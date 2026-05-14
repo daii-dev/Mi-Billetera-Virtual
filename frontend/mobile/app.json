@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Mi Billetera Virtual",
+    "slug": "mi-billetera-virtual",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "mibilleteravirtual",
+    "userInterfaceStyle": "light",
+    "plugins": [
+      "expo-secure-store"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.billeteravirtual.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      }
+    }
+  }
+}
