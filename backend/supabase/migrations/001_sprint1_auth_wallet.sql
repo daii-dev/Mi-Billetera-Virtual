@@ -65,3 +65,9 @@ for update
 to authenticated
 using ((select auth.jwt() ->> 'sub') = clerk_user_id)
 with check ((select auth.jwt() ->> 'sub') = clerk_user_id);
+
+create policy "accounts_delete_own"
+on public.accounts
+for delete
+to authenticated
+using ((select auth.jwt() ->> 'sub') = clerk_user_id);

@@ -155,8 +155,20 @@ export default function HomeScreen() {
     setSelectedSidebarItem(item.key);
 
     if (item.key === 'home') {
+      setSidebarVisible(false);
       return;
     }
+
+    if (item.key === 'accounts') {
+      setSidebarVisible(false);
+      router.push('/accounts');
+      return;
+    }
+
+    Alert.alert(
+      'Próximamente',
+      `La opción "${item.label}" se implementará en los siguientes sprints.`
+    );
   }
 
   if (loading && !account) {
@@ -241,7 +253,9 @@ export default function HomeScreen() {
 
           <View style={styles.movementInfo}>
             <Text style={styles.movementTitle}>Saldo inicial</Text>
-            <Text style={styles.movementSubtitle}>💼 Personal</Text>
+            <Text style={styles.movementSubtitle}>
+              💼 {account?.name ?? 'Personal'}
+            </Text>
             <Text style={styles.movementDate}>
               📅 {new Date().toISOString().slice(0, 10)}
             </Text>
