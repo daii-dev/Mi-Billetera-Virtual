@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
   Account,
+  Movement,
   Profile,
   WalletStatus,
 } from './wallet.types';
@@ -137,6 +138,71 @@ export async function getUserAccounts(
   return (data ?? []) as Account[];
 }
 
+export async function getRecentMovements(
+  supabase: SupabaseClient,
+  clerkUserId: string,
+  limit = 10
+): Promise<Movement[]> {
+  const { data, error } = await supabase
+    .from('movements')
+    .select(`
+      *,
+      account:accounts (
+        name
+      )
+    `)
+    .eq('clerk_user_id', clerkUserId)
+    .order('movement_date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as Movement[];
+}
+
+async function createInitialBalanceMovement(
+  supabase: SupabaseClient,
+  account: Account
+): Promise<void> {
+  const { data: existingMovement, error: existingMovementError } = await supabase
+    .from('movements')
+    .select('id')
+    .eq('account_id', account.id)
+    .eq('source', 'initial_balance')
+    .maybeSingle();
+
+  if (existingMovementError) {
+    throw new Error(existingMovementError.message);
+  }
+
+  if (existingMovement) {
+    return;
+  }
+
+  const amount = Number(account.initial_balance ?? account.current_balance ?? 0);
+
+  const { error } = await supabase
+    .from('movements')
+    .insert({
+      clerk_user_id: account.clerk_user_id,
+      account_id: account.id,
+      type: 'income',
+      source: 'initial_balance',
+      title: 'Saldo inicial',
+      description: 'Movimiento generado automáticamente al crear la cuenta',
+      amount,
+      currency: account.currency ?? 'BOB',
+      movement_date: new Date().toISOString().slice(0, 10),
+    });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 export async function getPersonalAccount(
   supabase: SupabaseClient,
   clerkUserId: string
@@ -191,7 +257,9 @@ export async function setInitialBalance(
       throw new Error(error.message);
     }
 
-    return data as Account;
+    const createdAccount = data as Account;
+    await createInitialBalanceMovement(supabase, createdAccount);
+    return createdAccount;
   }
 
   const { data, error } = await supabase
@@ -210,7 +278,9 @@ export async function setInitialBalance(
     throw new Error(error.message);
   }
 
-  return data as Account;
+  const updatedAccount = data as Account;
+  await createInitialBalanceMovement(supabase, updatedAccount);
+  return updatedAccount;
 }
 
 export async function createAccount(
@@ -238,7 +308,9 @@ export async function createAccount(
     throw new Error(error.message);
   }
 
-  return data as Account;
+  const createdAccount = data as Account;
+  await createInitialBalanceMovement(supabase, createdAccount);
+  return createdAccount;
 }
 
 export async function updateAccountName(

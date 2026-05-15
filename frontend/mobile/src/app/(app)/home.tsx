@@ -26,11 +26,17 @@ import {
 
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import {
+  getAccountsTotal,
   getPersonalAccount,
+  getRecentMovements,
+  getUserAccounts,
   getUserProfile,
   money,
 } from '@/features/wallet/wallet.service';
-import { Account } from '@/features/wallet/wallet.types';
+import {
+  Account,
+  Movement,
+} from '@/features/wallet/wallet.types';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
@@ -53,6 +59,8 @@ export default function HomeScreen() {
   const styles = createStyles(theme);
 
   const [account, setAccount] = useState<Account | null>(null);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [movements, setMovements] = useState<Movement[]>([]);
   const [profileName, setProfileName] = useState('Usuario');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -95,7 +103,9 @@ export default function HomeScreen() {
         setLoading(true);
       }
 
+      const userAccounts = await getUserAccounts(supabase, userId);
       const data = await getPersonalAccount(supabase, userId);
+      const recentMovements = await getRecentMovements(supabase, userId, 10);
 
       if (!data) {
         console.log('No existen cuentas para este usuario');
@@ -118,6 +128,8 @@ export default function HomeScreen() {
 
       setProfileName(profile?.full_name || fallbackName);
       setAccount(data);
+      setAccounts(userAccounts);
+      setMovements(recentMovements);
     } catch (error: any) {
       console.log('ERROR HOME LOAD ACCOUNT:', JSON.stringify(error, null, 2));
 
@@ -180,8 +192,15 @@ export default function HomeScreen() {
     );
   }
 
-  const currentBalance = Number(account?.current_balance ?? 0);
-  const initialBalance = Number(account?.initial_balance ?? 0);
+  const currentBalance = getAccountsTotal(accounts);
+
+  const totalIncome = movements
+    .filter((movement) => movement.type === 'income')
+    .reduce((total, movement) => total + Number(movement.amount ?? 0), 0);
+
+  const totalExpense = movements
+    .filter((movement) => movement.type === 'expense')
+    .reduce((total, movement) => total + Number(movement.amount ?? 0), 0);
 
   return (
     <View 
@@ -218,12 +237,12 @@ export default function HomeScreen() {
           <View style={styles.summaryRow}>
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>Ingresos:</Text>
-              <Text style={styles.incomeText}>{money(initialBalance)}</Text>
+              <Text style={styles.incomeText}>{money(totalIncome)}</Text>
             </View>
 
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>Gastos:</Text>
-              <Text style={styles.expenseText}>{money(0)}</Text>
+              <Text style={styles.expenseText}>{money(totalExpense)}</Text>
             </View>
           </View>
         </View>
@@ -246,23 +265,46 @@ export default function HomeScreen() {
 
         <Text style={styles.sectionTitle}>Movimientos recientes</Text>
 
-        <View style={styles.movementCard}>
-          <View style={styles.movementIcon}>
-            <Wallet size={26} color="#FFFFFF" />
-          </View>
+        {movements.length === 0 ? (
+          <Text style={styles.emptyText}>
+            Todavía no tienes movimientos registrados.
+          </Text>
+        ) : (
+          movements.map((movement) => {
+            const isIncome = movement.type === 'income';
+            const accountName = movement.account?.name ?? 'Cuenta';
+            const sign = isIncome ? '+' : '-';
 
-          <View style={styles.movementInfo}>
-            <Text style={styles.movementTitle}>Saldo inicial</Text>
-            <Text style={styles.movementSubtitle}>
-              💼 {account?.name ?? 'Personal'}
-            </Text>
-            <Text style={styles.movementDate}>
-              📅 {new Date().toISOString().slice(0, 10)}
-            </Text>
-          </View>
+            return (
+              <View key={movement.id} style={styles.movementCard}>
+                <View style={styles.movementIcon}>
+                  <Wallet size={26} color="#FFFFFF" />
+                </View>
 
-          <Text style={styles.movementAmount}>+{money(initialBalance)}</Text>
-        </View>
+                <View style={styles.movementInfo}>
+                  <Text style={styles.movementTitle}>{movement.title}</Text>
+                  <Text style={styles.movementSubtitle}>
+                    💼 {accountName}
+                  </Text>
+                  <Text style={styles.movementDate}>
+                    📅 {movement.movement_date}
+                  </Text>
+                </View>
+
+                <Text
+                  style={[
+                    styles.movementAmount,
+                    {
+                      color: isIncome ? colors.secondary : colors.expense,
+                    },
+                  ]}
+                >
+                  {sign}{money(movement.amount)}
+                </Text>
+              </View>
+            );
+          })
+        )}
       </ScrollView>
 
       <AppSidebar
@@ -392,6 +434,12 @@ function createStyles(theme: AppTheme) {
       fontSize: 18,
       color: theme.colors.text,
       fontWeight: '900',
+    },
+    emptyText: {
+      color: theme.colors.textSecondary,
+      fontSize: 14,
+      textAlign: 'center',
+      marginTop: 16,
     },
     movementCard: {
       minHeight: 88,
