@@ -19,7 +19,7 @@ import {
 
 import { AppButton } from '@/components/ui/AppButton';
 import { AppInput } from '@/components/ui/AppInput';
-import { savePendingFullName } from '@/lib/storage';
+import { savePendingSignupData } from '@/lib/storage';
 import { colors } from '@/theme/colors';
 import { useSignUp } from '@clerk/expo';
 
@@ -167,7 +167,7 @@ export default function SignUpScreen() {
         return;
       }
 
-      await savePendingFullName(cleanFullName);
+      await savePendingSignupData(cleanFullName, cleanEmail);
 
       const { error } = await signUp.password({
         emailAddress: cleanEmail,
@@ -195,7 +195,7 @@ export default function SignUpScreen() {
 
       Alert.alert(
         'Verificación requerida',
-        'Tu cuenta fue iniciada, pero Clerk todavía exige verificar el correo.'
+        'Tu cuenta fu iniciada, pero Clerk todavía exige verificar el correo.'
         );
     } catch (error: any) {
       const clerkMessage = getClerkErrorMessage(error);

@@ -22,8 +22,10 @@ import {
   View,
 } from 'react-native';
 
+import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import {
   getPrincipalAccount,
+  getUserProfile,
   money,
 } from '@/features/wallet/wallet.service';
 import { Account } from '@/features/wallet/wallet.types';
@@ -32,16 +34,23 @@ import { colors } from '@/theme/colors';
 import {
   useAuth,
   useClerk,
+  useUser,
 } from '@clerk/expo';
 
 export default function HomeScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
   const { signOut } = useClerk();
   const supabase = useSupabase();
 
   const [account, setAccount] = useState<Account | null>(null);
+  const [profileName, setProfileName] = useState('Usuario');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [selectedSidebarItem, setSelectedSidebarItem] = useState('home');
+  const [visualMode, setVisualMode] = useState(false);
 
   async function loadAccount(showFullLoader = false) {
     if (!isLoaded) return;
@@ -70,6 +79,14 @@ export default function HomeScreen() {
         return;
       }
 
+      const profile = await getUserProfile(supabase, userId);
+
+      const fallbackName =
+        user?.fullName ||
+        user?.primaryEmailAddress?.emailAddress ||
+        'Usuario';
+
+      setProfileName(profile?.full_name || fallbackName);
       setAccount(data);
     } catch (error: any) {
       console.log('ERROR HOME LOAD ACCOUNT:', JSON.stringify(error, null, 2));
@@ -104,6 +121,14 @@ export default function HomeScreen() {
     }
   }
 
+  function handleSelectSidebarItem(item: { key: string; label: string }) {
+    setSelectedSidebarItem(item.key);
+
+    if (item.key === 'home') {
+      return;
+    }
+  }
+
   if (loading && !account) {
     return (
       <View style={styles.loadingContainer}>
@@ -120,11 +145,17 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <View style={styles.topBar}>
         <View style={styles.topTitleBox}>
-          <Menu size={28} color="#FFFFFF" />
+          <Pressable
+            onPress={() => setSidebarVisible(true)}
+            hitSlop={10}
+          >
+            <Menu size={28} color="#FFFFFF" />
+          </Pressable>
+
           <Text style={styles.topTitle}>Inicio</Text>
         </View>
 
-        <Pressable onPress={handleLogout}>
+        <Pressable onPress={handleLogout} hitSlop={10}>
           <LogOut size={26} color="#FFFFFF" />
         </Pressable>
       </View>
@@ -185,8 +216,17 @@ export default function HomeScreen() {
 
           <Text style={styles.movementAmount}>+{money(initialBalance)}</Text>
         </View>
-
       </ScrollView>
+
+      <AppSidebar
+        visible={sidebarVisible}
+        userName={profileName}
+        selectedKey={selectedSidebarItem}
+        visualMode={visualMode}
+        onToggleVisualMode={setVisualMode}
+        onClose={() => setSidebarVisible(false)}
+        onSelectItem={handleSelectSidebarItem}
+      />
     </View>
   );
 }
@@ -351,13 +391,6 @@ const styles = StyleSheet.create({
     color: colors.secondary,
     fontSize: 13,
     fontWeight: '900',
-  },
-  note: {
-    marginTop: 24,
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: 'center',
   },
   loadingContainer: {
     flex: 1,

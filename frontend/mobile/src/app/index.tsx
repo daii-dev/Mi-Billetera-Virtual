@@ -13,9 +13,9 @@ import {
 
 import { ensureUserWallet } from '@/features/wallet/wallet.service';
 import {
-  clearPendingFullName,
+  clearPendingSignupData,
   getHasSeenOnboarding,
-  getPendingFullName,
+  getPendingSignupData,
 } from '@/lib/storage';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
@@ -50,16 +50,25 @@ export default function IndexScreen() {
 
         setMessage('Preparando tu billetera...');
 
-        const pendingFullName = await getPendingFullName();
+        const pendingSignupData = await getPendingSignupData();
 
         const email =
           user.primaryEmailAddress?.emailAddress ??
           user.emailAddresses[0]?.emailAddress ??
           '';
 
+        const normalizedEmail = email.toLowerCase();
+
+        const pendingFullName =
+          pendingSignupData?.email === normalizedEmail
+            ? pendingSignupData.fullName
+            : null;
+
+        const clerkFullName = user.fullName?.trim();
+
         const fullName =
-          user.fullName ||
           pendingFullName ||
+          clerkFullName ||
           email;
 
         const wallet = await ensureUserWallet(supabase, {
@@ -68,7 +77,9 @@ export default function IndexScreen() {
           fullName,
         });
 
-        await clearPendingFullName();
+        if (pendingSignupData?.email === normalizedEmail) {
+          await clearPendingSignupData();
+        }
 
         if (wallet.initialBalanceConfigured) {
           router.replace('/home');

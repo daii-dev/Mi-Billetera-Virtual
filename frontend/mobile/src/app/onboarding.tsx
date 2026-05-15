@@ -21,7 +21,7 @@ export default function OnboardingScreen() {
 
   async function finishOnboarding() {
     await setHasSeenOnboarding();
-    router.replace('/(auth)/sign-in');
+    router.replace('/sign-in');
   }
 
   function nextPage() {

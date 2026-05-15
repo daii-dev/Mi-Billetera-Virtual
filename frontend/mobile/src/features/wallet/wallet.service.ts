@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
   Account,
+  Profile,
   WalletStatus,
 } from './wallet.types';
 
@@ -17,13 +18,35 @@ export async function ensureUserWallet(
 ): Promise<WalletStatus> {
   const { clerkUserId, email, fullName } = params;
 
+  const { data: existingProfile, error: existingProfileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('clerk_user_id', clerkUserId)
+    .maybeSingle();
+
+  if (existingProfileError) {
+    throw new Error(existingProfileError.message);
+  }
+
+  const cleanFullName = fullName?.trim() ?? '';
+  const cleanEmail = email.trim().toLowerCase();
+
+  const isRealName =
+    cleanFullName.length > 0 &&
+    cleanFullName.toLowerCase() !== cleanEmail;
+
+  const finalFullName =
+    isRealName
+      ? cleanFullName
+      : existingProfile?.full_name ?? '';
+
   const { error: profileError } = await supabase
     .from('profiles')
     .upsert(
       {
         clerk_user_id: clerkUserId,
         email,
-        full_name: fullName ?? '',
+        full_name: finalFullName,
         updated_at: new Date().toISOString(),
       },
       {
@@ -74,6 +97,23 @@ export async function ensureUserWallet(
     account: newAccount as Account,
     initialBalanceConfigured: false,
   };
+}
+
+export async function getUserProfile(
+  supabase: SupabaseClient,
+  clerkUserId: string
+): Promise<Profile | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('clerk_user_id', clerkUserId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as Profile | null;
 }
 
 export async function getPrincipalAccount(
