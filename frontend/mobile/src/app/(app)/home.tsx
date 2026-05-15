@@ -26,7 +26,7 @@ import {
 
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import {
-  getPrincipalAccount,
+  getPersonalAccount,
   getUserProfile,
   money,
 } from '@/features/wallet/wallet.service';
@@ -95,10 +95,10 @@ export default function HomeScreen() {
         setLoading(true);
       }
 
-      const data = await getPrincipalAccount(supabase, userId);
+      const data = await getPersonalAccount(supabase, userId);
 
       if (!data) {
-        console.log('No existe cuenta principal para este usuario');
+        console.log('No existen cuentas para este usuario');
         router.replace('/initial-balance');
         return;
       }
@@ -241,7 +241,7 @@ export default function HomeScreen() {
 
           <View style={styles.movementInfo}>
             <Text style={styles.movementTitle}>Saldo inicial</Text>
-            <Text style={styles.movementSubtitle}>💼 Cuenta principal</Text>
+            <Text style={styles.movementSubtitle}>💼 Personal</Text>
             <Text style={styles.movementDate}>
               📅 {new Date().toISOString().slice(0, 10)}
             </Text>

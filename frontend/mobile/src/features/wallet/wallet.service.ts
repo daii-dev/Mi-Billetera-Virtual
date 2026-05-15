@@ -62,7 +62,7 @@ export async function ensureUserWallet(
     .from('accounts')
     .select('*')
     .eq('clerk_user_id', clerkUserId)
-    .eq('name', 'Principal')
+    .eq('name', 'Personal')
     .maybeSingle();
 
   if (accountQueryError) {
@@ -80,7 +80,7 @@ export async function ensureUserWallet(
     .from('accounts')
     .insert({
       clerk_user_id: clerkUserId,
-      name: 'Principal',
+      name: 'Personal',
       currency: 'BOB',
       initial_balance: 0,
       current_balance: 0,
@@ -116,7 +116,7 @@ export async function getUserProfile(
   return data as Profile | null;
 }
 
-export async function getPrincipalAccount(
+export async function getPersonalAccount(
   supabase: SupabaseClient,
   clerkUserId: string
 ): Promise<Account | null> {
@@ -124,7 +124,7 @@ export async function getPrincipalAccount(
     .from('accounts')
     .select('*')
     .eq('clerk_user_id', clerkUserId)
-    .eq('name', 'Principal')
+    .eq('name', 'Personal')
     .maybeSingle();
 
   if (error) {
@@ -143,7 +143,7 @@ export async function setInitialBalance(
     .from('accounts')
     .select('*')
     .eq('clerk_user_id', clerkUserId)
-    .eq('name', 'Principal')
+    .eq('name', 'Personal')
     .maybeSingle();
 
   if (queryError) {
@@ -155,7 +155,7 @@ export async function setInitialBalance(
       .from('accounts')
       .insert({
         clerk_user_id: clerkUserId,
-        name: 'Principal',
+        name: 'Personal',
         currency: 'BOB',
         initial_balance: amount,
         current_balance: amount,
