@@ -176,11 +176,6 @@ export default function HomeScreen() {
       router.push('/accounts');
       return;
     }
-
-    Alert.alert(
-      'Próximamente',
-      `La opción "${item.label}" se implementará en los siguientes sprints.`
-    );
   }
 
   if (loading && !account) {
@@ -446,6 +441,7 @@ function createStyles(theme: AppTheme) {
       backgroundColor: theme.colors.card,
       borderRadius: 12,
       padding: 14,
+      marginBottom: 14,
       flexDirection: 'row',
       alignItems: 'center',
       shadowColor: '#000',
