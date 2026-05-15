@@ -16,6 +16,10 @@ import {
 } from 'react-native';
 
 import { colors } from '@/theme/colors';
+import {
+  AppTheme,
+  useAppTheme,
+} from '@/theme/ThemeContext';
 
 const SIDEBAR_WIDTH = 270;
 
@@ -61,6 +65,9 @@ export function AppSidebar({
 
   const translateX = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
+
+  const { theme } = useAppTheme();
+  const styles = createStyles(theme);
 
   function animateOpen() {
     translateX.setValue(-SIDEBAR_WIDTH);
@@ -240,7 +247,9 @@ export function AppSidebar({
           </View>
 
           <View style={styles.visualModeBox}>
-            <Text style={styles.visualModeText}>MODO VISUAL</Text>
+            <Text style={styles.visualModeText}>
+              {visualMode ? 'MODO OSCURO' : 'MODO CLARO'}
+            </Text>
 
             <Switch
               value={visualMode}
@@ -258,100 +267,102 @@ export function AppSidebar({
   );
 }
 
-const styles = StyleSheet.create({
-  modalContainer: {
-    flex: 1,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-  },
-  sidebar: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: SIDEBAR_WIDTH,
-    backgroundColor: '#FFFFFF',
-    zIndex: 2,
-    elevation: 8,
-  },
-  header: {
-    height: 92,
-    backgroundColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 28,
-    paddingHorizontal: 16,
-  },
-  logoBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 8,
-    backgroundColor: colors.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logo: {
-    fontSize: 28,
-  },
-  headerTextBox: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  userName: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  appName: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    marginTop: 3,
-  },
-  menuContainer: {
-    paddingTop: 22,
-    paddingHorizontal: 14,
-    flex: 1,
-  },
-  menuItem: {
-    height: 42,
-    borderRadius: 22,
-    paddingHorizontal: 12,
-    marginBottom: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  menuItemSelected: {
-    backgroundColor: '#AEE4FF',
-  },
-  menuIcon: {
-    width: 28,
-    fontSize: 20,
-    textAlign: 'center',
-  },
-  menuText: {
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#4A4A4A',
-  },
-  menuTextSelected: {
-    color: colors.primary,
-  },
-  visualModeBox: {
-    height: 90,
-    marginBottom: 65,
-    borderTopWidth: 1,
-    borderTopColor: '#A8A8A8',
-    paddingHorizontal: 28,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  visualModeText: {
-    color: '#555555',
-    fontSize: 13,
-    fontWeight: '900',
-  },
-});
+function createStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    modalContainer: {
+      flex: 1,
+    },
+    overlay: {
+      flex: 1,
+      backgroundColor: theme.colors.overlay,
+    },
+    sidebar: {
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      bottom: 0,
+      width: SIDEBAR_WIDTH,
+      backgroundColor: theme.colors.surface,
+      zIndex: 2,
+      elevation: 8,
+    },
+    header: {
+      height: 92,
+      backgroundColor: theme.colors.sidebarHeader,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingTop: 28,
+      paddingHorizontal: 16,
+    },
+    logoBox: {
+      width: 42,
+      height: 42,
+      borderRadius: 8,
+      backgroundColor: colors.secondary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    logo: {
+      fontSize: 28,
+    },
+    headerTextBox: {
+      marginLeft: 12,
+      flex: 1,
+    },
+    userName: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: '900',
+    },
+    appName: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      marginTop: 3,
+    },
+    menuContainer: {
+      paddingTop: 22,
+      paddingHorizontal: 14,
+      flex: 1,
+    },
+    menuItem: {
+      height: 42,
+      borderRadius: 22,
+      paddingHorizontal: 12,
+      marginBottom: 6,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    menuItemSelected: {
+      backgroundColor: theme.colors.sidebarSelected,
+    },
+    menuIcon: {
+      width: 28,
+      fontSize: 20,
+      textAlign: 'center',
+    },
+    menuText: {
+      marginLeft: 8,
+      fontSize: 14,
+      fontWeight: '800',
+      color: theme.colors.textSecondary,
+    },
+    menuTextSelected: {
+      color: theme.colors.text,
+    },
+    visualModeBox: {
+      height: 90,
+      marginBottom: 65,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+      paddingHorizontal: 28,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    visualModeText: {
+      color: theme.colors.textSecondary,
+      fontSize: 13,
+      fontWeight: '900',
+    },
+  });
+}

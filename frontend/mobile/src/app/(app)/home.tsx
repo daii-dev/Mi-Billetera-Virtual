@@ -34,6 +34,10 @@ import { Account } from '@/features/wallet/wallet.types';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
+  AppTheme,
+  useAppTheme,
+} from '@/theme/ThemeContext';
+import {
   useAuth,
   useClerk,
   useUser,
@@ -45,6 +49,9 @@ export default function HomeScreen() {
   const { signOut } = useClerk();
   const supabase = useSupabase();
 
+  const { theme, isDarkMode, setDarkMode } = useAppTheme();
+  const styles = createStyles(theme);
+
   const [account, setAccount] = useState<Account | null>(null);
   const [profileName, setProfileName] = useState('Usuario');
   const [loading, setLoading] = useState(true);
@@ -52,7 +59,6 @@ export default function HomeScreen() {
 
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [selectedSidebarItem, setSelectedSidebarItem] = useState('home');
-  const [visualMode, setVisualMode] = useState(false);
 
   const openSidebarPanResponder = useRef(
     PanResponder.create({
@@ -249,8 +255,8 @@ export default function HomeScreen() {
         visible={sidebarVisible}
         userName={profileName}
         selectedKey={selectedSidebarItem}
-        visualMode={visualMode}
-        onToggleVisualMode={setVisualMode}
+        visualMode={isDarkMode}
+        onToggleVisualMode={setDarkMode}
         onClose={() => setSidebarVisible(false)}
         onSelectItem={handleSelectSidebarItem}
       />
@@ -258,176 +264,178 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  topBar: {
-    height: 80,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 18,
-    paddingTop: 32,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  topTitleBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  topTitle: {
-    color: '#FFFFFF',
-    fontSize: 25,
-    fontWeight: '900',
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  balanceCard: {
-    backgroundColor: colors.primary,
-    borderRadius: 16,
-    padding: 18,
-    shadowColor: '#000',
-    shadowOpacity: 0.22,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 5,
-    elevation: 6,
-  },
-  balanceLabel: {
-    color: '#AFC2FF',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  balanceAmount: {
-    color: '#FFFFFF',
-    fontSize: 32,
-    fontWeight: '900',
-    marginTop: 6,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 12,
-  },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: '#40388E',
-    borderRadius: 8,
-    padding: 12,
-  },
-  summaryLabel: {
-    color: '#C7C7C7',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  incomeText: {
-    marginTop: 8,
-    color: colors.secondary,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  expenseText: {
-    marginTop: 8,
-    color: colors.expense,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: 14,
-    marginTop: 16,
-  },
-  incomeButton: {
-    flex: 1,
-    height: 48,
-    backgroundColor: colors.secondary,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  expenseButton: {
-    flex: 1,
-    height: 48,
-    backgroundColor: colors.expense,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionText: {
-    color: '#FFFFFF',
-    fontWeight: '900',
-    fontSize: 17,
-  },
-  sectionTitle: {
-    marginTop: 24,
-    marginBottom: 10,
-    fontSize: 18,
-    color: colors.primary,
-    fontWeight: '900',
-  },
-  movementCard: {
-    minHeight: 88,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 3,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
-  },
-  movementIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#D9D9D9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  movementInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  movementTitle: {
-    color: colors.primary,
-    fontWeight: '900',
-    fontSize: 16,
-  },
-  movementSubtitle: {
-    marginTop: 6,
-    color: '#666666',
-    fontSize: 13,
-  },
-  movementDate: {
-    marginTop: 4,
-    color: '#8B8B8B',
-    fontSize: 12,
-  },
-  movementAmount: {
-    color: colors.secondary,
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    marginTop: 14,
-    color: colors.primary,
-    fontWeight: '800',
-  },
-});
+function createStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    topBar: {
+      height: 80,
+      backgroundColor: theme.colors.sidebarHeader,
+      paddingHorizontal: 18,
+      paddingTop: 32,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    topTitleBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    topTitle: {
+      color: '#FFFFFF',
+      fontSize: 25,
+      fontWeight: '900',
+    },
+    content: {
+      padding: 16,
+      paddingBottom: 40,
+    },
+    balanceCard: {
+      backgroundColor: theme.mode === 'dark' ? '#172554' : '#082B8C',
+      borderRadius: 16,
+      padding: 18,
+      shadowColor: '#000',
+      shadowOpacity: 0.22,
+      shadowOffset: { width: 0, height: 4 },
+      shadowRadius: 5,
+      elevation: 6,
+    },
+    balanceLabel: {
+      color: '#AFC2FF',
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    balanceAmount: {
+      color: '#FFFFFF',
+      fontSize: 32,
+      fontWeight: '900',
+      marginTop: 6,
+    },
+    summaryRow: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 12,
+    },
+    summaryCard: {
+      flex: 1,
+      backgroundColor: theme.colors.summaryCard,
+      borderRadius: 8,
+      padding: 12,
+    },
+    summaryLabel: {
+      color: '#C7C7C7',
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    incomeText: {
+      marginTop: 8,
+      color: colors.secondary,
+      fontSize: 12,
+      fontWeight: '900',
+    },
+    expenseText: {
+      marginTop: 8,
+      color: colors.expense,
+      fontSize: 12,
+      fontWeight: '900',
+    },
+    actionsRow: {
+      flexDirection: 'row',
+      gap: 14,
+      marginTop: 16,
+    },
+    incomeButton: {
+      flex: 1,
+      height: 48,
+      backgroundColor: colors.secondary,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+      gap: 8,
+    },
+    expenseButton: {
+      flex: 1,
+      height: 48,
+      backgroundColor: colors.expense,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+      gap: 8,
+    },
+    actionText: {
+      color: '#FFFFFF',
+      fontWeight: '900',
+      fontSize: 17,
+    },
+    sectionTitle: {
+      marginTop: 24,
+      marginBottom: 10,
+      fontSize: 18,
+      color: theme.colors.text,
+      fontWeight: '900',
+    },
+    movementCard: {
+      minHeight: 88,
+      backgroundColor: theme.colors.card,
+      borderRadius: 12,
+      padding: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOpacity: 0.18,
+      shadowOffset: { width: 0, height: 2 },
+      shadowRadius: 3,
+      elevation: 3,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    movementIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: '#D9D9D9',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    movementInfo: {
+      flex: 1,
+      marginLeft: 12,
+    },
+    movementTitle: {
+      color: theme.colors.text,
+      fontWeight: '900',
+      fontSize: 16,
+    },
+    movementSubtitle: {
+      marginTop: 6,
+      color: theme.colors.textSecondary,
+      fontSize: 13,
+    },
+    movementDate: {
+      marginTop: 4,
+      color: theme.colors.textSecondary,
+      fontSize: 12,
+    },
+    movementAmount: {
+      color: colors.secondary,
+      fontSize: 13,
+      fontWeight: '900',
+    },
+    loadingContainer: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    loadingText: {
+      marginTop: 14,
+      color: theme.colors.text,
+      fontWeight: '800',
+    },
+  });
+}
