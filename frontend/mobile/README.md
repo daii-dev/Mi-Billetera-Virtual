@@ -2,6 +2,18 @@
 
 Aplicación móvil desarrollada con **React Native + Expo + TypeScript**, utilizando **Clerk** para autenticación y **Supabase** como backend en la nube.
 
+## Requisitos previos
+
+- Node.js 20.19.4 o superior
+- npm
+- Expo Go instalado en el celular Android
+
+Verificar Node:
+
+```bash
+node -v
+```
+
 ## Instalar dependencias
 
 #### Dentro de la carpeta:
@@ -38,7 +50,7 @@ frontend/mobile
 ```bash
 npx expo start --clear
 ```
-##### También se puede usar:
+##### También se puede forzar el uso de Expo Go con:
 
 ```bash
 npx expo start --go --clear
