@@ -24,9 +24,9 @@ frontend/mobile/.env
 ##### Usar como referencia el archivo:
 frontend/mobile/.env.example
 #### Dentro del archivo .env, copiar lo siguiente:
-- EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_YXB0LXN3YW4tNzQuY2xlcmsuYWNjb3VudHMuZGV2JA
-- EXPO_PUBLIC_SUPABASE_URL=https://hhbjaxjmectcidnyagzu.supabase.co
-- EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_vqrCf9hciELCLhuemp9WhQ_vEn9fvix
+- EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxx
+- EXPO_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxxxxx
+- EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_xxxxxx
 
 ## Levantar el proyecto
 
