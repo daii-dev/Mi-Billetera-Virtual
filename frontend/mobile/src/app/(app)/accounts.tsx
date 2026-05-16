@@ -29,6 +29,11 @@ import {
 
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import {
+  isValidMoneyInput,
+  parseMoneyInput,
+  sanitizeMoneyInput,
+} from '@/features/wallet/amount.utils';
+import {
   createAccount,
   deleteAccount,
   getAccountsTotal,
@@ -174,35 +179,34 @@ export default function AccountsScreen() {
     setSaving(false);
   }
 
-  function normalizeAmount(value: string): number {
-    const normalized = value.replace(',', '.').trim();
-    return Number(normalized || 0);
-  }
-
   function handleChangeAmount(value: string) {
-    const clean = value.replace(/[^0-9.,]/g, '');
-    setInitialBalanceText(clean);
+    setInitialBalanceText(sanitizeMoneyInput(value, initialBalanceText));
   }
 
   async function handleCreateAccount() {
     if (!userId) return;
 
     const cleanName = accountName.trim();
-    const initialBalance = normalizeAmount(initialBalanceText);
+    const cleanInitialBalanceText = initialBalanceText.trim() || '0';
 
     if (!cleanName) {
       Alert.alert('Campo requerido', 'Ingresa el nombre de la cuenta');
       return;
     }
 
-    if (Number.isNaN(initialBalance)) {
-      Alert.alert('Monto inválido', 'Ingresa un saldo inicial válido');
-      return;
+    if (!isValidMoneyInput(cleanInitialBalanceText)) {
+        Alert.alert(
+            'Monto inválido',
+            'Usa coma decimal y máximo dos decimales. Ejemplo: 120,50'
+        );
+        return;
     }
 
+    const initialBalance = parseMoneyInput(cleanInitialBalanceText);
+
     if (initialBalance < 0) {
-      Alert.alert('Monto inválido', 'El saldo inicial no puede ser negativo');
-      return;
+    Alert.alert('Monto inválido', 'El saldo inicial no puede ser negativo');
+    return;
     }
 
     const duplicatedName = accounts.some(
@@ -322,11 +326,6 @@ export default function AccountsScreen() {
       setSidebarVisible(false);
       return;
     }
-
-    Alert.alert(
-      'Próximamente',
-      `La opción "${item.label}" se implementará en los siguientes sprints.`
-    );
   }
 
   const balanceTotal = getAccountsTotal(accounts);
@@ -424,7 +423,7 @@ export default function AccountsScreen() {
         onCreate={handleCreateAccount}
         onUpdate={handleUpdateAccount}
         onGoDelete={() => setModalMode('delete')}
-        onCancelDelete={() => setModalMode('edit')}
+        onCancelDelete={closeModal}
         onDelete={handleDeleteAccount}
       />
 
@@ -524,7 +523,7 @@ function AccountModal({
                 <TextInput
                   value={initialBalanceText}
                   onChangeText={onChangeInitialBalance}
-                  placeholder="0.00"
+                  placeholder="0,00"
                   placeholderTextColor="#A8A8A8"
                   keyboardType="decimal-pad"
                   style={styles.amountInput}

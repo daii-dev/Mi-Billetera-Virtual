@@ -29,6 +29,12 @@ import {
 } from 'react-native';
 
 import {
+  formatMoneyInput,
+  isValidMoneyInput,
+  parseMoneyInput,
+  sanitizeMoneyInput,
+} from '@/features/wallet/amount.utils';
+import {
   createManualMovement,
   deleteManualMovement,
   getMovementsByType,
@@ -166,14 +172,8 @@ export function MovementManagerScreen({
     await loadData(false);
   }
 
-  function normalizeAmount(value: string): number {
-    const normalized = value.replace(',', '.').trim();
-    return Number(normalized || 0);
-  }
-
   function handleChangeAmount(value: string) {
-    const clean = value.replace(/[^0-9.,]/g, '');
-    setAmountText(clean);
+    setAmountText(sanitizeMoneyInput(value, amountText));
   }
 
   function getDefaultAccountId() {
@@ -202,7 +202,7 @@ export function MovementManagerScreen({
 
     setSelectedMovement(movement);
     setDescription(movement.title);
-    setAmountText(String(movement.amount));
+    setAmountText(formatMoneyInput(movement.amount));
     setSelectedAccountId(movement.account_id);
     setSelectedCategory(movement.category_name || getDefaultCategory());
     setShowAccountOptions(false);
@@ -227,7 +227,7 @@ export function MovementManagerScreen({
     category: string;
   } | null {
     const cleanDescription = description.trim();
-    const amount = normalizeAmount(amountText);
+    const cleanAmountText = amountText.trim();
     const accountId = selectedAccountId;
     const category = selectedCategory.trim();
 
@@ -236,9 +236,20 @@ export function MovementManagerScreen({
       return null;
     }
 
-    if (Number.isNaN(amount) || amount <= 0) {
-      Alert.alert('Monto inválido', 'Ingresa un monto mayor a cero');
-      return null;
+    
+    if (!isValidMoneyInput(cleanAmountText)) {
+        Alert.alert(
+            'Monto inválido',
+            'Usa coma decimal y máximo dos decimales. Ejemplo: 120,50'
+        );
+        return null;
+    }
+
+    const amount = parseMoneyInput(cleanAmountText);
+
+    if (amount <= 0) {
+        Alert.alert('Monto inválido', 'Ingresa un monto mayor a cero');
+        return null;
     }
 
     if (!accountId) {
@@ -782,7 +793,7 @@ function MovementForm({
         <TextInput
           value={amountText}
           onChangeText={onChangeAmount}
-          placeholder="0.00"
+          placeholder="0,00"
           placeholderTextColor="#A8A8A8"
           keyboardType="decimal-pad"
           style={styles.amountInput}

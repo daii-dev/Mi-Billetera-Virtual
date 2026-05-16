@@ -31,6 +31,12 @@ import {
 
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import {
+  formatMoneyInput,
+  isValidMoneyInput,
+  parseMoneyInput,
+  sanitizeMoneyInput,
+} from '@/features/wallet/amount.utils';
+import {
   expenseCategories,
   incomeCategories,
 } from '@/features/wallet/movement.constants';
@@ -196,14 +202,8 @@ export default function HomeScreen() {
     return type === 'income' ? incomeCategories : expenseCategories;
   }
 
-  function normalizeAmount(value: string): number {
-    const normalized = value.replace(',', '.').trim();
-    return Number(normalized || 0);
-  }
-
   function handleChangeMovementAmount(value: string) {
-    const clean = value.replace(/[^0-9.,]/g, '');
-    setMovementAmountText(clean);
+    setMovementAmountText(sanitizeMoneyInput(value, movementAmountText));
   }
 
   function openMovementEditModal(movement: Movement) {
@@ -215,7 +215,7 @@ export default function HomeScreen() {
 
     setSelectedMovement(movement);
     setMovementDescription(movement.title);
-    setMovementAmountText(String(movement.amount));
+    setMovementAmountText(formatMoneyInput(movement.amount));
     setSelectedAccountId(movement.account_id);
     setSelectedCategory(movement.category_name || categories[0] || 'Otro');
     setShowAccountOptions(false);
@@ -242,7 +242,7 @@ export default function HomeScreen() {
     category: string;
   } | null {
     const cleanDescription = movementDescription.trim();
-    const amount = normalizeAmount(movementAmountText);
+    const cleanAmountText = movementAmountText.trim();
     const accountId = selectedAccountId;
     const category = selectedCategory.trim();
 
@@ -251,7 +251,17 @@ export default function HomeScreen() {
       return null;
     }
 
-    if (Number.isNaN(amount) || amount <= 0) {
+    if (!isValidMoneyInput(cleanAmountText)) {
+      Alert.alert(
+        'Monto inválido',
+        'Usa coma decimal y máximo dos decimales. Ejemplo: 120,50'
+      );
+      return null;
+    }
+
+    const amount = parseMoneyInput(cleanAmountText);
+
+    if (amount <= 0) {
       Alert.alert('Monto inválido', 'Ingresa un monto mayor a cero');
       return null;
     }
@@ -655,7 +665,7 @@ function HomeMovementModal({
                 <TextInput
                   value={amountText}
                   onChangeText={onChangeAmount}
-                  placeholder="0.00"
+                  placeholder="0,00"
                   placeholderTextColor="#A8A8A8"
                   keyboardType="decimal-pad"
                   style={styles.amountInput}
