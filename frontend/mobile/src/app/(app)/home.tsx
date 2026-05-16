@@ -523,7 +523,7 @@ export default function HomeScreen() {
         onClose={closeMovementModal}
         onUpdate={handleUpdateMovementFromHome}
         onGoDelete={() => setMovementModalMode('delete')}
-        onCancelDelete={() => setMovementModalMode('edit')}
+        onCancelDelete={closeMovementModal}
         onDelete={handleDeleteMovementFromHome}
       />
 
@@ -790,10 +790,10 @@ function createStyles(theme: AppTheme) {
       backgroundColor: theme.colors.background,
     },
     topBar: {
-      height: 80,
+      height: 92,
       backgroundColor: theme.colors.sidebarHeader,
       paddingHorizontal: 18,
-      paddingTop: 32,
+      paddingTop: 42,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -1127,7 +1127,7 @@ function createStyles(theme: AppTheme) {
       paddingVertical: 8,
     },
     deleteOptionText: {
-      color: colors.primary,
+      color: theme.mode === 'dark' ? '#FFFFFF' : colors.primary,
       fontSize: 14,
       fontWeight: '900',
     },

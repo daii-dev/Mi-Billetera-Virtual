@@ -492,7 +492,7 @@ export function MovementManagerScreen({
         onCreate={handleCreateMovement}
         onUpdate={handleUpdateMovement}
         onGoDelete={() => setModalMode('delete')}
-        onCancelDelete={() => setModalMode('edit')}
+        onCancelDelete={closeModal}
         onDelete={handleDeleteMovement}
       />
     </View>
@@ -881,10 +881,10 @@ function createStyles(
       backgroundColor: theme.colors.background,
     },
     topBar: {
-      height: 70,
+      height: 92,
       backgroundColor: headerColor,
       paddingHorizontal: 12,
-      paddingTop: 25,
+      paddingTop: 42,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
@@ -996,8 +996,8 @@ function createStyles(
     },
     registerPageTitle: {
       width: '100%',
-      height: 70,
-      paddingTop: 28,
+      height: 92,
+      paddingTop: 42,
       backgroundColor: headerColor,
       color: '#FFFFFF',
       textAlign: 'center',
@@ -1201,7 +1201,7 @@ function createStyles(
       paddingVertical: 8,
     },
     deleteOptionText: {
-      color: colors.primary,
+      color: theme.mode === 'dark' ? '#FFFFFF' : colors.primary,
       fontSize: 14,
       fontWeight: '900',
     },
