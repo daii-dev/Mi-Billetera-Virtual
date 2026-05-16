@@ -606,11 +606,11 @@ function HomeMovementModal({
 
   const editTitle = isIncome ? 'Editar Ingreso' : 'Editar Gasto';
   const deleteTitle = isIncome ? 'Eliminar Ingreso' : 'Eliminar gasto';
-  const successTitle = isIncome ? 'Nuevo Ingreso' : 'Nuevo Gasto';
+  const successTitle = isIncome ? 'Editar Ingreso' : 'Editar Gasto';
 
   const successMessage = isIncome
-    ? 'Ingreso guardado correctamente'
-    : 'Gasto guardado correctamente';
+    ? 'Ingreso editado correctamente'
+    : 'Gasto editado correctamente';
 
   const deleteMessage = isIncome
     ? '¿Estas seguro que quieres eliminar este ingreso?'

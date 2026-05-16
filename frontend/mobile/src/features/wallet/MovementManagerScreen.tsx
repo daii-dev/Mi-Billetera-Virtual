@@ -111,6 +111,8 @@ export function MovementManagerScreen({
   const [saving, setSaving] = useState(false);
   const [openedParamEditId, setOpenedParamEditId] = useState<string | null>(null);
 
+  const [successAction, setSuccessAction] = useState<'create' | 'edit'>('create');
+
   async function loadData(showFullLoader = false) {
     if (!isLoaded) return;
 
@@ -277,6 +279,7 @@ export function MovementManagerScreen({
       });
 
       await loadData(false);
+      setSuccessAction('create');
       setModalMode('success');
 
       setTimeout(() => {
@@ -312,6 +315,7 @@ export function MovementManagerScreen({
       });
 
       await loadData(false);
+      setSuccessAction('edit');
       setModalMode('success');
 
       setTimeout(() => {
@@ -455,6 +459,7 @@ export function MovementManagerScreen({
         mode={modalMode}
         styles={styles}
         type={type}
+        successAction={successAction}
         registerTitle={registerTitle}
         editTitle={editTitle}
         deleteTitle={deleteTitle}
@@ -498,6 +503,7 @@ type MovementModalProps = {
   mode: ModalMode;
   styles: ReturnType<typeof createStyles>;
   type: MovementType;
+  successAction: 'create' | 'edit';
   registerTitle: string;
   editTitle: string;
   deleteTitle: string;
@@ -531,6 +537,8 @@ type MovementModalProps = {
 function MovementModal({
   mode,
   styles,
+  type,
+  successAction,
   registerTitle,
   editTitle,
   deleteTitle,
@@ -568,6 +576,24 @@ function MovementModal({
   const isEdit = mode === 'edit';
   const isDelete = mode === 'delete';
   const isSuccess = mode === 'success';
+
+  const editSuccessTitle = type === 'income'
+    ? 'Editar Ingreso'
+    : 'Editar Gasto';
+
+    const editSuccessMessage = type === 'income'
+    ? 'Ingreso editado correctamente'
+    : 'Gasto editado correctamente';
+
+    const finalSuccessTitle =
+    successAction === 'edit'
+        ? editSuccessTitle
+        : successTitle;
+
+    const finalSuccessMessage =
+    successAction === 'edit'
+        ? editSuccessMessage
+        : successMessage;
 
   return (
     <Modal
@@ -615,7 +641,7 @@ function MovementModal({
           <View style={styles.modalBox}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {isEdit ? editTitle : isDelete ? deleteTitle : successTitle}
+                {isEdit ? editTitle : isDelete ? deleteTitle : finalSuccessTitle}
               </Text>
 
               {isEdit && (
@@ -655,7 +681,7 @@ function MovementModal({
             {isSuccess && (
               <View style={styles.successContent}>
                 <Text style={styles.successText}>
-                  ♡ {successMessage}
+                  ♡ {finalSuccessMessage}
                 </Text>
               </View>
             )}
