@@ -38,6 +38,7 @@ export type Movement = {
   description: string | null;
   amount: number | string;
   currency: string;
+  category_name: string | null;
   movement_date: string;
   created_at: string;
   updated_at: string;

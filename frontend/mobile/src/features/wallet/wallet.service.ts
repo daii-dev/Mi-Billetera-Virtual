@@ -365,3 +365,208 @@ export function money(value: number | string | null | undefined): string {
     maximumFractionDigits: 2,
   })}`;
 }
+
+type ManualMovementPayload = {
+  clerkUserId: string;
+  accountId: string;
+  type: 'income' | 'expense';
+  title: string;
+  amount: number;
+  categoryName: string;
+};
+
+function getMovementDelta(type: 'income' | 'expense', amount: number): number {
+  return type === 'income' ? amount : -amount;
+}
+
+async function adjustAccountBalance(
+  supabase: SupabaseClient,
+  accountId: string,
+  delta: number
+): Promise<void> {
+  const { data: account, error: accountError } = await supabase
+    .from('accounts')
+    .select('id, current_balance')
+    .eq('id', accountId)
+    .single();
+
+  if (accountError) {
+    throw new Error(accountError.message);
+  }
+
+  const currentBalance = Number(account.current_balance ?? 0);
+  const newBalance = currentBalance + delta;
+
+  const { error: updateError } = await supabase
+    .from('accounts')
+    .update({
+      current_balance: newBalance,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', accountId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+}
+
+export async function getMovementsByType(
+  supabase: SupabaseClient,
+  clerkUserId: string,
+  type: 'income' | 'expense'
+): Promise<Movement[]> {
+  const { data, error } = await supabase
+    .from('movements')
+    .select(`
+      *,
+      account:accounts (
+        name
+      )
+    `)
+    .eq('clerk_user_id', clerkUserId)
+    .eq('type', type)
+    .order('movement_date', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as Movement[];
+}
+
+export async function createManualMovement(
+  supabase: SupabaseClient,
+  payload: ManualMovementPayload
+): Promise<Movement> {
+  const cleanTitle = payload.title.trim();
+  const cleanCategory = payload.categoryName.trim();
+
+  const { data, error } = await supabase
+    .from('movements')
+    .insert({
+      clerk_user_id: payload.clerkUserId,
+      account_id: payload.accountId,
+      type: payload.type,
+      source: 'manual',
+      title: cleanTitle,
+      description: null,
+      amount: payload.amount,
+      currency: 'BOB',
+      category_name: cleanCategory,
+      movement_date: new Date().toISOString().slice(0, 10),
+    })
+    .select(`
+      *,
+      account:accounts (
+        name
+      )
+    `)
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const delta = getMovementDelta(payload.type, payload.amount);
+  await adjustAccountBalance(supabase, payload.accountId, delta);
+
+  return data as Movement;
+}
+
+export async function updateManualMovement(
+  supabase: SupabaseClient,
+  movementId: string,
+  payload: ManualMovementPayload
+): Promise<Movement> {
+  const { data: existingMovement, error: existingError } = await supabase
+    .from('movements')
+    .select('*')
+    .eq('id', movementId)
+    .single();
+
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+
+  if (existingMovement.source !== 'manual') {
+    throw new Error('Los movimientos de saldo inicial no se pueden modificar.');
+  }
+
+  const oldAccountId = existingMovement.account_id as string;
+  const oldType = existingMovement.type as 'income' | 'expense';
+  const oldAmount = Number(existingMovement.amount ?? 0);
+  const oldDelta = getMovementDelta(oldType, oldAmount);
+
+  const newDelta = getMovementDelta(payload.type, payload.amount);
+
+  const { data, error } = await supabase
+    .from('movements')
+    .update({
+      account_id: payload.accountId,
+      type: payload.type,
+      title: payload.title.trim(),
+      amount: payload.amount,
+      category_name: payload.categoryName.trim(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', movementId)
+    .select(`
+      *,
+      account:accounts (
+        name
+      )
+    `)
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (oldAccountId === payload.accountId) {
+    await adjustAccountBalance(supabase, payload.accountId, newDelta - oldDelta);
+  } else {
+    await adjustAccountBalance(supabase, oldAccountId, -oldDelta);
+    await adjustAccountBalance(supabase, payload.accountId, newDelta);
+  }
+
+  return data as Movement;
+}
+
+export async function deleteManualMovement(
+  supabase: SupabaseClient,
+  movementId: string
+): Promise<void> {
+  const { data: existingMovement, error: existingError } = await supabase
+    .from('movements')
+    .select('*')
+    .eq('id', movementId)
+    .single();
+
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+
+  if (existingMovement.source !== 'manual') {
+    throw new Error('Los movimientos de saldo inicial no se pueden eliminar.');
+  }
+
+  const movementType = existingMovement.type as 'income' | 'expense';
+  const amount = Number(existingMovement.amount ?? 0);
+  const delta = getMovementDelta(movementType, amount);
+
+  const { error } = await supabase
+    .from('movements')
+    .delete()
+    .eq('id', movementId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await adjustAccountBalance(
+    supabase,
+    existingMovement.account_id,
+    -delta
+  );
+}

@@ -8,6 +8,7 @@ import { router } from 'expo-router';
 import {
   LogOut,
   Menu,
+  MoreVertical,
   TrendingDown,
   TrendingUp,
   Wallet,
@@ -245,6 +246,7 @@ export default function HomeScreen() {
         <View style={styles.actionsRow}>
           <Pressable
             style={styles.incomeButton}
+            onPress={() => router.push('/income')}
           >
             <TrendingUp size={25} color="#FFFFFF" />
             <Text style={styles.actionText}>Ingreso</Text>
@@ -252,6 +254,7 @@ export default function HomeScreen() {
 
           <Pressable
             style={styles.expenseButton}
+            onPress={() => router.push('/expense')}
           >
             <TrendingDown size={25} color="#FFFFFF" />
             <Text style={styles.actionText}>Gasto</Text>
@@ -281,21 +284,47 @@ export default function HomeScreen() {
                   <Text style={styles.movementSubtitle}>
                     💼 {accountName}
                   </Text>
+
+                  {movement.category_name && (
+                    <Text style={styles.movementSubtitle}>
+                      ♟ {movement.category_name}
+                    </Text>
+                  )}
+
                   <Text style={styles.movementDate}>
                     📅 {movement.movement_date}
                   </Text>
                 </View>
 
-                <Text
-                  style={[
-                    styles.movementAmount,
-                    {
-                      color: isIncome ? colors.secondary : colors.expense,
-                    },
-                  ]}
-                >
-                  {sign}{money(movement.amount)}
-                </Text>
+                <View style={styles.movementRightBox}>
+                  {movement.source === 'manual' && (
+                    <Pressable
+                      onPress={() =>
+                        router.push({
+                          pathname: movement.type === 'income' ? '/income' : '/expense',
+                          params: {
+                            editId: movement.id,
+                          },
+                        })
+                      }
+                      hitSlop={10}
+                      style={styles.movementMenuButton}
+                    >
+                      <MoreVertical size={22} color={theme.colors.textSecondary} />
+                    </Pressable>
+                  )}
+
+                  <Text
+                    style={[
+                      styles.movementAmount,
+                      {
+                        color: isIncome ? colors.secondary : colors.expense,
+                      },
+                    ]}
+                  >
+                    {sign}{money(movement.amount)}
+                  </Text>
+                </View>
               </View>
             );
           })
@@ -494,6 +523,14 @@ function createStyles(theme: AppTheme) {
       marginTop: 14,
       color: theme.colors.text,
       fontWeight: '800',
+    },
+    movementRightBox: {
+      alignItems: 'flex-end',
+      justifyContent: 'space-between',
+      minHeight: 64,
+    },
+    movementMenuButton: {
+      padding: 2,
     },
   });
 }
