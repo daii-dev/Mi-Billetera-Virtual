@@ -34,3 +34,30 @@ export type UpdateSavingsGoalParams = {
 };
 
 export type SavingsGoalStatus = 'activa' | 'completada' | 'vencida';
+
+export type AbonoMetaAhorro = {
+  id_abono: string;
+  meta_id: string;
+  cuenta_id: string;
+  movimiento_id: string | null;
+  usuario_clerk_id: string;
+  monto: number | string;
+  fecha_abono: string;
+  nota: string | null;
+  creado_en: string;
+};
+
+export type RegisterGoalContributionParams = {
+  meta_id: string;
+  cuenta_id: string;
+  monto: number;
+  nota?: string | null;
+};
+
+export type GoalSavingsNeeded = {
+  remainingAmount: number;
+  daysRemaining: number;
+  daily: number;
+  weekly: number;
+  monthly: number;
+};

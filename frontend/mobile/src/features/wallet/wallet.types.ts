@@ -24,9 +24,11 @@ export type WalletStatus = {
   initialBalanceConfigured: boolean;
 };
 
-export type MovementType = 'income' | 'expense';
+export type MovementType = 'income' | 'expense' | 'ahorro';
 
-export type MovementSource = 'initial_balance' | 'manual';
+export type ManualMovementType = 'income' | 'expense';
+
+export type MovementSource = 'initial_balance' | 'manual' | 'savings_goal';
 
 export type Movement = {
   id: string;

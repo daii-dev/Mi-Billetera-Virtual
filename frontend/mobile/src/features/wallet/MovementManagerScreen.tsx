@@ -44,8 +44,8 @@ import {
 } from '@/features/wallet/wallet.service';
 import {
   Account,
+  ManualMovementType,
   Movement,
-  MovementType,
 } from '@/features/wallet/wallet.types';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
@@ -58,7 +58,7 @@ import { useAuth } from '@clerk/expo';
 type ModalMode = 'form' | 'edit' | 'delete' | 'success' | null;
 
 type MovementManagerScreenProps = {
-  type: MovementType;
+  type: ManualMovementType;
   title: string;
   listTitle: string;
   registerButtonText: string;
@@ -513,7 +513,7 @@ export function MovementManagerScreen({
 type MovementModalProps = {
   mode: ModalMode;
   styles: ReturnType<typeof createStyles>;
-  type: MovementType;
+  type: ManualMovementType;
   successAction: 'create' | 'edit';
   registerTitle: string;
   editTitle: string;

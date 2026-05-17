@@ -52,6 +52,7 @@ import {
 } from '@/features/wallet/wallet.service';
 import {
   Account,
+  ManualMovementType,
   Movement,
   MovementType,
 } from '@/features/wallet/wallet.types';
@@ -198,7 +199,11 @@ export default function HomeScreen() {
     }
   }
 
-  function getCategoriesByType(type: MovementType) {
+  function isManualMovementType(type: MovementType): type is ManualMovementType {
+    return type === 'income' || type === 'expense';
+  }
+
+  function getCategoriesByType(type: ManualMovementType) {
     return type === 'income' ? incomeCategories : expenseCategories;
   }
 
@@ -207,7 +212,7 @@ export default function HomeScreen() {
   }
 
   function openMovementEditModal(movement: Movement) {
-    if (movement.source !== 'manual') {
+    if (movement.source !== 'manual' || !isManualMovementType(movement.type)) {
       return;
     }
 
@@ -285,7 +290,7 @@ export default function HomeScreen() {
   }
 
   async function handleUpdateMovementFromHome() {
-    if (!userId || !selectedMovement) return;
+    if (!userId || !selectedMovement || !isManualMovementType(selectedMovement.type)) return;
 
     const form = validateMovementForm();
 
