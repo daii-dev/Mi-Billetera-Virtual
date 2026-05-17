@@ -78,6 +78,26 @@ export async function getSavingsGoals(
   return (data || []) as SavingsGoal[];
 }
 
+export async function getCompletedSavingsGoals(
+  supabase: SupabaseClient,
+  clerkUserId: string
+): Promise<SavingsGoal[]> {
+  const { data, error } = await supabase
+    .from('metas_ahorro')
+    .select('*')
+    .eq('usuario_clerk_id', clerkUserId)
+    .eq('visible', true)
+    .eq('estado', 'completada')
+    .order('actualizado_en', { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data || []) as SavingsGoal[];
+}
+
+
 export async function getSavingsGoalById(
   supabase: SupabaseClient,
   clerkUserId: string,

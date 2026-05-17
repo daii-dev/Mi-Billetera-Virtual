@@ -51,8 +51,9 @@ export function GoalCard({ goal, onEdit, onDelete, onContribute }: GoalCardProps
 
   const daysRemaining = calculateDaysRemaining(goal.fecha_limite);
   const isCompleted = goal.estado === 'completada';
+  const isSpent = goal.estado === 'gastada';
   const isExpired = goal.estado === 'vencida' || (!isCompleted && daysRemaining < 0);
-  const canContribute = !isCompleted && !isExpired;
+  const canContribute = !isCompleted && !isExpired && !isSpent;
   const accentColor = isExpired ? colors.gray : goal.color || colors.secondary;
   const Icon = iconMap[goal.icono as keyof typeof iconMap] || PiggyBank;
   const progress = calculateProgress(goal.monto_actual, goal.monto_objetivo);
@@ -128,6 +129,8 @@ export function GoalCard({ goal, onEdit, onDelete, onContribute }: GoalCardProps
         <Text style={styles.daysText}>
           {isCompleted
             ? 'Meta alcanzada'
+            : isSpent
+            ? 'Meta gastada'
             : daysRemaining > 0
             ? `${daysRemaining} dias restantes`
             : 'Fecha limite vencida'}
@@ -140,7 +143,7 @@ export function GoalCard({ goal, onEdit, onDelete, onContribute }: GoalCardProps
         isExpired && styles.statusExpired,
       ]}>
         <Text style={styles.statusText}>
-          {isCompleted ? 'Completada' : isExpired ? 'Vencida' : 'Activa'}
+          {isCompleted ? 'Completada' : isSpent ? 'Gastada' : isExpired ? 'Vencida' : 'Activa'}
         </Text>
       </View>
 

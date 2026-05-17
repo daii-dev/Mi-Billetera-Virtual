@@ -254,8 +254,9 @@ function GoalProgressDetail({
   const savingsNeeded = calculateSavingsNeeded(goal);
   const daysRemaining = calculateDaysRemaining(goal.fecha_limite);
   const isCompleted = goal.estado === 'completada';
+  const isSpent = goal.estado === 'gastada';
   const isExpired = goal.estado === 'vencida' || (!isCompleted && daysRemaining < 0);
-  const canContribute = !isCompleted && !isExpired;
+  const canContribute = !isCompleted && !isExpired && !isSpent;
 
   return (
     <View style={styles.detailCard}>
@@ -267,7 +268,7 @@ function GoalProgressDetail({
           isExpired && styles.statusExpired,
         ]}>
           <Text style={styles.statusText}>
-            {isCompleted ? 'Completada' : isExpired ? 'Vencida' : 'Activa'}
+            {isCompleted ? 'Completada' : isSpent ? 'Gastada' : isExpired ? 'Vencida' : 'Activa'}
           </Text>
         </View>
       </View>
@@ -292,7 +293,7 @@ function GoalProgressDetail({
         <Metric label="Faltante" value={money(remainingAmount)} />
         <Metric
           label="Tiempo"
-          value={isCompleted ? 'Completada' : daysRemaining > 0 ? `${daysRemaining} dias` : 'Vencida'}
+          value={isSpent ? 'Gastada' : isCompleted ? 'Completada' : daysRemaining > 0 ? `${daysRemaining} dias` : 'Vencida'}
         />
       </View>
 

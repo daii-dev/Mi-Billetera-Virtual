@@ -8,7 +8,7 @@ export type SavingsGoal = {
   cuenta_id: string | null;
   icono: string | null;
   color: string | null;
-  estado: string;
+  estado: SavingsGoalStatus;
   visible: boolean;
   creado_en: string;
   actualizado_en: string;
@@ -30,7 +30,7 @@ export type UpdateSavingsGoalParams = {
   color?: string | null;
 };
 
-export type SavingsGoalStatus = 'activa' | 'completada' | 'vencida';
+export type SavingsGoalStatus = 'activa' | 'completada' | 'vencida' | 'gastada';
 
 export type AbonoMetaAhorro = {
   id_abono: string;

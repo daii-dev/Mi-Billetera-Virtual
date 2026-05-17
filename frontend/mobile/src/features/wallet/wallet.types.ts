@@ -34,6 +34,7 @@ export type Movement = {
   id: string;
   clerk_user_id: string;
   account_id: string;
+  meta_id?: string | null;
   type: MovementType;
   source: MovementSource;
   title: string;
