@@ -33,11 +33,15 @@ import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { AppButton } from '@/components/ui/AppButton';
 import {
   deleteSavingsGoal,
+  getGoalDeletionRefundSummary,
   getSavingsGoals,
   registerGoalContribution,
   updateExpiredGoalsIfNeeded,
 } from '@/features/savings-goals/savings-goals.service';
-import { SavingsGoal } from '@/features/savings-goals/savings-goals.types';
+import {
+  GoalDeletionRefundSummary,
+  SavingsGoal,
+} from '@/features/savings-goals/savings-goals.types';
 import {
   getUserAccounts,
   getUserProfile,
@@ -163,26 +167,41 @@ export default function GoalsScreen() {
     }
   }
 
-  function handleDelete(goal: SavingsGoal) {
-    Alert.alert(
-      'Eliminar meta',
-      `Quieres eliminar "${goal.nombre}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteSavingsGoal(supabase, userId || '', goal.id_meta);
-              setGoals((current) => current.filter((item) => item.id_meta !== goal.id_meta));
-            } catch (error: any) {
-              Alert.alert('Error', error?.message || 'No se pudo eliminar la meta');
-            }
+  async function handleDelete(goal: SavingsGoal) {
+    if (!userId) return;
+
+    try {
+      const refundSummary = await getGoalDeletionRefundSummary(supabase, userId, goal.id_meta);
+      const message = buildDeleteConfirmationMessage(goal, refundSummary);
+
+      Alert.alert(
+        'Eliminar meta',
+        message,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Eliminar y devolver',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await deleteSavingsGoal(supabase, goal.id_meta);
+                const [freshGoals, freshAccounts] = await Promise.all([
+                  getSavingsGoals(supabase, userId),
+                  getUserAccounts(supabase, userId),
+                ]);
+
+                setGoals(freshGoals);
+                setAccounts(freshAccounts);
+              } catch (error: any) {
+                Alert.alert('Error', error?.message || 'No se pudo eliminar la meta');
+              }
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'No se pudo preparar la eliminacion de la meta');
+    }
   }
 
   function openContributionModal(goal: SavingsGoal) {
@@ -349,6 +368,27 @@ export default function GoalsScreen() {
       />
     </View>
   );
+}
+
+function buildDeleteConfirmationMessage(
+  goal: SavingsGoal,
+  refundSummary: GoalDeletionRefundSummary
+) {
+  const currentAmount = Number(goal.monto_actual ?? 0);
+
+  if (currentAmount <= 0) {
+    return '¿Deseas eliminar esta meta de ahorro?';
+  }
+
+  if (refundSummary.accounts.length === 1) {
+    return `Al eliminar esta meta, se te devolverán ${money(currentAmount)} a tu cuenta ${refundSummary.accounts[0].accountName}. ¿Deseas continuar?`;
+  }
+
+  if (refundSummary.accounts.length > 1) {
+    return 'Al eliminar esta meta, se devolverán los abonos a las cuentas desde las que fueron realizados. ¿Deseas continuar?';
+  }
+
+  return `Al eliminar esta meta, se te devolverán ${money(currentAmount)} a tu(s) cuenta(s). ¿Deseas continuar?`;
 }
 
 function createStyles(theme: AppTheme) {

@@ -25,12 +25,9 @@ export type CreateSavingsGoalParams = {
 
 export type UpdateSavingsGoalParams = {
   nombre?: string;
-  monto_objetivo?: number;
   fecha_limite?: string;
-  cuenta_id?: string | null;
   icono?: string | null;
   color?: string | null;
-  estado?: string;
 };
 
 export type SavingsGoalStatus = 'activa' | 'completada' | 'vencida';
@@ -63,4 +60,13 @@ export type GoalSavingsNeeded = {
   daily: number;
   weekly: number;
   monthly: number;
+};
+
+export type GoalDeletionRefundSummary = {
+  totalAmount: number;
+  accounts: Array<{
+    accountId: string;
+    accountName: string;
+    amount: number;
+  }>;
 };

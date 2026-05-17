@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   AbonoMetaAhorro,
   CreateSavingsGoalParams,
+  GoalDeletionRefundSummary,
   GoalSavingsNeeded,
   RegisterGoalContributionParams,
   SavingsGoal,
@@ -144,6 +145,50 @@ export async function registerGoalContribution(
   return data as SavingsGoal;
 }
 
+export async function getGoalDeletionRefundSummary(
+  supabase: SupabaseClient,
+  clerkUserId: string,
+  goalId: string
+): Promise<GoalDeletionRefundSummary> {
+  const { data, error } = await supabase
+    .from('abonos_metas_ahorro')
+    .select(`
+      cuenta_id,
+      monto,
+      account:accounts (
+        name
+      )
+    `)
+    .eq('meta_id', goalId)
+    .eq('usuario_clerk_id', clerkUserId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const accountsById = new Map<string, { accountId: string; accountName: string; amount: number }>();
+
+  (data || []).forEach((contribution: any) => {
+    const accountId = contribution.cuenta_id as string;
+    const current = accountsById.get(accountId);
+    const amount = Number(contribution.monto ?? 0);
+    const accountName = contribution.account?.name || 'Cuenta';
+
+    accountsById.set(accountId, {
+      accountId,
+      accountName: current?.accountName ?? accountName,
+      amount: (current?.amount ?? 0) + amount,
+    });
+  });
+
+  const accounts = Array.from(accountsById.values());
+
+  return {
+    totalAmount: accounts.reduce((sum, account) => sum + account.amount, 0),
+    accounts,
+  };
+}
+
 export async function updateExpiredGoalsIfNeeded(
   supabase: SupabaseClient,
   clerkUserId: string
@@ -179,10 +224,6 @@ export async function updateSavingsGoal(
     throw new Error('La fecha límite debe ser una fecha futura');
   }
 
-  if (params.monto_objetivo !== undefined && params.monto_objetivo <= 0) {
-    throw new Error('El monto objetivo debe ser mayor a 0');
-  }
-
   if (params.nombre !== undefined && params.nombre.length > 50) {
     throw new Error('El nombre debe tener máximo 50 caracteres');
   }
@@ -194,14 +235,8 @@ export async function updateSavingsGoal(
   if (params.nombre !== undefined) {
     updateData.nombre = params.nombre.trim();
   }
-  if (params.monto_objetivo !== undefined) {
-    updateData.monto_objetivo = params.monto_objetivo;
-  }
   if (params.fecha_limite !== undefined) {
     updateData.fecha_limite = params.fecha_limite;
-  }
-  if (params.cuenta_id !== undefined) {
-    updateData.cuenta_id = params.cuenta_id;
   }
   if (params.icono !== undefined) {
     updateData.icono = params.icono;
@@ -209,10 +244,6 @@ export async function updateSavingsGoal(
   if (params.color !== undefined) {
     updateData.color = params.color;
   }
-  if (params.estado !== undefined) {
-    updateData.estado = params.estado;
-  }
-
   const { data, error } = await supabase
     .from('metas_ahorro')
     .update(updateData)
@@ -230,21 +261,17 @@ export async function updateSavingsGoal(
 
 export async function deleteSavingsGoal(
   supabase: SupabaseClient,
-  clerkUserId: string,
   goalId: string
-): Promise<void> {
-  const { error } = await supabase
-    .from('metas_ahorro')
-    .update({
-      visible: false,
-      actualizado_en: new Date().toISOString(),
-    })
-    .eq('id_meta', goalId)
-    .eq('usuario_clerk_id', clerkUserId);
+): Promise<SavingsGoal> {
+  const { data, error } = await supabase.rpc('eliminar_meta_ahorro', {
+    p_meta_id: goalId,
+  });
 
   if (error) {
     throw new Error(error.message);
   }
+
+  return data as SavingsGoal;
 }
 
 export function calculateDaysRemaining(fechaLimite: string): number {

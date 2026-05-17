@@ -13,6 +13,10 @@ import { AppButton } from '@/components/ui/AppButton';
 import { AppInput } from '@/components/ui/AppInput';
 import { SavingsGoal } from '@/features/savings-goals/savings-goals.types';
 import {
+  calculateDaysRemaining,
+  calculateRemainingAmount,
+} from '@/features/savings-goals/savings-goals.service';
+import {
   formatMoneyInput,
   isValidMoneyInput,
   parseMoneyInput,
@@ -56,6 +60,7 @@ export function GoalContributionModal({
   const [error, setError] = useState('');
 
   const selectedAccount = accounts.find((account) => account.id === selectedAccountId) ?? null;
+  const remainingAmount = goal ? calculateRemainingAmount(goal) : 0;
 
   useEffect(() => {
     if (visible) {
@@ -94,9 +99,20 @@ export function GoalContributionModal({
     }
 
     const amount = parseMoneyInput(cleanAmount);
+    const daysRemaining = goal ? calculateDaysRemaining(goal.fecha_limite) : 0;
 
     if (amount <= 0) {
       setError('El monto debe ser mayor a 0');
+      return;
+    }
+
+    if (!goal || goal.estado !== 'activa' || daysRemaining < 0) {
+      setError('No se pueden registrar abonos en metas completadas o vencidas');
+      return;
+    }
+
+    if (amount > remainingAmount) {
+      setError('El abono no puede superar el monto faltante de la meta');
       return;
     }
 
@@ -174,6 +190,11 @@ export function GoalContributionModal({
               <Text style={styles.availableBalance}>
                 {selectedAccount ? money(selectedAccount.current_balance) : 'Selecciona una cuenta'}
               </Text>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Monto faltante</Text>
+              <Text style={styles.remainingAmount}>{money(remainingAmount)}</Text>
             </View>
 
             <View style={styles.field}>
@@ -294,6 +315,11 @@ function createStyles(theme: AppTheme) {
     },
     availableBalance: {
       color: colors.secondary,
+      fontSize: 18,
+      fontWeight: '900',
+    },
+    remainingAmount: {
+      color: colors.expense,
       fontSize: 18,
       fontWeight: '900',
     },

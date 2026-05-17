@@ -55,7 +55,7 @@ import { useAuth } from '@clerk/expo';
 
 type FormSubmitValues = {
   nombre: string;
-  monto_objetivo: number;
+  monto_objetivo?: number;
   fecha_limite: string;
   cuenta_id: string | null;
   icono: string | null;
@@ -129,9 +129,7 @@ export default function EditGoalScreen() {
       setSaving(true);
       await updateSavingsGoal(supabase, userId, id, {
         nombre: values.nombre,
-        monto_objetivo: values.monto_objetivo,
         fecha_limite: values.fecha_limite,
-        cuenta_id: values.cuenta_id,
         icono: values.icono,
         color: values.color,
       });
