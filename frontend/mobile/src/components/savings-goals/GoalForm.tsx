@@ -1,0 +1,386 @@
+import {
+  Calendar,
+  Check,
+  Gift,
+  GraduationCap,
+  Home,
+  PiggyBank,
+  Plane,
+  Target,
+} from 'lucide-react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
+
+import { AppButton } from '@/components/ui/AppButton';
+import { AppInput } from '@/components/ui/AppInput';
+import { SavingsGoal } from '@/features/savings-goals/savings-goals.types';
+import { Account } from '@/features/wallet/wallet.types';
+import { colors } from '@/theme/colors';
+import {
+  AppTheme,
+  useAppTheme,
+} from '@/theme/ThemeContext';
+import { useMemo, useState } from 'react';
+
+type GoalFormValues = {
+  nombre: string;
+  montoObjetivo: string;
+  fechaLimite: string;
+  cuentaId: string | null;
+  icono: string | null;
+  color: string | null;
+};
+
+type GoalFormSubmitValues = {
+  nombre: string;
+  monto_objetivo: number;
+  fecha_limite: string;
+  cuenta_id: string | null;
+  icono: string | null;
+  color: string | null;
+};
+
+type GoalFormProps = {
+  initialGoal?: SavingsGoal | null;
+  personalAccount?: Account | null;
+  submitLabel: string;
+  loading?: boolean;
+  onSubmit: (values: GoalFormSubmitValues) => Promise<void> | void;
+};
+
+const iconOptions = [
+  { value: 'piggy-bank', Icon: PiggyBank },
+  { value: 'target', Icon: Target },
+  { value: 'plane', Icon: Plane },
+  { value: 'home', Icon: Home },
+  { value: 'gift', Icon: Gift },
+  { value: 'education', Icon: GraduationCap },
+];
+
+const colorOptions = [
+  '#53FF35',
+  '#082B8C',
+  '#FF5A5F',
+  '#F7C948',
+  '#7C3AED',
+  '#0EA5E9',
+];
+
+export function GoalForm({
+  initialGoal,
+  personalAccount,
+  submitLabel,
+  loading = false,
+  onSubmit,
+}: GoalFormProps) {
+  const { theme } = useAppTheme();
+  const styles = createStyles(theme);
+
+  const initialValues = useMemo<GoalFormValues>(() => ({
+    nombre: initialGoal?.nombre ?? '',
+    montoObjetivo: initialGoal ? String(initialGoal.monto_objetivo) : '',
+    fechaLimite: initialGoal?.fecha_limite ?? '',
+    cuentaId: initialGoal?.cuenta_id ?? null,
+    icono: initialGoal?.icono ?? 'piggy-bank',
+    color: initialGoal?.color ?? '#53FF35',
+  }), [initialGoal]);
+
+  const [values, setValues] = useState(initialValues);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const hasPersonalAccount = Boolean(personalAccount?.id);
+  const associateAccount = hasPersonalAccount && values.cuentaId === personalAccount?.id;
+
+  function setValue<K extends keyof GoalFormValues>(key: K, value: GoalFormValues[K]) {
+    setValues((current) => ({
+      ...current,
+      [key]: value,
+    }));
+    setErrors((current) => ({
+      ...current,
+      [key]: '',
+    }));
+  }
+
+  async function handleSubmit() {
+    const nextErrors = validate(values);
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    await onSubmit({
+      nombre: values.nombre.trim(),
+      monto_objetivo: Number(normalizeAmount(values.montoObjetivo)),
+      fecha_limite: values.fechaLimite,
+      cuenta_id: values.cuentaId,
+      icono: values.icono,
+      color: values.color,
+    });
+  }
+
+  return (
+    <View style={styles.form}>
+      <View style={styles.field}>
+        <Text style={styles.label}>Nombre de la meta</Text>
+        <AppInput
+          value={values.nombre}
+          onChangeText={(text) => setValue('nombre', text)}
+          placeholder="Ej. Viaje, emergencia, estudios"
+          maxLength={50}
+          autoCapitalize="sentences"
+        />
+        <View style={styles.helpRow}>
+          <Text style={styles.errorText}>{errors.nombre}</Text>
+          <Text style={styles.counter}>{values.nombre.length}/50</Text>
+        </View>
+      </View>
+
+      <View style={styles.field}>
+        <Text style={styles.label}>Monto objetivo</Text>
+        <AppInput
+          value={values.montoObjetivo}
+          onChangeText={(text) => setValue('montoObjetivo', text)}
+          placeholder="0.00"
+          keyboardType="decimal-pad"
+        />
+        <Text style={styles.errorText}>{errors.montoObjetivo}</Text>
+      </View>
+
+      <View style={styles.field}>
+        <Text style={styles.label}>Fecha limite</Text>
+        <AppInput
+          value={values.fechaLimite}
+          onChangeText={(text) => setValue('fechaLimite', text)}
+          placeholder="AAAA-MM-DD"
+          keyboardType="numbers-and-punctuation"
+          leftIcon={<Calendar size={18} color={colors.gray} />}
+        />
+        <Text style={styles.errorText}>{errors.fechaLimite}</Text>
+      </View>
+
+      {hasPersonalAccount && (
+        <View style={styles.accountRow}>
+          <View style={styles.accountTextBox}>
+            <Text style={styles.label}>Cuenta asociada</Text>
+            <Text style={styles.accountName}>{personalAccount?.name}</Text>
+          </View>
+          <Switch
+            value={associateAccount}
+            onValueChange={(enabled) => {
+              setValue('cuentaId', enabled ? personalAccount?.id ?? null : null);
+            }}
+            trackColor={{
+              false: '#D9D9D9',
+              true: '#A7E3FF',
+            }}
+            thumbColor={associateAccount ? colors.primary : '#F4F4F4'}
+          />
+        </View>
+      )}
+
+      <View style={styles.field}>
+        <Text style={styles.label}>Icono</Text>
+        <View style={styles.optionGrid}>
+          {iconOptions.map(({ value, Icon }) => {
+            const selected = values.icono === value;
+
+            return (
+              <Pressable
+                key={value}
+                onPress={() => setValue('icono', selected ? null : value)}
+                style={[
+                  styles.iconOption,
+                  selected && styles.optionSelected,
+                ]}
+              >
+                <Icon
+                  size={22}
+                  color={selected ? '#FFFFFF' : theme.colors.primary}
+                />
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      <View style={styles.field}>
+        <Text style={styles.label}>Color</Text>
+        <View style={styles.colorRow}>
+          {colorOptions.map((option) => {
+            const selected = values.color === option;
+
+            return (
+              <Pressable
+                key={option}
+                onPress={() => setValue('color', selected ? null : option)}
+                style={[
+                  styles.colorOption,
+                  { backgroundColor: option },
+                  selected && styles.colorSelected,
+                ]}
+              >
+                {selected && <Check size={18} color="#FFFFFF" />}
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      <View style={styles.infoBox}>
+        <Text style={styles.infoText}>
+          El monto actual se mantiene en Bs. 0,00 al crear la meta. Los abonos estaran disponibles en HU-16.
+        </Text>
+      </View>
+
+      <AppButton
+        title={submitLabel}
+        onPress={handleSubmit}
+        loading={loading}
+      />
+    </View>
+  );
+}
+
+function normalizeAmount(value: string) {
+  return value.replace(',', '.').trim();
+}
+
+function validate(values: GoalFormValues) {
+  const errors: Record<string, string> = {};
+  const cleanName = values.nombre.trim();
+  const amount = Number(normalizeAmount(values.montoObjetivo));
+  const date = new Date(`${values.fechaLimite}T00:00:00`);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (!cleanName) {
+    errors.nombre = 'El nombre es obligatorio';
+  } else if (cleanName.length > 50) {
+    errors.nombre = 'Maximo 50 caracteres';
+  }
+
+  if (!values.montoObjetivo.trim()) {
+    errors.montoObjetivo = 'El monto objetivo es obligatorio';
+  } else if (!Number.isFinite(amount) || amount <= 0) {
+    errors.montoObjetivo = 'Debe ser mayor a 0';
+  }
+
+  if (!values.fechaLimite.trim()) {
+    errors.fechaLimite = 'La fecha limite es obligatoria';
+  } else if (!/^\d{4}-\d{2}-\d{2}$/.test(values.fechaLimite) || Number.isNaN(date.getTime())) {
+    errors.fechaLimite = 'Usa el formato AAAA-MM-DD';
+  } else if (date <= today) {
+    errors.fechaLimite = 'Debe ser una fecha futura';
+  }
+
+  return errors;
+}
+
+function createStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    form: {
+      gap: 14,
+    },
+    field: {
+      gap: 7,
+    },
+    label: {
+      color: theme.colors.text,
+      fontSize: 13,
+      fontWeight: '900',
+    },
+    helpRow: {
+      minHeight: 18,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: 10,
+    },
+    counter: {
+      color: theme.colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    errorText: {
+      minHeight: 18,
+      color: colors.expense,
+      fontSize: 12,
+      fontWeight: '700',
+      flex: 1,
+    },
+    accountRow: {
+      minHeight: 64,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.card,
+      paddingHorizontal: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    accountTextBox: {
+      flex: 1,
+    },
+    accountName: {
+      marginTop: 4,
+      color: theme.colors.textSecondary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    optionGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+    iconOption: {
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.colors.card,
+    },
+    optionSelected: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    colorRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+    colorOption: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    colorSelected: {
+      borderWidth: 3,
+      borderColor: theme.mode === 'dark' ? '#FFFFFF' : '#111827',
+    },
+    infoBox: {
+      borderRadius: 12,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.mode === 'dark' ? '#0F172A' : '#F8FAFC',
+    },
+    infoText: {
+      color: theme.colors.textSecondary,
+      fontSize: 12,
+      lineHeight: 18,
+      fontWeight: '700',
+    },
+  });
+}

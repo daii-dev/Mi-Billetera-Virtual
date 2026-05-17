@@ -157,6 +157,12 @@ export default function HomeScreen() {
     if (item.key === 'home') {
       return;
     }
+
+    setSidebarVisible(false);
+
+    if (item.key === 'goals') {
+      router.push('/goals');
+    }
   }
 
   if (loading && !account) {
