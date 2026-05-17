@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
   Account,
+  Budget,
   Movement,
   Profile,
   WalletStatus,
@@ -569,4 +570,76 @@ export async function deleteManualMovement(
     existingMovement.account_id,
     -delta
   );
+}
+
+
+
+// Obtener presupuestos del usuario
+export async function getBudgets(supabase: any, userId: string) {
+  const { data, error } = await supabase
+    .from('budgets') // Asegúrate de que en Supabase se llame 'budgets' con 's'
+    .select('*')
+    .eq('clerk_user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+// Calcular gasto actual para un presupuesto específico
+export async function getCategorySpent(
+  supabase: any, 
+  userId: string, 
+  category: string, 
+  month: number | null, 
+  year: number, 
+  accountId?: string | null
+) {
+  let query = supabase
+    .from('movements')
+    .select('amount')
+    .eq('clerk_user_id', userId)
+    .eq('type', 'expense')
+    .eq('category_name', category);
+
+  // Si el presupuesto es mensual, filtramos por el mes y año
+  if (month) {
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    // El último día del mes
+    const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+    query = query.gte('movement_date', startDate).lte('movement_date', endDate);
+  }
+
+  // Si el presupuesto está amarrado a una cuenta específica
+  if (accountId) {
+    query = query.eq('account_id', accountId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return data?.reduce((acc: number, m: any) => acc + Number(m.amount), 0) || 0;
+}
+
+export async function saveBudget(supabase: any, budgetData: any) {
+  // Primero verificamos si ya existe uno para evitar el error del Criterio de Aceptación
+  const { data: existing } = await supabase
+    .from('budgets')
+    .select('id')
+    .eq('clerk_user_id', budgetData.clerk_user_id)
+    .eq('category_name', budgetData.category_name)
+    .eq('period_type', budgetData.period_type)
+    .eq('period_month', budgetData.period_month)
+    .eq('period_year', budgetData.period_year)
+    .maybeSingle();
+
+  if (existing) {
+    throw new Error('Ya existe un presupuesto para esa categoría en este período.');
+  }
+
+  const { error } = await supabase
+    .from('budgets')
+    .insert(budgetData);
+
+  if (error) throw error;
 }

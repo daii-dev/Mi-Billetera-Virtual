@@ -344,18 +344,16 @@ export default function HomeScreen() {
 
   function handleSelectSidebarItem(item: { key: string; label: string }) {
     setSelectedSidebarItem(item.key);
+  setSidebarVisible(false); 
 
-    if (item.key === 'home') {
-      setSidebarVisible(false);
-      return;
-    }
-
-    if (item.key === 'accounts') {
-      setSidebarVisible(false);
-      router.push('/accounts');
-      return;
-    }
+  if (item.key === 'home') {
+    router.push('/home');
+  } else if (item.key === 'accounts') {
+    router.push('/accounts');
+  } else if (item.key === 'budgets') {
+    router.push('/budgets'); 
   }
+}
 
   if (loading && !account) {
     return (
