@@ -34,7 +34,7 @@ const sidebarItems: SidebarItem[] = [
   { key: 'accounts', label: 'Cuentas', icon: '👛' },
   { key: 'categories', label: 'Categorias', icon: '🔷' },
   { key: 'budgets', label: 'Presupuestos', icon: '💰' },
-  { key: 'savings', label: 'Metas de Ahorro', icon: '🐷' },
+  { key: 'goals', label: 'Metas de Ahorro', icon: '🐷' },
   { key: 'planned-payments', label: 'Pagos Planificados', icon: '🤲' },
   { key: 'shopping-list', label: 'Lista de Compras', icon: '🛒' },
   { key: 'debts', label: 'Deudas', icon: '💸' },
