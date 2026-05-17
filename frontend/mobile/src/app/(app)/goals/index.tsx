@@ -28,17 +28,22 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoalCard } from '@/components/savings-goals/GoalCard';
+import { GoalContributionModal } from '@/components/savings-goals/GoalContributionModal';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { AppButton } from '@/components/ui/AppButton';
 import {
   deleteSavingsGoal,
   getSavingsGoals,
+  registerGoalContribution,
+  updateExpiredGoalsIfNeeded,
 } from '@/features/savings-goals/savings-goals.service';
 import { SavingsGoal } from '@/features/savings-goals/savings-goals.types';
 import {
+  getUserAccounts,
   getUserProfile,
   money,
 } from '@/features/wallet/wallet.service';
+import { Account } from '@/features/wallet/wallet.types';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
@@ -65,6 +70,10 @@ export default function GoalsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [selectedGoal, setSelectedGoal] = useState<SavingsGoal | null>(null);
+  const [contributionModalVisible, setContributionModalVisible] = useState(false);
+  const [savingContribution, setSavingContribution] = useState(false);
 
   const openSidebarPanResponder = useRef(
     PanResponder.create({
@@ -98,9 +107,12 @@ export default function GoalsScreen() {
         setLoading(true);
       }
 
-      const [goalsData, profile] = await Promise.all([
+      await updateExpiredGoalsIfNeeded(supabase, userId);
+
+      const [goalsData, profile, userAccounts] = await Promise.all([
         getSavingsGoals(supabase, userId),
         getUserProfile(supabase, userId),
+        getUserAccounts(supabase, userId),
       ]);
 
       const fallbackName =
@@ -109,7 +121,8 @@ export default function GoalsScreen() {
         'Usuario';
 
       setProfileName(profile?.full_name || fallbackName);
-      setGoals(goalsData.filter((goal) => goal.estado === 'activa'));
+      setAccounts(userAccounts);
+      setGoals(goalsData);
     } catch (error: any) {
       Alert.alert('Error', error?.message || 'No se pudieron cargar tus metas');
     } finally {
@@ -170,6 +183,63 @@ export default function GoalsScreen() {
         },
       ]
     );
+  }
+
+  function openContributionModal(goal: SavingsGoal) {
+    setSelectedGoal(goal);
+    setContributionModalVisible(true);
+  }
+
+  function closeContributionModal() {
+    if (savingContribution) return;
+
+    setContributionModalVisible(false);
+    setSelectedGoal(null);
+  }
+
+  async function handleRegisterContribution(params: {
+    cuentaId: string;
+    monto: number;
+    nota: string | null;
+  }) {
+    if (!selectedGoal) return;
+
+    try {
+      setSavingContribution(true);
+      const updatedGoal = await registerGoalContribution(supabase, {
+        meta_id: selectedGoal.id_meta,
+        cuenta_id: params.cuentaId,
+        monto: params.monto,
+        nota: params.nota,
+      });
+
+      setGoals((current) => current.map((goal) => {
+        return goal.id_meta === updatedGoal.id_meta ? updatedGoal : goal;
+      }));
+
+      if (userId) {
+        const [freshGoals, freshAccounts] = await Promise.all([
+          getSavingsGoals(supabase, userId),
+          getUserAccounts(supabase, userId),
+        ]);
+        setGoals(freshGoals);
+        setAccounts(freshAccounts);
+      }
+
+      setContributionModalVisible(false);
+      setSelectedGoal(null);
+
+      Alert.alert(
+        updatedGoal.estado === 'completada' ? '¡Meta alcanzada!' : 'Abono registrado',
+        updatedGoal.estado === 'completada'
+          ? 'Tu meta de ahorro fue completada.'
+          : 'El abono se guardo correctamente.'
+      );
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'No se pudo registrar el abono');
+    } finally {
+      setSavingContribution(false);
+    }
   }
 
   const totalObjective = goals.reduce((sum, goal) => sum + Number(goal.monto_objetivo ?? 0), 0);
@@ -243,6 +313,7 @@ export default function GoalsScreen() {
               goal={goal}
               onEdit={(selectedGoal) => router.push(`/goals/${selectedGoal.id_meta}`)}
               onDelete={handleDelete}
+              onContribute={openContributionModal}
             />
           ))
         )}
@@ -266,6 +337,15 @@ export default function GoalsScreen() {
         onToggleVisualMode={setDarkMode}
         onClose={() => setSidebarVisible(false)}
         onSelectItem={handleSelectSidebarItem}
+      />
+
+      <GoalContributionModal
+        visible={contributionModalVisible}
+        goal={selectedGoal}
+        accounts={accounts}
+        loading={savingContribution}
+        onClose={closeContributionModal}
+        onConfirm={handleRegisterContribution}
       />
     </View>
   );

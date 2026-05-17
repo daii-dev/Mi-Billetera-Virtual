@@ -45,6 +45,9 @@ export type AbonoMetaAhorro = {
   fecha_abono: string;
   nota: string | null;
   creado_en: string;
+  account?: {
+    name: string;
+  } | null;
 };
 
 export type RegisterGoalContributionParams = {

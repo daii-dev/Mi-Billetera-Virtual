@@ -18,6 +18,7 @@ import {
 
 import {
   calculateDaysRemaining,
+  calculateRemainingAmount,
   calculateProgress,
 } from '@/features/savings-goals/savings-goals.service';
 import { SavingsGoal } from '@/features/savings-goals/savings-goals.types';
@@ -32,6 +33,7 @@ type GoalCardProps = {
   goal: SavingsGoal;
   onEdit: (goal: SavingsGoal) => void;
   onDelete: (goal: SavingsGoal) => void;
+  onContribute: (goal: SavingsGoal) => void;
 };
 
 const iconMap = {
@@ -43,14 +45,18 @@ const iconMap = {
   target: Target,
 };
 
-export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
+export function GoalCard({ goal, onEdit, onDelete, onContribute }: GoalCardProps) {
   const { theme } = useAppTheme();
   const styles = createStyles(theme);
 
-  const accentColor = goal.color || colors.secondary;
-  const Icon = iconMap[goal.icono as keyof typeof iconMap] || PiggyBank;
   const daysRemaining = calculateDaysRemaining(goal.fecha_limite);
+  const isCompleted = goal.estado === 'completada';
+  const isExpired = goal.estado === 'vencida' || (!isCompleted && daysRemaining < 0);
+  const canContribute = !isCompleted && !isExpired;
+  const accentColor = isExpired ? colors.gray : goal.color || colors.secondary;
+  const Icon = iconMap[goal.icono as keyof typeof iconMap] || PiggyBank;
   const progress = calculateProgress(goal.monto_actual, goal.monto_objetivo);
+  const remainingAmount = calculateRemainingAmount(goal);
 
   return (
     <View style={styles.card}>
@@ -100,6 +106,11 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
         </View>
       </View>
 
+      <View style={styles.remainingBox}>
+        <Text style={styles.amountLabel}>Faltante</Text>
+        <Text style={styles.remainingAmount}>{money(remainingAmount)}</Text>
+      </View>
+
       <View style={styles.progressTrack}>
         <View
           style={[
@@ -115,14 +126,38 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
       <View style={styles.footer}>
         <Text style={styles.progressText}>{progress}% completado</Text>
         <Text style={styles.daysText}>
-          {daysRemaining > 0
+          {isCompleted
+            ? 'Meta alcanzada'
+            : daysRemaining > 0
             ? `${daysRemaining} dias restantes`
             : 'Fecha limite vencida'}
         </Text>
       </View>
 
-      <Pressable disabled style={styles.hu16Button}>
-        <Text style={styles.hu16Text}>Anadir cantidad ahorrada - HU-16</Text>
+      <View style={[
+        styles.statusBadge,
+        isCompleted && styles.statusCompleted,
+        isExpired && styles.statusExpired,
+      ]}>
+        <Text style={styles.statusText}>
+          {isCompleted ? 'Completada' : isExpired ? 'Vencida' : 'Activa'}
+        </Text>
+      </View>
+
+      <Pressable
+        disabled={!canContribute}
+        onPress={() => onContribute(goal)}
+        style={[
+          styles.hu16Button,
+          !canContribute && styles.hu16ButtonDisabled,
+        ]}
+      >
+        <Text style={[
+          styles.hu16Text,
+          canContribute && styles.hu16TextActive,
+        ]}>
+          {canContribute ? 'Anadir cantidad ahorrada' : 'No disponible para esta meta'}
+        </Text>
       </Pressable>
     </View>
   );
@@ -225,6 +260,22 @@ function createStyles(theme: AppTheme) {
       fontWeight: '900',
       textAlign: 'right',
     },
+    remainingBox: {
+      marginTop: 12,
+      borderRadius: 10,
+      backgroundColor: theme.mode === 'dark' ? '#0F172A' : '#F8FAFC',
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      padding: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    remainingAmount: {
+      color: colors.expense,
+      fontSize: 15,
+      fontWeight: '900',
+    },
     progressTrack: {
       height: 9,
       borderRadius: 8,
@@ -254,21 +305,48 @@ function createStyles(theme: AppTheme) {
       textAlign: 'right',
       flex: 1,
     },
+    statusBadge: {
+      alignSelf: 'flex-start',
+      marginTop: 12,
+      borderRadius: 14,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      backgroundColor: theme.colors.primary,
+    },
+    statusCompleted: {
+      backgroundColor: colors.secondary,
+    },
+    statusExpired: {
+      backgroundColor: colors.gray,
+    },
+    statusText: {
+      color: '#FFFFFF',
+      fontSize: 11,
+      fontWeight: '900',
+      textTransform: 'uppercase',
+    },
     hu16Button: {
       height: 38,
       borderRadius: 19,
       marginTop: 14,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: theme.mode === 'dark' ? '#1E293B' : '#F1F5F9',
+      backgroundColor: colors.secondary,
       borderWidth: 1,
+      borderColor: colors.secondary,
+    },
+    hu16ButtonDisabled: {
+      backgroundColor: theme.mode === 'dark' ? '#1E293B' : '#F1F5F9',
       borderColor: theme.colors.border,
-      opacity: 0.8,
+      opacity: 0.75,
     },
     hu16Text: {
       color: theme.colors.textSecondary,
       fontSize: 12,
       fontWeight: '800',
+    },
+    hu16TextActive: {
+      color: '#FFFFFF',
     },
   });
 }

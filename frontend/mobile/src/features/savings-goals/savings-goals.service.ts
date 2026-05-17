@@ -104,7 +104,12 @@ export async function getGoalContributions(
 ): Promise<AbonoMetaAhorro[]> {
   const { data, error } = await supabase
     .from('abonos_metas_ahorro')
-    .select('*')
+    .select(`
+      *,
+      account:accounts (
+        name
+      )
+    `)
     .eq('meta_id', metaId)
     .eq('usuario_clerk_id', clerkUserId)
     .order('fecha_abono', { ascending: false })
