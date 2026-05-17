@@ -13,6 +13,11 @@ import {
 
 import { AppButton } from '@/components/ui/AppButton';
 import { AppInput } from '@/components/ui/AppInput';
+import {
+  isValidMoneyInput,
+  parseMoneyInput,
+  sanitizeMoneyInput,
+} from '@/features/wallet/amount.utils';
 import { setInitialBalance } from '@/features/wallet/wallet.service';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
@@ -33,13 +38,17 @@ export default function InitialBalanceScreen() {
       return;
     }
 
-    const normalized = amountText.replace(',', '.').trim();
-    const amount = Number(normalized || 0);
+    const cleanAmountText = amountText.trim() || '0';
 
-    if (Number.isNaN(amount)) {
-      Alert.alert('Monto inválido', 'Ingresa un monto válido');
+    if (!isValidMoneyInput(cleanAmountText)) {
+      Alert.alert(
+        'Monto inválido',
+        'Usa coma decimal y máximo dos decimales. Ejemplo: 120,50'
+      );
       return;
     }
+
+    const amount = parseMoneyInput(cleanAmountText);
 
     if (amount < 0) {
       Alert.alert('Monto inválido', 'El saldo inicial no puede ser negativo');
@@ -58,8 +67,7 @@ export default function InitialBalanceScreen() {
   }
 
   function handleChangeAmount(value: string) {
-    const clean = value.replace(/[^0-9.,]/g, '');
-    setAmountText(clean);
+    setAmountText(sanitizeMoneyInput(value, amountText));
   }
 
   return (
@@ -78,7 +86,7 @@ export default function InitialBalanceScreen() {
         <AppInput
           value={amountText}
           onChangeText={handleChangeAmount}
-          placeholder="0.00"
+          placeholder="0,00"
           keyboardType="decimal-pad"
           leftIcon={<Text style={styles.prefix}>Bs.</Text>}
         />

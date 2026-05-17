@@ -23,3 +23,26 @@ export type WalletStatus = {
   account: Account;
   initialBalanceConfigured: boolean;
 };
+
+export type MovementType = 'income' | 'expense';
+
+export type MovementSource = 'initial_balance' | 'manual';
+
+export type Movement = {
+  id: string;
+  clerk_user_id: string;
+  account_id: string;
+  type: MovementType;
+  source: MovementSource;
+  title: string;
+  description: string | null;
+  amount: number | string;
+  currency: string;
+  category_name: string | null;
+  movement_date: string;
+  created_at: string;
+  updated_at: string;
+  account?: {
+    name: string;
+  } | null;
+};
