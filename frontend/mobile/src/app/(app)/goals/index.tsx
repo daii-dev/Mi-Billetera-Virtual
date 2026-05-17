@@ -25,6 +25,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoalCard } from '@/components/savings-goals/GoalCard';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
@@ -56,6 +57,7 @@ export default function GoalsScreen() {
   const { signOut } = useClerk();
   const supabase = useSupabase();
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const styles = createStyles(theme);
 
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
@@ -218,12 +220,6 @@ export default function GoalsScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Tus metas activas</Text>
-          <Pressable
-            style={styles.addButton}
-            onPress={() => router.push('/goals/create')}
-          >
-            <Plus size={20} color="#FFFFFF" />
-          </Pressable>
         </View>
 
         {goals.length === 0 ? (
@@ -251,6 +247,16 @@ export default function GoalsScreen() {
           ))
         )}
       </ScrollView>
+
+      <Pressable
+        style={[
+          styles.floatingAddButton,
+          { bottom: insets.bottom + 24 },
+        ]}
+        onPress={() => router.push('/goals/create')}
+      >
+        <Plus size={28} color="#FFFFFF" />
+      </Pressable>
 
       <AppSidebar
         visible={sidebarVisible}
@@ -296,7 +302,7 @@ function createStyles(theme: AppTheme) {
     },
     content: {
       padding: 16,
-      paddingBottom: 40,
+      paddingBottom: 120,
     },
     summaryCard: {
       minHeight: 100,
@@ -344,13 +350,21 @@ function createStyles(theme: AppTheme) {
       fontSize: 18,
       fontWeight: '900',
     },
-    addButton: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
+    floatingAddButton: {
+      position: 'absolute',
+      right: 20,
+      width: 58,
+      height: 58,
+      borderRadius: 29,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.secondary,
+      shadowColor: '#000',
+      shadowOpacity: 0.25,
+      shadowOffset: { width: 0, height: 5 },
+      shadowRadius: 7,
+      elevation: 8,
+      zIndex: 5,
     },
     emptyCard: {
       minHeight: 300,
