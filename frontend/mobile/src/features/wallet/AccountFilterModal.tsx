@@ -54,83 +54,52 @@ export function AccountFilterModal({
           </View>
 
           <View style={styles.content}>
-            <Pressable
-              style={[
-                styles.option,
-                !selectedAccountId && styles.optionSelected,
-              ]}
-              onPress={() => {
-                onClear();
-                onClose();
-              }}
-            >
-              <View>
-                <Text
-                  style={[
-                    styles.optionTitle,
-                    !selectedAccountId && styles.optionTitleSelected,
-                  ]}
-                >
-                  Todas las cuentas
-                </Text>
-                <Text
-                  style={[
-                    styles.optionSubtitle,
-                    !selectedAccountId && styles.optionSubtitleSelected,
-                  ]}
-                >
-                  Mostrar todos los movimientos
-                </Text>
-              </View>
+            {accounts.length === 0 ? (
+              <Text style={styles.emptyText}>
+                No tienes cuentas disponibles para filtrar.
+              </Text>
+            ) : (
+              accounts.map((account) => {
+                const isSelected = selectedAccountId === account.id;
 
-              {!selectedAccountId && (
-                <Text style={styles.checkText}>✓</Text>
-              )}
-            </Pressable>
+                return (
+                  <Pressable
+                    key={account.id}
+                    style={[
+                      styles.option,
+                      isSelected && styles.optionSelected,
+                    ]}
+                    onPress={() => {
+                      onSelectAccount(account.id);
+                      onClose();
+                    }}
+                  >
+                    <View>
+                      <Text
+                        style={[
+                          styles.optionTitle,
+                          isSelected && styles.optionTitleSelected,
+                        ]}
+                      >
+                        {account.name}
+                      </Text>
 
-            {accounts.map((account) => {
-              const isSelected = selectedAccountId === account.id;
-
-              return (
-                <Pressable
-                  key={account.id}
-                  style={[
-                    styles.option,
-                    isSelected && styles.optionSelected,
-                  ]}
-                  onPress={() => {
-                    onSelectAccount(account.id);
-                    onClose();
-                  }}
-                >
-                  <View>
-                    <Text
-                      style={[
-                        styles.optionTitle,
-                        isSelected && styles.optionTitleSelected,
-                      ]}
-                    >
-                      {account.name}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.optionSubtitle,
-                        isSelected && styles.optionSubtitleSelected,
-                      ]}
-                    >
-                      Bs. {Number(account.current_balance ?? 0).toLocaleString('es-BO', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </Text>
-                  </View>
-
-                  {isSelected && (
-                    <Text style={styles.checkText}>✓</Text>
-                  )}
-                </Pressable>
-              );
-            })}
+                      <Text
+                        style={[
+                          styles.optionSubtitle,
+                          isSelected && styles.optionSubtitleSelected,
+                        ]}
+                      >
+                        Bs. {Number(account.current_balance ?? 0).toLocaleString('es-BO', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })
+            )}
 
             <View style={styles.actionsRow}>
               <Pressable
@@ -196,13 +165,11 @@ function createStyles(theme: AppTheme) {
       backgroundColor: theme.colors.surface,
       paddingHorizontal: 14,
       paddingVertical: 10,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      justifyContent: 'center',
     },
     optionSelected: {
-      backgroundColor: theme.mode === 'dark' ? '#1E3A8A' : '#AEE4FF',
-      borderColor: theme.mode === 'dark' ? '#4F7CFF' : colors.primary,
+      backgroundColor: '#AEE4FF',
+      borderColor: '#5BBEEA',
     },
     optionTitle: {
       color: theme.colors.text,
@@ -210,7 +177,7 @@ function createStyles(theme: AppTheme) {
       fontWeight: '900',
     },
     optionTitleSelected: {
-      color: theme.mode === 'dark' ? '#FFFFFF' : colors.primary,
+      color: colors.primary,
     },
     optionSubtitle: {
       marginTop: 3,
@@ -219,12 +186,14 @@ function createStyles(theme: AppTheme) {
       fontWeight: '700',
     },
     optionSubtitleSelected: {
-      color: theme.mode === 'dark' ? '#DBEAFE' : '#304A8A',
+      color: '#304A8A',
     },
-    checkText: {
-      color: theme.mode === 'dark' ? '#FFFFFF' : colors.primary,
-      fontSize: 22,
-      fontWeight: '900',
+    emptyText: {
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      fontSize: 14,
+      fontWeight: '700',
+      paddingVertical: 14,
     },
     actionsRow: {
       marginTop: 8,

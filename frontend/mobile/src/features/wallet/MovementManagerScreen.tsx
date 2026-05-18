@@ -438,7 +438,7 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
           >
             <SlidersHorizontal
               size={16}
-              color={selectedFilterAccountId ? '#FFFFFF' : theme.colors.text}
+              color={selectedFilterAccountId ? colors.primary : theme.colors.text}
             />
 
             <Text
@@ -1020,8 +1020,8 @@ function createStyles(
       gap: 6,
     },
     filterButtonActive: {
-      backgroundColor: buttonColor,
-      borderColor: buttonColor,
+      backgroundColor: '#AEE4FF',
+      borderColor: '#AEE4FF',
     },
     filterButtonText: {
       color: theme.colors.text,
@@ -1030,7 +1030,7 @@ function createStyles(
       maxWidth: 98,
     },
     filterButtonTextActive: {
-      color: '#FFFFFF',
+      color: colors.primary,
     },
     emptyText: {
       color: theme.colors.textSecondary,

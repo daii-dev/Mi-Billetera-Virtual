@@ -481,7 +481,7 @@ export default function HomeScreen() {
           >
             <SlidersHorizontal
               size={16}
-              color={selectedHomeFilterAccountId ? '#FFFFFF' : theme.colors.text}
+              color={selectedHomeFilterAccountId ? colors.primary : theme.colors.text}
             />
 
             <Text
@@ -997,8 +997,8 @@ function createStyles(theme: AppTheme) {
       gap: 6,
     },
     filterButtonActive: {
-      backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
+      backgroundColor: '#AEE4FF',
+      borderColor: '#5BBEEA',
     },
     filterButtonText: {
       color: theme.colors.text,
@@ -1007,7 +1007,7 @@ function createStyles(theme: AppTheme) {
       maxWidth: 98,
     },
     filterButtonTextActive: {
-      color: '#FFFFFF',
+      color: colors.primary,
     },
     emptyText: {
       color: theme.colors.textSecondary,
