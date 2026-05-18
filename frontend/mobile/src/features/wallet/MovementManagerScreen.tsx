@@ -12,6 +12,7 @@ import {
   ChevronDown,
   MoreVertical,
   PiggyBank,
+  SlidersHorizontal,
   Trash2,
   Wallet,
 } from 'lucide-react-native';
@@ -28,6 +29,7 @@ import {
   View,
 } from 'react-native';
 
+import { AccountFilterModal } from '@/features/wallet/AccountFilterModal';
 import {
   formatMoneyInput,
   isValidMoneyInput,
@@ -100,6 +102,9 @@ export function MovementManagerScreen({
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [movements, setMovements] = useState<Movement[]>([]);
 
+  const [filterVisible, setFilterVisible] = useState(false);
+const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -153,6 +158,18 @@ export function MovementManagerScreen({
       loadData(true);
     }
   }, [isLoaded, isSignedIn, userId]);
+
+  useEffect(() => {
+    if (!selectedFilterAccountId) return;
+
+    const accountExists = accounts.some(
+      (account) => account.id === selectedFilterAccountId
+    );
+
+    if (!accountExists) {
+      setSelectedFilterAccountId('');
+    }
+  }, [accounts, selectedFilterAccountId]);
 
   useEffect(() => {
     if (!editId || openedParamEditId === editId || movements.length === 0) {
@@ -369,6 +386,14 @@ export function MovementManagerScreen({
   const isIncome = type === 'income';
   const amountSign = isIncome ? '+' : '-';
 
+  const selectedFilterAccount = accounts.find(
+    (account) => account.id === selectedFilterAccountId
+  );
+
+  const filteredMovements = selectedFilterAccountId
+    ? movements.filter((movement) => movement.account_id === selectedFilterAccountId)
+    : movements;
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -401,14 +426,42 @@ export function MovementManagerScreen({
           <Text style={styles.registerButtonText}>{registerButtonText}</Text>
         </Pressable>
 
-        <Text style={styles.sectionTitle}>{listTitle}</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{listTitle}</Text>
 
-        {movements.length === 0 ? (
+          <Pressable
+            style={[
+              styles.filterButton,
+              selectedFilterAccountId && styles.filterButtonActive,
+            ]}
+            onPress={() => setFilterVisible(true)}
+          >
+            <SlidersHorizontal
+              size={16}
+              color={selectedFilterAccountId ? '#FFFFFF' : theme.colors.text}
+            />
+
+            <Text
+              style={[
+                styles.filterButtonText,
+                selectedFilterAccountId && styles.filterButtonTextActive,
+              ]}
+              numberOfLines={1}
+            >
+              {selectedFilterAccount?.name ?? 'Filtrar'}
+            </Text>
+          </Pressable>
+        </View>
+
+        {filteredMovements.length === 0 ? (
           <Text style={styles.emptyText}>
-            Todavía no tienes movimientos registrados.
+            {selectedFilterAccountId
+              ? 'No hay movimientos para esta cuenta.'
+              : 'Todavía no tienes movimientos registrados.'}
           </Text>
         ) : (
-          movements.map((movement) => {
+          filteredMovements.map((movement) => {
+
             const accountName = movement.account?.name ?? 'Cuenta';
             const canEdit = movement.source === 'manual';
 
@@ -465,6 +518,16 @@ export function MovementManagerScreen({
           })
         )}
       </ScrollView>
+
+      <AccountFilterModal
+        visible={filterVisible}
+        accounts={accounts}
+        selectedAccountId={selectedFilterAccountId}
+        title="Filtrar por cuenta"
+        onSelectAccount={setSelectedFilterAccountId}
+        onClear={() => setSelectedFilterAccountId('')}
+        onClose={() => setFilterVisible(false)}
+      />
 
       <MovementModal
         mode={modalMode}
@@ -930,11 +993,44 @@ function createStyles(
       fontSize: 15,
       fontWeight: '900',
     },
+    sectionHeader: {
+      marginBottom: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
     sectionTitle: {
+      flex: 1,
       color: theme.colors.text,
       fontSize: 16,
       fontWeight: '900',
-      marginBottom: 12,
+    },
+    filterButton: {
+      maxWidth: 150,
+      minHeight: 34,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.card,
+      paddingHorizontal: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+    },
+    filterButtonActive: {
+      backgroundColor: buttonColor,
+      borderColor: buttonColor,
+    },
+    filterButtonText: {
+      color: theme.colors.text,
+      fontSize: 12,
+      fontWeight: '900',
+      maxWidth: 98,
+    },
+    filterButtonTextActive: {
+      color: '#FFFFFF',
     },
     emptyText: {
       color: theme.colors.textSecondary,

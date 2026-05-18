@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   MoreVertical,
+  SlidersHorizontal,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -30,6 +31,7 @@ import {
 } from 'react-native';
 
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
+import { AccountFilterModal } from '@/features/wallet/AccountFilterModal';
 import {
   formatMoneyInput,
   isValidMoneyInput,
@@ -81,6 +83,8 @@ export default function HomeScreen() {
   const [account, setAccount] = useState<Account | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [movements, setMovements] = useState<Movement[]>([]);
+  const [homeFilterVisible, setHomeFilterVisible] = useState(false);
+  const [selectedHomeFilterAccountId, setSelectedHomeFilterAccountId] = useState('');
   const [profileName, setProfileName] = useState('Usuario');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -140,7 +144,7 @@ export default function HomeScreen() {
 
       const userAccounts = await getUserAccounts(supabase, userId);
       const data = await getPersonalAccount(supabase, userId);
-      const recentMovements = await getRecentMovements(supabase, userId, 10);
+      const recentMovements = await getRecentMovements(supabase, userId, 100);
 
       if (!data) {
         console.log('No existen cuentas para este usuario');
@@ -183,6 +187,18 @@ export default function HomeScreen() {
       loadAccount(true);
     }
   }, [isLoaded, isSignedIn, userId]);
+
+  useEffect(() => {
+    if (!selectedHomeFilterAccountId) return;
+
+    const accountExists = accounts.some(
+      (account) => account.id === selectedHomeFilterAccountId
+    );
+
+    if (!accountExists) {
+      setSelectedHomeFilterAccountId('');
+    }
+  }, [accounts, selectedHomeFilterAccountId]);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -381,6 +397,14 @@ export default function HomeScreen() {
   const totalExpense = movements
     .filter((movement) => movement.type === 'expense')
     .reduce((total, movement) => total + Number(movement.amount ?? 0), 0);
+  
+  const selectedHomeFilterAccount = accounts.find(
+    (account) => account.id === selectedHomeFilterAccountId
+  );
+
+  const filteredHomeMovements = selectedHomeFilterAccountId
+    ? movements.filter((movement) => movement.account_id === selectedHomeFilterAccountId)
+    : movements;
 
   return (
     <View 
@@ -445,14 +469,42 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        <Text style={styles.sectionTitle}>Movimientos recientes</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Movimientos recientes</Text>
 
-        {movements.length === 0 ? (
+          <Pressable
+            style={[
+              styles.filterButton,
+              selectedHomeFilterAccountId && styles.filterButtonActive,
+            ]}
+            onPress={() => setHomeFilterVisible(true)}
+          >
+            <SlidersHorizontal
+              size={16}
+              color={selectedHomeFilterAccountId ? '#FFFFFF' : theme.colors.text}
+            />
+
+            <Text
+              style={[
+                styles.filterButtonText,
+                selectedHomeFilterAccountId && styles.filterButtonTextActive,
+              ]}
+              numberOfLines={1}
+            >
+              {selectedHomeFilterAccount?.name ?? 'Filtrar'}
+            </Text>
+          </Pressable>
+        </View>
+
+        {filteredHomeMovements.length === 0 ? (
           <Text style={styles.emptyText}>
-            Todavía no tienes movimientos registrados.
+            {selectedHomeFilterAccountId
+              ? 'No hay movimientos para esta cuenta.'
+              : 'Todavía no tienes movimientos registrados.'}
           </Text>
         ) : (
-          movements.map((movement) => {
+          filteredHomeMovements.map((movement) => {
+
             const isIncome = movement.type === 'income';
             const accountName = movement.account?.name ?? 'Cuenta';
             const sign = isIncome ? '+' : '-';
@@ -507,6 +559,16 @@ export default function HomeScreen() {
           })
         )}
       </ScrollView>
+
+      <AccountFilterModal
+        visible={homeFilterVisible}
+        accounts={accounts}
+        selectedAccountId={selectedHomeFilterAccountId}
+        title="Filtrar movimientos"
+        onSelectAccount={setSelectedHomeFilterAccountId}
+        onClear={() => setSelectedHomeFilterAccountId('')}
+        onClose={() => setHomeFilterVisible(false)}
+      />
 
       <HomeMovementModal
         mode={movementModalMode}
@@ -907,12 +969,45 @@ function createStyles(theme: AppTheme) {
       fontWeight: '900',
       fontSize: 17,
     },
-    sectionTitle: {
+    sectionHeader: {
       marginTop: 24,
       marginBottom: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    sectionTitle: {
+      flex: 1,
       fontSize: 18,
       color: theme.colors.text,
       fontWeight: '900',
+    },
+    filterButton: {
+      maxWidth: 150,
+      minHeight: 34,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.card,
+      paddingHorizontal: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+    },
+    filterButtonActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    filterButtonText: {
+      color: theme.colors.text,
+      fontSize: 12,
+      fontWeight: '900',
+      maxWidth: 98,
+    },
+    filterButtonTextActive: {
+      color: '#FFFFFF',
     },
     emptyText: {
       color: theme.colors.textSecondary,
