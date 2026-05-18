@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
   Account,
+  Budget,
   Movement,
   Profile,
   WalletStatus,
@@ -569,4 +570,135 @@ export async function deleteManualMovement(
     existingMovement.account_id,
     -delta
   );
+}
+
+export async function getBudgets(supabase: any, userId: string) {
+  const { data, error } = await supabase
+    .from('budgets') // Asegúrate de que en Supabase se llame 'budgets' con 's'
+    .select('*')
+    .eq('clerk_user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getCategorySpent(
+  supabase: any, 
+  userId: string, 
+  category: string, 
+  month: number | null, 
+  year: number, 
+  accountId?: string | null,
+  periodType: 'monthly' | 'weekly' = 'monthly'
+) {
+  const now = new Date();
+  let startDate: string;
+  let endDate: string;
+
+  if (periodType === 'monthly') {
+    // Mes actual: del día 1 al último día
+    const targetMonth = month || (now.getMonth() + 1);
+    const firstDay = new Date(year, targetMonth - 1, 1);
+    const lastDay = new Date(year, targetMonth, 0);
+    
+    startDate = firstDay.toISOString().split('T')[0];
+    endDate = lastDay.toISOString().split('T')[0];
+  } else {
+    // Semana actual: de Lunes a Domingo
+    const curr = new Date();
+    const day = curr.getDay(); 
+    // Ajuste para que el lunes sea el día 1 y domingo el 7
+    const diff = curr.getDate() - (day === 0 ? 6 : day - 1); 
+    
+    const monday = new Date(new Date().setDate(diff));
+    const sunday = new Date(new Date().setDate(diff + 6));
+    
+    startDate = monday.toISOString().split('T')[0];
+    endDate = sunday.toISOString().split('T')[0];
+  }
+
+  let query = supabase
+    .from('movements')
+    .select('amount')
+    .eq('clerk_user_id', userId)
+    .eq('type', 'expense')
+    .eq('category_name', category)
+    .gte('movement_date', startDate)
+    .lte('movement_date', endDate);
+
+  if (accountId) {
+    query = query.eq('account_id', accountId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return data?.reduce((acc: number, m: any) => acc + Number(m.amount), 0) || 0;
+}
+
+export async function getUsedCategories(supabase: any, userId: string): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from('movements')
+      .select('category_name')
+      .eq('clerk_user_id', userId)
+      .eq('type', 'expense');
+
+    if (error || !data) return [];
+
+    const categories = data
+      .map((m: any) => m.category_name)
+      .filter((name: any) => name !== null && name !== undefined && name !== '');
+      
+    return Array.from(new Set(categories as string[]));
+  } catch (e) {
+    console.error("Error en getUsedCategories:", e);
+    return [];
+  }
+}
+
+
+export async function saveBudget(supabase: any, budgetData: any) {
+  // Primero verificamos si ya existe uno para evitar el error del Criterio de Aceptación
+  const { data: existing } = await supabase
+    .from('budgets')
+    .select('id')
+    .eq('clerk_user_id', budgetData.clerk_user_id)
+    .eq('category_name', budgetData.category_name)
+    .eq('period_type', budgetData.period_type)
+    .eq('period_month', budgetData.period_month)
+    .eq('period_year', budgetData.period_year)
+    .maybeSingle();
+
+  if (existing) {
+    throw new Error('Ya existe un presupuesto para esa categoría en este período.');
+  }
+
+  const { error } = await supabase
+    .from('budgets')
+    .insert(budgetData);
+
+  if (error) throw error;
+}
+
+export async function deleteBudget(supabase: any, budgetId: string) {
+  const { error } = await supabase
+    .from('budgets')
+    .delete()
+    .eq('id', budgetId);
+
+  if (error) throw error;
+}
+
+export async function updateBudget(supabase: any, budgetId: string, amount: number) {
+  const { error } = await supabase
+    .from('budgets')
+    .update({ 
+      amount, 
+      updated_at: new Date().toISOString() 
+    })
+    .eq('id', budgetId);
+
+  if (error) throw error;
 }
