@@ -279,6 +279,17 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
       return null;
     }
 
+    if (!isIncome && selectedAccount) {
+      const currentBalance = Number(selectedAccount.current_balance ?? 0);
+      if (amount > currentBalance) {
+        Alert.alert(
+          'Fondos insuficientes',
+          'No tienes los suficientes fondos para retirar dinero de esta cuenta'
+        );
+        return null;
+      }
+    }
+
     return {
       cleanDescription,
       amount,

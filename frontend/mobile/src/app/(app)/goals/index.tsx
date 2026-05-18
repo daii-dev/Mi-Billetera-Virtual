@@ -143,9 +143,11 @@ export default function GoalsScreen() {
 
     if (item.key === 'home') {
       router.push('/home');
-    }
-
-    if (item.key === 'goals') {
+    } else if (item.key === 'accounts') {
+      router.push('/accounts');
+    } else if (item.key === 'budgets') {
+      router.push('/budgets');
+    } else if (item.key === 'goals') {
       router.push('/goals');
     }
   }

@@ -326,6 +326,18 @@ export default function AccountsScreen() {
       setSidebarVisible(false);
       return;
     }
+
+    if (item.key === 'budgets') {
+      setSidebarVisible(false);
+      router.push('/budgets');
+      return;
+    }
+
+    if (item.key === 'goals') {
+      setSidebarVisible(false);
+      router.push('/goals');
+      return;
+    }
   }
 
   const balanceTotal = getAccountsTotal(accounts);
