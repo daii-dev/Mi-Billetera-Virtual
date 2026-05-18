@@ -46,3 +46,12 @@ export type Movement = {
     name: string;
   } | null;
 };
+export type Category = {
+  id: string;
+  clerk_user_id: string;
+  type: MovementType;
+  name: string;
+  icon: string | null;
+  color: string | null;
+  created_at: string;
+};

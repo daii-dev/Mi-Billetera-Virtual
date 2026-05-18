@@ -63,11 +63,10 @@ import {
   AppTheme,
   useAppTheme,
 } from '@/theme/ThemeContext';
-import {
-  useAuth,
-  useClerk,
-  useUser,
-} from '@clerk/expo';
+
+import { useAuth } from '@clerk/expo';
+import { useClerk } from '@clerk/expo';
+import { useUser } from '@clerk/expo';
 
 type HomeMovementModalMode = 'edit' | 'delete' | 'success' | null;
 
@@ -369,6 +368,12 @@ export default function HomeScreen() {
     if (item.key === 'accounts') {
       setSidebarVisible(false);
       router.push('/accounts');
+      return;
+    }
+    
+    if (item.key === 'categories') {
+      setSidebarVisible(false);
+      router.push('/categories');
       return;
     }
 

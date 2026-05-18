@@ -46,6 +46,7 @@ import {
 } from '@/features/wallet/wallet.service';
 import {
   Account,
+  Category,
   Movement,
   MovementType,
 } from '@/features/wallet/wallet.types';
@@ -73,7 +74,7 @@ type MovementManagerScreenProps = {
   headerColor: string;
   buttonColor: string;
   placeholder: string;
-  categories: string[];
+  categories: Category[];
 };
 
 export function MovementManagerScreen({
@@ -198,7 +199,7 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
   }
 
   function getDefaultCategory() {
-    return categories[0] ?? 'Otro';
+    return categories[0]?.name ?? '';
   }
 
   function openCreateModal() {
@@ -590,7 +591,7 @@ type MovementModalProps = {
   selectedAccountName: string;
   selectedCategory: string;
   accounts: Account[];
-  categories: string[];
+  categories: Category[];
   showAccountOptions: boolean;
   showCategoryOptions: boolean;
   saving: boolean;
@@ -802,7 +803,7 @@ type MovementFormProps = {
   selectedAccountName: string;
   selectedCategory: string;
   accounts: Account[];
-  categories: string[];
+  categories: Category[];
   showAccountOptions: boolean;
   showCategoryOptions: boolean;
   saving: boolean;
@@ -898,7 +899,13 @@ function MovementForm({
         onPress={onToggleCategoryOptions}
       >
         <View style={styles.selectorLeft}>
-          <Text style={styles.categoryIcon}>♟</Text>
+        <Text style={styles.categoryIcon}>
+  {
+    categories.find(
+      (c) => c.name === selectedCategory
+    )?.icon ?? '📁'
+  }
+</Text>
           <Text style={styles.selectorText}>
             {selectedCategory || 'Selecciona una categoría'}
           </Text>
@@ -910,14 +917,18 @@ function MovementForm({
       {showCategoryOptions && (
         <View style={styles.optionsBox}>
           {categories.map((category) => (
-            <Pressable
-              key={category}
-              style={styles.optionItem}
-              onPress={() => onSelectCategory(category)}
-            >
-              <Text style={styles.optionText}>{category}</Text>
-            </Pressable>
-          ))}
+  <Pressable
+    key={category.id}
+    style={styles.optionItem}
+    onPress={() =>
+      onSelectCategory(category.name)
+    }
+  >
+    <Text style={styles.optionText}>
+      {category.icon ?? '📁'} {category.name}
+    </Text>
+  </Pressable>
+))}
         </View>
       )}
 

@@ -1,8 +1,46 @@
-import { expenseCategories } from '@/features/wallet/movement.constants';
+import { useEffect, useState } from 'react';
+
+import { useAuth } from '@clerk/expo';
+
 import { MovementManagerScreen } from '@/features/wallet/MovementManagerScreen';
+
+import {
+  Category,
+} from '@/features/wallet/wallet.types';
+
+import { getCategoriesByType } from '@/features/wallet/wallet.service';
+
+import { useSupabase } from '@/lib/useSupabase';
+
 import { colors } from '@/theme/colors';
 
 export default function ExpenseScreen() {
+  const supabase = useSupabase();
+
+  const { userId } = useAuth();
+
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    async function loadCategories() {
+      if (!userId) return;
+
+      try {
+        const data = await getCategoriesByType(
+          supabase,
+          userId,
+          'expense'
+        );
+
+        setCategories(data);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+
+    loadCategories();
+  }, [supabase, userId]);
+
   return (
     <MovementManagerScreen
       type="expense"
@@ -18,7 +56,7 @@ export default function ExpenseScreen() {
       headerColor="#9B241B"
       buttonColor={colors.expense}
       placeholder="Ej. Compra de viveres"
-      categories={expenseCategories}
+      categories={categories}
     />
   );
 }
