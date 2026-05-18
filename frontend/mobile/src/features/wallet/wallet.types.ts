@@ -46,3 +46,22 @@ export type Movement = {
     name: string;
   } | null;
 };
+
+export type Budget = {
+  id: string;
+  clerk_user_id: string;
+  category_name: string;
+  amount: number;
+  period_type: 'monthly' | 'weekly';
+  period_year: number;
+  period_month: number | null;
+  period_week: number | null;
+  account_id: string | null;
+  created_at: string;
+};
+
+export interface BudgetWithProgress extends Budget {
+  spent: number;
+  progress: number; // Porcentaje 0-100
+  color: string; // 'green' | 'yellow' | 'red'
+}
