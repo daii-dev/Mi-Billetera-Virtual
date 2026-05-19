@@ -4,8 +4,14 @@
     "slug": "mi-billetera-virtual",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/logo-app.png",
     "scheme": "mibilleteravirtual",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/logo-app.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
     "plugins": [
       "expo-secure-store"
     ],
@@ -15,7 +21,8 @@
     "android": {
       "package": "com.billeteravirtual.app",
       "adaptiveIcon": {
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/adaptive-logo.png",
+        "backgroundColor": "#002381"
       }
     }
   }
