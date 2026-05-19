@@ -19,6 +19,7 @@ import {
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Modal,
   Pressable,
   RefreshControl,
@@ -29,6 +30,10 @@ import {
   View,
 } from 'react-native';
 
+import {
+  getCompletedSavingsGoals,
+} from '@/features/savings-goals/savings-goals.service';
+import { SavingsGoal } from '@/features/savings-goals/savings-goals.types';
 import { AccountFilterModal } from '@/features/wallet/AccountFilterModal';
 import {
   formatMoneyInput,
@@ -36,10 +41,6 @@ import {
   parseMoneyInput,
   sanitizeMoneyInput,
 } from '@/features/wallet/amount.utils';
-import {
-  getCompletedSavingsGoals,
-} from '@/features/savings-goals/savings-goals.service';
-import { SavingsGoal } from '@/features/savings-goals/savings-goals.types';
 import {
   createManualMovement,
   deleteManualMovement,
@@ -63,6 +64,10 @@ import {
 import { useAuth } from '@clerk/expo';
 
 type ModalMode = 'form' | 'edit' | 'delete' | 'success' | null;
+const registerPigImages = {
+  income: require('../../../assets/chanchito-ingreso.png'),
+  expense: require('../../../assets/chanchito-gasto.png'),
+};
 
 type MovementManagerScreenProps = {
   type: ManualMovementType;
@@ -781,7 +786,11 @@ function MovementModal({
             <Text style={styles.registerPageTitle}>{registerTitle}</Text>
 
             <View style={styles.pigBox}>
-              <PiggyBank size={90} color={colors.secondary} strokeWidth={2.6} />
+              <Image
+                source={registerPigImages[type]}
+                style={styles.pigImage}
+                resizeMode="contain"
+              />
             </View>
 
             <View style={styles.formCard}>
@@ -1326,12 +1335,16 @@ function createStyles(
       fontWeight: '900',
     },
     pigBox: {
-      width: 130,
-      height: 110,
+      width: 140,
+      height: 120,
       alignItems: 'center',
       justifyContent: 'center',
       marginTop: 12,
       marginBottom: 4,
+    },
+    pigImage: {
+      width: 120,
+      height: 110,
     },
     formCard: {
       width: '90%',
