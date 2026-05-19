@@ -55,3 +55,23 @@ export type Category = {
   color: string | null;
   created_at: string;
 };
+export async function getCategoriesByType(
+  supabase: any,
+  clerkUserId: string,
+  type: 'income' | 'expense'
+) {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('clerk_user_id', clerkUserId)
+    .eq('type', type)
+    .order('created_at', {
+      ascending: true,
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
