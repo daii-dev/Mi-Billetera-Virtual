@@ -2,7 +2,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
   Account,
+<<<<<<< HEAD
   Budget,
+=======
+  Category,
+>>>>>>> origin/feat/HU12-13-categorias
   Movement,
   Profile,
   WalletStatus,
@@ -575,6 +579,7 @@ export async function deleteManualMovement(
     -delta
   );
 }
+<<<<<<< HEAD
 
 export async function getBudgets(supabase: any, userId: string) {
   const { data, error } = await supabase
@@ -705,4 +710,93 @@ export async function updateBudget(supabase: any, budgetId: string, amount: numb
     .eq('id', budgetId);
 
   if (error) throw error;
+=======
+export async function getCategoriesByType(
+  supabase: SupabaseClient,
+  clerkUserId: string,
+  type: 'income' | 'expense'
+): Promise<Category[]> {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('clerk_user_id', clerkUserId)
+    .eq('type', type)
+    .order('name', { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as Category[];
+}
+
+type CreateCategoryPayload = {
+  clerkUserId: string;
+  type: 'income' | 'expense';
+  name: string;
+  icon?: string;
+  color?: string;
+};
+
+export async function createCategory(
+  supabase: SupabaseClient,
+  payload: CreateCategoryPayload
+): Promise<Category> {
+  const cleanName = payload.name.trim();
+
+  const { data, error } = await supabase
+    .from('categories')
+    .insert({
+      clerk_user_id: payload.clerkUserId,
+      type: payload.type,
+      name: cleanName,
+      icon: payload.icon ?? null,
+      color: payload.color ?? null,
+    })
+    .select('*')
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as Category;
+}
+
+export async function deleteCategory(
+  supabase: SupabaseClient,
+  categoryId: string
+): Promise<void> {
+  const { data: category, error: categoryError } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('id', categoryId)
+    .single();
+
+  if (categoryError) {
+    throw new Error(categoryError.message);
+  }
+
+  const { data: movementUsingCategory } = await supabase
+    .from('movements')
+    .select('id')
+    .eq('category_name', category.name)
+    .limit(1)
+    .maybeSingle();
+
+  if (movementUsingCategory) {
+    throw new Error(
+      'No puedes eliminar una categoría que ya está siendo utilizada.'
+    );
+  }
+
+  const { error } = await supabase
+    .from('categories')
+    .delete()
+    .eq('id', categoryId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+>>>>>>> origin/feat/HU12-13-categorias
 }

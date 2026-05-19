@@ -63,11 +63,10 @@ import {
   AppTheme,
   useAppTheme,
 } from '@/theme/ThemeContext';
-import {
-  useAuth,
-  useClerk,
-  useUser,
-} from '@clerk/expo';
+
+import { useAuth } from '@clerk/expo';
+import { useClerk } from '@clerk/expo';
+import { useUser } from '@clerk/expo';
 
 type HomeMovementModalMode = 'edit' | 'delete' | 'success' | null;
 
@@ -360,6 +359,7 @@ export default function HomeScreen() {
 
   function handleSelectSidebarItem(item: { key: string; label: string }) {
     setSelectedSidebarItem(item.key);
+<<<<<<< HEAD
   setSidebarVisible(false); 
   
   if (item.key === 'home') {
@@ -369,6 +369,29 @@ export default function HomeScreen() {
   } else if (item.key === 'budgets') {
     router.push('/budgets'); 
   } else  if (item.key === 'goals') {
+=======
+
+    if (item.key === 'home') {
+      setSidebarVisible(false);
+      return;
+    }
+
+    if (item.key === 'accounts') {
+      setSidebarVisible(false);
+      router.push('/accounts');
+      return;
+    }
+    
+    if (item.key === 'categories') {
+      setSidebarVisible(false);
+      router.push('/categories');
+      return;
+    }
+
+    setSidebarVisible(false);
+
+    if (item.key === 'goals') {
+>>>>>>> origin/feat/HU12-13-categorias
       router.push('/goals');
     }
     }
