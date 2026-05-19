@@ -35,7 +35,7 @@ import { useAuth } from '@clerk/expo';
 
 type FormSubmitValues = {
   nombre: string;
-  monto_objetivo: number;
+  monto_objetivo?: number;
   fecha_limite: string;
   cuenta_id: string | null;
   icono: string | null;
@@ -78,6 +78,10 @@ export default function CreateGoalScreen() {
     if (!userId) return;
 
     try {
+      if (!values.monto_objetivo) {
+        throw new Error('El monto objetivo debe ser mayor a 0');
+      }
+
       setSaving(true);
       await createSavingsGoal(supabase, userId, {
         nombre: values.nombre,

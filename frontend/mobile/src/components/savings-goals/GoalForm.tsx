@@ -20,6 +20,7 @@ import {
 import { AppButton } from '@/components/ui/AppButton';
 import { AppInput } from '@/components/ui/AppInput';
 import { SavingsGoal } from '@/features/savings-goals/savings-goals.types';
+import { money } from '@/features/wallet/wallet.service';
 import { Account } from '@/features/wallet/wallet.types';
 import { colors } from '@/theme/colors';
 import {
@@ -39,7 +40,7 @@ type GoalFormValues = {
 
 type GoalFormSubmitValues = {
   nombre: string;
-  monto_objetivo: number;
+  monto_objetivo?: number;
   fecha_limite: string;
   cuenta_id: string | null;
   icono: string | null;
@@ -101,6 +102,7 @@ export function GoalForm({
   });
 
   const hasPersonalAccount = Boolean(personalAccount?.id);
+  const isEditing = Boolean(initialGoal);
   const associateAccount = hasPersonalAccount && values.cuentaId === personalAccount?.id;
 
   function setValue<K extends keyof GoalFormValues>(key: K, value: GoalFormValues[K]) {
@@ -115,21 +117,26 @@ export function GoalForm({
   }
 
   async function handleSubmit() {
-    const nextErrors = validate(values);
+    const nextErrors = validate(values, isEditing);
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       return;
     }
 
-    await onSubmit({
+    const submitValues: GoalFormSubmitValues = {
       nombre: values.nombre.trim(),
-      monto_objetivo: Number(normalizeAmount(values.montoObjetivo)),
       fecha_limite: values.fechaLimite,
       cuenta_id: values.cuentaId,
       icono: values.icono,
       color: values.color,
-    });
+    };
+
+    if (!isEditing) {
+      submitValues.monto_objetivo = Number(normalizeAmount(values.montoObjetivo));
+    }
+
+    await onSubmit(submitValues);
   }
 
   function openCalendar() {
@@ -175,13 +182,21 @@ export function GoalForm({
 
       <View style={styles.field}>
         <Text style={styles.label}>Monto objetivo</Text>
-        <AppInput
-          value={values.montoObjetivo}
-          onChangeText={(text) => setValue('montoObjetivo', text)}
-          placeholder="0.00"
-          keyboardType="decimal-pad"
-        />
-        <Text style={styles.errorText}>{errors.montoObjetivo}</Text>
+        {isEditing ? (
+          <View style={styles.readOnlyBox}>
+            <Text style={styles.readOnlyValue}>{money(initialGoal?.monto_objetivo)}</Text>
+          </View>
+        ) : (
+          <>
+            <AppInput
+              value={values.montoObjetivo}
+              onChangeText={(text) => setValue('montoObjetivo', text)}
+              placeholder="0.00"
+              keyboardType="decimal-pad"
+            />
+            <Text style={styles.errorText}>{errors.montoObjetivo}</Text>
+          </>
+        )}
       </View>
 
       <View style={styles.field}>
@@ -198,7 +213,7 @@ export function GoalForm({
         <Text style={styles.errorText}>{errors.fechaLimite}</Text>
       </View>
 
-      {hasPersonalAccount && (
+      {hasPersonalAccount && !isEditing && (
         <View style={styles.accountRow}>
           <View style={styles.accountTextBox}>
             <Text style={styles.label}>Cuenta asociada</Text>
@@ -268,7 +283,9 @@ export function GoalForm({
 
       <View style={styles.infoBox}>
         <Text style={styles.infoText}>
-          El monto actual se mantiene en Bs. 0,00 al crear la meta. Los abonos estaran disponibles en HU-16.
+          {isEditing
+            ? 'El monto objetivo, el monto ahorrado y la cuenta asociada no se modifican al editar la meta.'
+            : 'El monto actual se mantiene en Bs. 0,00 al crear la meta.'}
         </Text>
       </View>
 
@@ -449,7 +466,7 @@ function capitalize(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-function validate(values: GoalFormValues) {
+function validate(values: GoalFormValues, isEditing = false) {
   const errors: Record<string, string> = {};
   const cleanName = values.nombre.trim();
   const amount = Number(normalizeAmount(values.montoObjetivo));
@@ -463,10 +480,12 @@ function validate(values: GoalFormValues) {
     errors.nombre = 'Maximo 50 caracteres';
   }
 
-  if (!values.montoObjetivo.trim()) {
-    errors.montoObjetivo = 'El monto objetivo es obligatorio';
-  } else if (!Number.isFinite(amount) || amount <= 0) {
-    errors.montoObjetivo = 'Debe ser mayor a 0';
+  if (!isEditing) {
+    if (!values.montoObjetivo.trim()) {
+      errors.montoObjetivo = 'El monto objetivo es obligatorio';
+    } else if (!Number.isFinite(amount) || amount <= 0) {
+      errors.montoObjetivo = 'Debe ser mayor a 0';
+    }
   }
 
   if (!values.fechaLimite.trim()) {
@@ -530,6 +549,20 @@ function createStyles(theme: AppTheme) {
       color: theme.colors.textSecondary,
       fontSize: 13,
       fontWeight: '800',
+    },
+    readOnlyBox: {
+      minHeight: 52,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.mode === 'dark' ? '#0F172A' : '#F8FAFC',
+      paddingHorizontal: 14,
+      justifyContent: 'center',
+    },
+    readOnlyValue: {
+      color: theme.colors.text,
+      fontSize: 16,
+      fontWeight: '900',
     },
     optionGrid: {
       flexDirection: 'row',

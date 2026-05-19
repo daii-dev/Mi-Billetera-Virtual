@@ -376,6 +376,13 @@ type ManualMovementPayload = {
   categoryName: string;
 };
 
+type GoalExpensePayload = {
+  metaId: string;
+  accountId: string;
+  description: string;
+  categoryName: string;
+};
+
 function getMovementDelta(type: 'income' | 'expense', amount: number): number {
   return type === 'income' ? amount : -amount;
 }
@@ -475,6 +482,24 @@ export async function createManualMovement(
 
   const delta = getMovementDelta(payload.type, payload.amount);
   await adjustAccountBalance(supabase, payload.accountId, delta);
+
+  return data as Movement;
+}
+
+export async function registerExpenseFromGoal(
+  supabase: SupabaseClient,
+  payload: GoalExpensePayload
+): Promise<Movement> {
+  const { data, error } = await supabase.rpc('registrar_gasto_desde_meta', {
+    p_meta_id: payload.metaId,
+    p_cuenta_id: payload.accountId,
+    p_descripcion: payload.description,
+    p_categoria: payload.categoryName,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
 
   return data as Movement;
 }
