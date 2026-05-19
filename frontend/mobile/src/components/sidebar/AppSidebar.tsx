@@ -14,11 +14,11 @@ import {
   PiggyBank,
   ReceiptText,
   Tags,
-  Wallet,
   WalletCards,
 } from 'lucide-react-native';
 import {
   Animated,
+  Image,
   Modal,
   PanResponder,
   Pressable,
@@ -35,6 +35,7 @@ import {
 } from '@/theme/ThemeContext';
 
 const SIDEBAR_WIDTH = 270;
+const appLogo = require('../../../assets/logo-app.png');
 
 type SidebarIcon = ComponentType<{
   size?: number;
@@ -226,7 +227,11 @@ export function AppSidebar({
         >
           <View style={styles.header}>
             <View style={styles.logoBox}>
-              <Wallet size={27} color="#FFFFFF" strokeWidth={2.8} />
+              <Image
+                source={appLogo}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
 
             <View style={styles.headerTextBox}>
@@ -332,12 +337,15 @@ function createStyles(theme: AppTheme) {
       paddingHorizontal: 16,
     },
     logoBox: {
-      width: 42,
-      height: 42,
-      borderRadius: 8,
-      backgroundColor: colors.secondary,
+      width: 52,
+      height: 52,
+      borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    logoImage: {
+      width: 52,
+      height: 52,
     },
     logo: {
       fontSize: 28,
