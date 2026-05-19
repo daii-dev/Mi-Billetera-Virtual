@@ -315,8 +315,16 @@ export default function BudgetsScreen() {
         onClose={() => setSidebarVisible(false)}
         onSelectItem={(item) => {
           setSidebarVisible(false);
-          if (item.key === 'home') router.push('/home');
-          if (item.key === 'accounts') router.push('/accounts');
+
+          if (item.key === 'home') {
+            router.push('/home');
+          } else if (item.key === 'accounts') {
+            router.push('/accounts');
+          } else if (item.key === 'budgets') {
+            router.push('/budgets');
+          } else if (item.key === 'goals') {
+            router.push('/goals');
+          }
         }}
       />
     </View>

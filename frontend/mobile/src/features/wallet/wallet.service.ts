@@ -398,6 +398,10 @@ async function adjustAccountBalance(
   const currentBalance = Number(account.current_balance ?? 0);
   const newBalance = currentBalance + delta;
 
+  if (newBalance < 0) {
+    throw new Error('No tienes los suficientes fondos para retirar dinero de esta cuenta');
+  }
+
   const { error: updateError } = await supabase
     .from('accounts')
     .update({
