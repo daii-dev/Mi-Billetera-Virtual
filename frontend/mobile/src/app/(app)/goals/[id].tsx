@@ -207,12 +207,6 @@ export default function EditGoalScreen() {
             />
 
             <ContributionsHistory contributions={contributions} />
-
-            <View style={styles.noticeBox}>
-              <Text style={styles.noticeText}>
-                Puedes editar los datos principales de la meta. El monto actual no se modifica en HU-15.
-              </Text>
-            </View>
             <GoalForm
               initialGoal={goal}
               personalAccount={personalAccount}
@@ -295,13 +289,6 @@ function GoalProgressDetail({
           label="Tiempo"
           value={isSpent ? 'Gastada' : isCompleted ? 'Completada' : daysRemaining > 0 ? `${daysRemaining} dias` : 'Vencida'}
         />
-      </View>
-
-      <View style={styles.savingsNeededBox}>
-        <Text style={styles.savingsNeededTitle}>Para llegar a tiempo</Text>
-        <Text style={styles.savingsNeededText}>Dia: {money(savingsNeeded.daily)}</Text>
-        <Text style={styles.savingsNeededText}>Semana: {money(savingsNeeded.weekly)}</Text>
-        <Text style={styles.savingsNeededText}>Mes: {money(savingsNeeded.monthly)}</Text>
       </View>
 
       <AppButton

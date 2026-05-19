@@ -281,14 +281,6 @@ export function GoalForm({
         </View>
       </View>
 
-      <View style={styles.infoBox}>
-        <Text style={styles.infoText}>
-          {isEditing
-            ? 'El monto objetivo, el monto ahorrado y la cuenta asociada no se modifican al editar la meta.'
-            : 'El monto actual se mantiene en Bs. 0,00 al crear la meta.'}
-        </Text>
-      </View>
-
       <AppButton
         title={submitLabel}
         onPress={handleSubmit}
