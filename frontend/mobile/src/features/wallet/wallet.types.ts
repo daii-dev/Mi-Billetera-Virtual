@@ -30,21 +30,18 @@ export type MovementSource = 'initial_balance' | 'manual';
 
 export type Movement = {
   id: string;
-  clerk_user_id: string;
+  user_id: string;
   account_id: string;
   type: MovementType;
-  source: MovementSource;
   title: string;
-  description: string | null;
-  amount: number | string;
-  currency: string;
+  amount: number;
   category_name: string | null;
+  category_icon: string | null;  // ← AGREGAR ESTA LÍNEA
+  category_color: string | null; // ← AGREGAR ESTA LÍNEA
   movement_date: string;
   created_at: string;
-  updated_at: string;
-  account?: {
-    name: string;
-  } | null;
+  source: 'manual' | 'system';
+  account?: Account;
 };
 export type Category = {
   id: string;

@@ -10,9 +10,13 @@ import {
   Text,
   TextInput,
   View,
+  TouchableOpacity,
 } from 'react-native';
+import { Trash2, Plus, Menu, LogOut } from 'lucide-react-native';
 
 import { useAuth } from '@clerk/expo';
+import { useClerk } from '@clerk/expo';
+import { router } from 'expo-router';
 
 import {
   Category,
@@ -26,74 +30,80 @@ import {
 } from '@/features/wallet/wallet.service';
 
 import { useSupabase } from '@/lib/useSupabase';
+import { renderCategoryIcon } from '@/features/wallet/category.utils';
+import { colors } from '@/theme/colors';
+import {
+  AppTheme,
+  useAppTheme,
+} from '@/theme/ThemeContext';
 
 const COLORS = [
-  '#4CAF50',
-  '#FF5252',
-  '#03A9F4',
-  '#FFC107',
-  '#9C27B0',
-  '#FF9800',
+  '#10B981', // Verde
+  '#EF4444', // Rojo
+  '#3B82F6', // Azul
+  '#F59E0B', // Amarillo
+  '#8B5CF6', // Púrpura
+  '#EC4899', // Rosa
+  '#06B6D4', // Cian
+  '#F97316', // Naranja
 ];
 
-const EMOJIS = [
-  '🍔',
-  '🚗',
-  '💰',
-  '🎮',
-  '🏠',
-  '📚',
-  '🛒',
-  '❤️',
-  '✈️',
-  '🎵',
-  '💡',
-  '🏥',
-  '👕',
-  '💼',
-  '🍕',
-  '☕',
-  '🎬',
-  '⚽',
+const ICONS = [
+  { name: 'Wallet', icon: 'Wallet', label: 'Billetera' },
+  { name: 'Car', icon: 'Car', label: 'Auto' },
+  { name: 'Gamepad2', icon: 'Gamepad2', label: 'Juegos' },
+  { name: 'House', icon: 'House', label: 'Casa' },
+  { name: 'Music', icon: 'Music', label: 'Música' },
+  { name: 'ShoppingCart', icon: 'ShoppingCart', label: 'Compras' },
+  { name: 'Utensils', icon: 'Utensils', label: 'Comida' },
 ];
 
 export default function CategoriesScreen() {
   const { userId } = useAuth();
+  const { signOut } = useClerk();
   const supabase = useSupabase();
 
-  const [type, setType] = useState<MovementType>('income');
+  const { theme, isDarkMode, setDarkMode } = useAppTheme();
+  const styles = createStyles(theme);
 
+  const [type, setType] = useState<MovementType>('expense');
   const [categories, setCategories] = useState<Category[]>([]);
-
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const [name, setName] = useState('');
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
-  const [selectedEmoji, setSelectedEmoji] = useState('💰');
+  const [selectedIcon, setSelectedIcon] = useState('Wallet');
+
+  async function handleLogout() {
+    try {
+      await signOut();
+      router.replace('/sign-in');
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'No se pudo cerrar sesión');
+    }
+  }
 
   const loadCategories = useCallback(async () => {
     if (!userId) return;
 
     try {
       setLoading(true);
-
-      const data = await getCategoriesByType(
-        supabase,
-        userId,
-        type
-      );
-
+      const data = await getCategoriesByType(supabase, userId, type);
       setCategories(data);
     } catch (error) {
       console.error(error);
-
-      Alert.alert(
-        'Error',
-        'No se pudieron cargar las categorías.'
-      );
+      setErrorMessage('No se pudieron cargar las categorías.');
+      setErrorModalVisible(true);
     } finally {
       setLoading(false);
     }
@@ -104,182 +114,211 @@ export default function CategoriesScreen() {
   }, [loadCategories]);
 
   const title = useMemo(() => {
-    return type === 'income'
-      ? 'Categorías Ingreso'
-      : 'Categorías Gasto';
+    return type === 'income' ? 'Ingresos' : 'Gastos';
   }, [type]);
 
   const closeModal = useCallback(() => {
     setModalVisible(false);
     setName('');
     setSelectedColor(COLORS[0]);
-    setSelectedEmoji('💰');
+    setSelectedIcon('Wallet');
   }, []);
 
   async function handleCreateCategory() {
     if (!userId) return;
-    
+
     const trimmedName = name.trim();
-    
+
     if (!trimmedName) {
-      Alert.alert('Campo requerido', 'Ingresa un nombre para la categoría.');
+      setErrorMessage('Por favor, ingresa un nombre para la categoría.');
+      setErrorModalVisible(true);
       return;
     }
-    
+
     if (trimmedName.length < 2) {
-      Alert.alert('Nombre muy corto', 'La categoría debe tener al menos 2 caracteres.');
+      setErrorMessage('La categoría debe tener al menos 2 caracteres.');
+      setErrorModalVisible(true);
       return;
     }
-    
+
     const alreadyExists = categories.some(
       (category) => category.name.trim().toLowerCase() === trimmedName.toLowerCase()
     );
-    
+
     if (alreadyExists) {
-      Alert.alert('Duplicado', `Ya existe una categoría llamada "${trimmedName}".`);
+      setErrorMessage(`Ya existe una categoría llamada "${trimmedName}".`);
+      setErrorModalVisible(true);
       return;
     }
-    
+
     try {
       setCreating(true);
-      
+
       await createCategory(supabase, {
         clerkUserId: userId,
         type,
         name: trimmedName,
         color: selectedColor,
-        icon: selectedEmoji,
+        icon: selectedIcon,
       });
-      
+
       closeModal();
       await loadCategories();
+
+      setSuccessMessage('Categoría creada correctamente');
+      setSuccessModalVisible(true);
       
-      Alert.alert('Éxito', 'Categoría creada correctamente.');
+      setTimeout(() => {
+        setSuccessModalVisible(false);
+      }, 2000);
     } catch (error: any) {
       console.error('Error creating category:', error);
-      
+
       if (error?.code === '23505') {
-        Alert.alert('Duplicado', 'Ya existe una categoría con ese nombre en la base de datos.');
+        setErrorMessage('Ya existe una categoría con ese nombre en la base de datos.');
       } else {
-        Alert.alert('Error', error.message ?? 'No se pudo crear la categoría.');
+        setErrorMessage(error.message ?? 'No se pudo crear la categoría.');
       }
+      setErrorModalVisible(true);
     } finally {
       setCreating(false);
     }
   }
 
-  async function handleDeleteCategory(categoryId: string) {
-    Alert.alert(
-      'Eliminar categoría',
-      '¿Seguro que deseas eliminar esta categoría?',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteCategory(supabase, categoryId);
-              await loadCategories();
-              
-              Alert.alert('Éxito', 'Categoría eliminada correctamente.');
-            } catch (error: any) {
-              Alert.alert(
-                'No permitido',
-                error.message || 'No se pudo eliminar la categoría.'
-              );
-            }
-          },
-        },
-      ]
-    );
+  function handleDeletePress(category: Category) {
+    setSelectedCategory(category);
+    setDeleteModalVisible(true);
   }
+
+  async function handleConfirmDelete() {
+    if (!selectedCategory) return;
+
+    try {
+      await deleteCategory(supabase, selectedCategory.id);
+      await loadCategories();
+
+      setDeleteModalVisible(false);
+      setSuccessMessage('Categoría eliminada correctamente');
+      setSuccessModalVisible(true);
+      
+      setTimeout(() => {
+        setSuccessModalVisible(false);
+      }, 2000);
+    } catch (error: any) {
+      setDeleteModalVisible(false);
+      setErrorMessage(error.message || 'No se pudo eliminar la categoría.');
+      setErrorModalVisible(true);
+    }
+  }
+
+  const renderCategoryCard = ({ item }: { item: Category }) => (
+    <View style={styles.categoryCard}>
+      <View style={styles.categoryCardContent}>
+        <View style={[styles.iconContainer, { backgroundColor: (item.color || '#10B981') + '20' }]}>
+          {renderCategoryIcon(item.icon, 28, item.color)}
+        </View>
+
+        <Text style={styles.categoryName}>{item.name}</Text>
+      </View>
+
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={() => handleDeletePress(item)}
+        activeOpacity={0.7}
+      >
+        <Trash2 size={20} color="#EF4444" />
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>
-        Categorías
-      </Text>
+      {/* Header consistente con home.tsx y accounts.tsx */}
+      <View style={styles.topBar}>
+        <View style={styles.topTitleBox}>
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={10}
+          >
+            <Menu size={28} color="#FFFFFF" />
+          </Pressable>
 
-      <View style={styles.tabs}>
-        <Pressable
-          style={[
-            styles.tab,
-            type === 'income' && styles.activeIncomeTab,
-          ]}
-          onPress={() => setType('income')}
-        >
-          <Text style={styles.tabText}>
-            Ingresos
-          </Text>
-        </Pressable>
+          <Text style={styles.topTitle}>Categorías</Text>
+        </View>
 
-        <Pressable
-          style={[
-            styles.tab,
-            type === 'expense' && styles.activeExpenseTab,
-          ]}
-          onPress={() => setType('expense')}
-        >
-          <Text style={styles.tabText}>
-            Gastos
-          </Text>
+        <Pressable onPress={handleLogout} hitSlop={10}>
+          <LogOut size={26} color="#FFFFFF" />
         </Pressable>
       </View>
 
-      <Text style={styles.title}>
-        {title}
-      </Text>
+      {/* Segmented Control Moderno */}
+      <View style={styles.segmentedControl}>
+        <TouchableOpacity
+          style={[
+            styles.segmentButton,
+            type === 'expense' && styles.segmentButtonActiveExpense,
+          ]}
+          onPress={() => setType('expense')}
+          activeOpacity={0.7}
+        >
+          <Text
+            style={[
+              styles.segmentText,
+              type === 'expense' && styles.segmentTextActive,
+            ]}
+          >
+            Gastos
+          </Text>
+        </TouchableOpacity>
 
+        <TouchableOpacity
+          style={[
+            styles.segmentButton,
+            type === 'income' && styles.segmentButtonActiveIncome,
+          ]}
+          onPress={() => setType('income')}
+          activeOpacity={0.7}
+        >
+          <Text
+            style={[
+              styles.segmentText,
+              type === 'income' && styles.segmentTextActive,
+            ]}
+          >
+            Ingresos
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Lista de Categorías */}
       <FlatList
         data={categories}
         keyExtractor={(item) => item.id}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.categoriesList}
         refreshing={loading}
         onRefresh={loadCategories}
-        renderItem={({ item }) => (
-          <View style={styles.categoryItem}>
-            <View
-              style={[
-                styles.colorDot,
-                { backgroundColor: item.color ?? '#ccc' },
-              ]}
-            />
-
-            <Text style={styles.categoryName}>
-              {item.icon ?? '📁'} {item.name}
+        renderItem={renderCategoryCard}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No hay categorías</Text>
+            <Text style={styles.emptySubtext}>
+              Toca el botón + para crear una nueva categoría
             </Text>
-
-            <Pressable
-              onPress={() =>
-                handleDeleteCategory(item.id)
-              }
-              hitSlop={10}
-            >
-              <Text style={styles.deleteText}>
-                🗑️
-              </Text>
-            </Pressable>
           </View>
-        )}
+        }
       />
 
-      <Pressable
-        style={[
-          styles.fab,
-          type === 'income'
-            ? styles.incomeFab
-            : styles.expenseFab,
-        ]}
+      {/* FAB - Botón flotante */}
+      <TouchableOpacity
+        style={styles.fab}
         onPress={() => setModalVisible(true)}
+        activeOpacity={0.8}
       >
-        <Text style={styles.fabText}>
-          +
-        </Text>
-      </Pressable>
+        <Plus size={28} color="#FFF" />
+      </TouchableOpacity>
 
+      {/* Modal Crear Categoría */}
       <Modal
         visible={modalVisible}
         transparent
@@ -288,91 +327,174 @@ export default function CategoriesScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
-              Nueva Categoría
-            </Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalHeaderTitle}>Nueva Categoría</Text>
+            </View>
 
-            <TextInput
-              placeholder="Nombre categoría"
-              placeholderTextColor="#999"
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              editable={!creating}
-              autoFocus
-            />
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <TextInput
+                placeholder="Nombre de la categoría"
+                placeholderTextColor="#9CA3AF"
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                editable={!creating}
+                autoFocus
+              />
 
-            <Text style={styles.inputLabel}>
-              Color
-            </Text>
+              <Text style={styles.inputLabel}>Selecciona un color</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.colorsScroll}>
+                <View style={styles.colorsRow}>
+                  {COLORS.map((color) => (
+                    <TouchableOpacity
+                      key={color}
+                      style={[
+                        styles.colorCircle,
+                        { backgroundColor: color },
+                        selectedColor === color && styles.colorCircleSelected,
+                      ]}
+                      onPress={() => setSelectedColor(color)}
+                      disabled={creating}
+                    />
+                  ))}
+                </View>
+              </ScrollView>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.colorsScroll}>
-              <View style={styles.colorsRow}>
-                {COLORS.map((color) => (
-                  <Pressable
-                    key={color}
-                    style={[
-                      styles.colorPicker,
-                      {
-                        backgroundColor: color,
-                        borderWidth: selectedColor === color ? 3 : 1,
-                        borderColor: selectedColor === color ? '#000' : '#DDD',
-                      },
-                    ]}
-                    onPress={() => setSelectedColor(color)}
-                    disabled={creating}
-                  />
-                ))}
-              </View>
+              <Text style={styles.inputLabel}>Selecciona un icono</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.iconsScroll}>
+                <View style={styles.iconsRow}>
+                  {ICONS.map(({ name, icon }) => (
+                    <TouchableOpacity
+                      key={name}
+                      style={[
+                        styles.iconCircle,
+                        selectedIcon === name && styles.iconCircleSelected,
+                      ]}
+                      onPress={() => setSelectedIcon(name)}
+                      disabled={creating}
+                    >
+                      {renderCategoryIcon(icon, 28, selectedIcon === name ? '#FFF' : '#6B7280')}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
             </ScrollView>
 
-            <Text style={styles.inputLabel}>
-              Emoji
-            </Text>
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.emojiScroll}>
-              <View style={styles.emojiRow}>
-                {EMOJIS.map((emoji) => (
-                  <Pressable
-                    key={emoji}
-                    style={[
-                      styles.emojiPicker,
-                      selectedEmoji === emoji && styles.emojiPickerSelected,
-                    ]}
-                    onPress={() => setSelectedEmoji(emoji)}
-                    disabled={creating}
-                  >
-                    <Text style={styles.emojiText}>
-                      {emoji}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </ScrollView>
-
-            <View style={styles.actions}>
-              <Pressable
-                style={styles.cancelButton}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
                 onPress={closeModal}
                 disabled={creating}
               >
-                <Text style={styles.actionText}>
-                  Cancelar
-                </Text>
-              </Pressable>
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
 
-              <Pressable
-                style={[
-                  styles.createButton,
-                  creating && styles.createButtonDisabled
-                ]}
+              <TouchableOpacity
+                style={[styles.modalButton, styles.createButton, creating && styles.buttonDisabled]}
                 onPress={handleCreateCategory}
                 disabled={creating}
               >
-                <Text style={styles.actionText}>
+                <Text style={styles.createButtonText}>
                   {creating ? 'Creando...' : 'Crear'}
                 </Text>
-              </Pressable>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Eliminar Categoría */}
+      <Modal
+        visible={deleteModalVisible}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.feedbackModalCard}>
+            <View style={styles.feedbackHeader}>
+              <Text style={styles.feedbackHeaderTitle}>
+                Eliminar categoría
+              </Text>
+            </View>
+
+            <View style={styles.feedbackBody}>
+              <Trash2 size={40} color="#EF4444" />
+              <Text style={styles.feedbackDeleteText}>
+                ¿Deseas eliminar "{selectedCategory?.name}"?
+              </Text>
+
+              <View style={styles.feedbackButtons}>
+                <TouchableOpacity
+                  style={styles.feedbackCancelButton}
+                  onPress={() => setDeleteModalVisible(false)}
+                >
+                  <Text style={styles.feedbackCancelText}>
+                    Cancelar
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.feedbackDeleteButton}
+                  onPress={handleConfirmDelete}
+                >
+                  <Text style={styles.feedbackDeleteButtonText}>
+                    Eliminar
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Éxito */}
+      <Modal
+        visible={successModalVisible}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.feedbackModalCard}>
+            <View style={styles.feedbackHeader}>
+              <Text style={styles.feedbackHeaderTitle}>
+                {type === 'expense' ? 'Nuevo Gasto' : 'Nuevo Ingreso'}
+              </Text>
+            </View>
+
+            <View style={styles.feedbackBody}>
+              <Text style={styles.feedbackSuccessIcon}>♡</Text>
+              <Text style={styles.feedbackSuccessText}>
+                {successMessage}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Error */}
+      <Modal
+        visible={errorModalVisible}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.feedbackModalCard}>
+            <View style={styles.feedbackHeader}>
+              <Text style={styles.feedbackHeaderTitle}>Error</Text>
+            </View>
+
+            <View style={styles.feedbackBody}>
+              <Text style={styles.feedbackErrorIcon}>⚠️</Text>
+              <Text style={styles.feedbackErrorText}>
+                {errorMessage}
+              </Text>
+
+              <TouchableOpacity
+                style={styles.feedbackErrorButton}
+                onPress={() => setErrorModalVisible(false)}
+              >
+                <Text style={styles.feedbackErrorButtonText}>Entendido</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -381,231 +503,389 @@ export default function CategoriesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F4F4F4',
-    padding: 16,
-  },
+function createStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
 
-  header: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 20,
-    color: '#333',
-  },
+    topBar: {
+      height: 92,
+      backgroundColor: theme.colors.sidebarHeader,
+      paddingHorizontal: 18,
+      paddingTop: 42,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
 
-  tabs: {
-    flexDirection: 'row',
-    marginBottom: 20,
-    gap: 10,
-  },
+    topTitleBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
 
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: '#DDD',
-    alignItems: 'center',
-  },
+    topTitle: {
+      color: '#FFFFFF',
+      fontSize: 25,
+      fontWeight: '900',
+    },
 
-  activeIncomeTab: {
-    backgroundColor: '#4CAF50',
-  },
+    segmentedControl: {
+      flexDirection: 'row',
+      backgroundColor: theme.mode === 'dark' ? '#1E293B' : '#F3F4F6',
+      marginHorizontal: 24,
+      marginVertical: 16,
+      borderRadius: 12,
+      padding: 4,
+    },
 
-  activeExpenseTab: {
-    backgroundColor: '#FF5252',
-  },
+    segmentButton: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
 
-  tabText: {
-    color: '#FFF',
-    fontWeight: '700',
-  },
+    segmentButtonActiveExpense: {
+      backgroundColor: '#EF4444',
+    },
 
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 20,
-    color: '#333',
-  },
+    segmentButtonActiveIncome: {
+      backgroundColor: '#10B981',
+    },
 
-  categoryItem: {
-    backgroundColor: '#FFF',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
+    segmentText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.mode === 'dark' ? '#CBD5E1' : '#6B7280',
+    },
 
-  colorDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 999,
-    marginRight: 12,
-  },
+    segmentTextActive: {
+      color: '#FFF',
+    },
 
-  categoryName: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
+    categoriesList: {
+      paddingHorizontal: 24,
+      paddingBottom: 80,
+    },
 
-  deleteText: {
-    fontSize: 20,
-  },
+    categoryCard: {
+      backgroundColor: theme.colors.card,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 3,
+    },
 
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
-  },
+    categoryCardContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
 
-  incomeFab: {
-    backgroundColor: '#4CAF50',
-  },
+    iconContainer: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 16,
+    },
 
-  expenseFab: {
-    backgroundColor: '#FF5252',
-  },
+    categoryName: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.text,
+      flex: 1,
+    },
 
-  fabText: {
-    color: '#FFF',
-    fontSize: 32,
-    fontWeight: '700',
-  },
+    deleteButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: '#FEE2E2',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: 20,
-  },
+    fab: {
+      position: 'absolute',
+      bottom: 24,
+      right: 24,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: '#10B981',
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 5,
+    },
 
-  modalCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    padding: 20,
-    maxHeight: '90%',
-  },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: theme.colors.overlay,
+      justifyContent: 'center',
+      padding: 20,
+    },
 
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    marginBottom: 20,
-    color: '#333',
-    textAlign: 'center',
-  },
+    modalCard: {
+      backgroundColor: theme.colors.card,
+      borderRadius: 20,
+      overflow: 'hidden',
+      maxHeight: '90%',
+    },
 
-  input: {
-    borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 20,
-    fontSize: 16,
-    backgroundColor: '#FFF',
-  },
+    modalHeader: {
+      backgroundColor: '#3B82F6',
+      paddingVertical: 20,
+      paddingHorizontal: 24,
+    },
 
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#333',
-  },
+    modalHeaderTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: '#FFF',
+      textAlign: 'center',
+    },
 
-  colorsScroll: {
-    marginBottom: 20,
-  },
+    input: {
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: 12,
+      padding: 14,
+      margin: 20,
+      marginBottom: 16,
+      fontSize: 16,
+      backgroundColor: theme.colors.surface,
+      color: theme.colors.text,
+    },
 
-  colorsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 4,
-  },
+    inputLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.textSecondary,
+      marginLeft: 20,
+      marginBottom: 12,
+    },
 
-  colorPicker: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
+    colorsScroll: {
+      marginBottom: 20,
+    },
 
-  emojiScroll: {
-    marginBottom: 20,
-  },
+    colorsRow: {
+      flexDirection: 'row',
+      paddingHorizontal: 20,
+      gap: 12,
+    },
 
-  emojiRow: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 4,
-  },
+    colorCircle: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+    },
 
-  emojiPicker: {
-    width: 55,
-    height: 55,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
+    colorCircleSelected: {
+      borderColor: '#000',
+      borderWidth: 3,
+      transform: [{ scale: 1.05 }],
+    },
 
-  emojiPickerSelected: {
-    borderColor: '#4CAF50',
-    backgroundColor: '#E8F5E9',
-    transform: [{ scale: 1.02 }],
-  },
+    iconsScroll: {
+      marginBottom: 20,
+    },
 
-  emojiText: {
-    fontSize: 28,
-  },
+    iconsRow: {
+      flexDirection: 'row',
+      paddingHorizontal: 20,
+      gap: 12,
+    },
 
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
+    iconCircle: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: theme.mode === 'dark' ? '#334155' : '#F3F4F6',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: 'transparent',
+    },
 
-  cancelButton: {
-    flex: 1,
-    backgroundColor: '#FF5252',
-    padding: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
+    iconCircleSelected: {
+      backgroundColor: '#3B82F6',
+      borderColor: '#3B82F6',
+    },
 
-  createButton: {
-    flex: 1,
-    backgroundColor: '#4CAF50',
-    padding: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
+    modalActions: {
+      flexDirection: 'row',
+      padding: 20,
+      gap: 12,
+    },
 
-  createButtonDisabled: {
-    opacity: 0.5,
-  },
+    modalButton: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: 'center',
+    },
 
-  actionText: {
-    color: '#FFF',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-});
+    cancelButton: {
+      backgroundColor: '#F3F4F6',
+    },
+
+    cancelButtonText: {
+      color: '#6B7280',
+      fontWeight: '600',
+      fontSize: 16,
+    },
+
+    createButton: {
+      backgroundColor: '#10B981',
+    },
+
+    createButtonText: {
+      color: '#FFF',
+      fontWeight: '600',
+      fontSize: 16,
+    },
+
+    buttonDisabled: {
+      opacity: 0.5,
+    },
+
+    emptyContainer: {
+      alignItems: 'center',
+      paddingVertical: 60,
+    },
+
+    emptyText: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: theme.colors.textSecondary,
+      marginBottom: 8,
+    },
+
+    emptySubtext: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+    },
+
+    // Estilos para los modales rediseñados
+    feedbackModalCard: {
+      backgroundColor: theme.colors.card,
+      borderRadius: 24,
+      overflow: 'hidden',
+    },
+
+    feedbackHeader: {
+      backgroundColor: '#0F2D8C',
+      paddingVertical: 24,
+      paddingHorizontal: 24,
+    },
+
+    feedbackHeaderTitle: {
+      color: '#FFF',
+      fontSize: 22,
+      fontWeight: '700',
+    },
+
+    feedbackBody: {
+      padding: 32,
+      alignItems: 'center',
+    },
+
+    feedbackSuccessIcon: {
+      fontSize: 42,
+      color: '#52F436',
+      marginBottom: 12,
+    },
+
+    feedbackSuccessText: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: '#52F436',
+      textAlign: 'center',
+    },
+
+    feedbackDeleteText: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: theme.colors.text,
+      textAlign: 'center',
+      marginTop: 20,
+    },
+
+    feedbackButtons: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 28,
+    },
+
+    feedbackCancelButton: {
+      backgroundColor: '#E5E7EB',
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+
+    feedbackCancelText: {
+      color: '#374151',
+      fontWeight: '600',
+    },
+
+    feedbackDeleteButton: {
+      backgroundColor: '#EF4444',
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+
+    feedbackDeleteButtonText: {
+      color: '#FFF',
+      fontWeight: '700',
+    },
+
+    feedbackErrorIcon: {
+      fontSize: 42,
+      color: '#F59E0B',
+      marginBottom: 12,
+    },
+
+    feedbackErrorText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: '#F59E0B',
+      textAlign: 'center',
+      marginBottom: 24,
+    },
+
+    feedbackErrorButton: {
+      backgroundColor: '#F59E0B',
+      paddingHorizontal: 32,
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+
+    feedbackErrorButtonText: {
+      color: '#FFF',
+      fontWeight: '700',
+      fontSize: 16,
+    },
+  });
+}

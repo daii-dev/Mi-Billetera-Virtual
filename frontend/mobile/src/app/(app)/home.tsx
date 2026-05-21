@@ -68,6 +68,9 @@ import { useAuth } from '@clerk/expo';
 import { useClerk } from '@clerk/expo';
 import { useUser } from '@clerk/expo';
 
+// Importar la función para renderizar iconos
+import { renderCategoryIcon } from '@/features/wallet/category.utils';
+
 type HomeMovementModalMode = 'edit' | 'delete' | 'success' | null;
 
 export default function HomeScreen() {
@@ -355,8 +358,6 @@ export default function HomeScreen() {
     }
   }
 
-  
-
   function handleSelectSidebarItem(item: { key: string; label: string }) {
     setSelectedSidebarItem(item.key);
 
@@ -509,15 +510,18 @@ export default function HomeScreen() {
           </Text>
         ) : (
           filteredHomeMovements.map((movement) => {
-
             const isIncome = movement.type === 'income';
             const accountName = movement.account?.name ?? 'Cuenta';
             const sign = isIncome ? '+' : '-';
+            
+            // Obtener el icono y color de la categoría con valores por defecto
+            const categoryIcon = movement.category_icon || 'Wallet';
+            const categoryColor = movement.category_color || '#D9D9D9';
 
             return (
               <View key={movement.id} style={styles.movementCard}>
-                <View style={styles.movementIcon}>
-                  <Wallet size={26} color="#FFFFFF" />
+                <View style={[styles.movementIcon, { backgroundColor: categoryColor }]}>
+                  {renderCategoryIcon(categoryIcon, 26, '#FFFFFF')}
                 </View>
 
                 <View style={styles.movementInfo}>
@@ -527,9 +531,12 @@ export default function HomeScreen() {
                   </Text>
 
                   {movement.category_name && (
-                    <Text style={styles.movementSubtitle}>
-                      ♟ {movement.category_name}
-                    </Text>
+                    <View style={styles.movementCategoryRow}>
+                      {renderCategoryIcon(categoryIcon, 14, theme.colors.textSecondary)}
+                      <Text style={styles.movementSubtitle}>
+                        {movement.category_name}
+                      </Text>
+                    </View>
                   )}
 
                   <Text style={styles.movementDate}>
@@ -1040,7 +1047,6 @@ function createStyles(theme: AppTheme) {
       width: 48,
       height: 48,
       borderRadius: 24,
-      backgroundColor: '#D9D9D9',
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -1265,6 +1271,12 @@ function createStyles(theme: AppTheme) {
     },
     movementMenuButton: {
       padding: 2,
+    },
+    movementCategoryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 4,
     },
   });
 }

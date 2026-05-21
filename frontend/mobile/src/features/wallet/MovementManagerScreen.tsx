@@ -58,6 +58,9 @@ import {
 } from '@/theme/ThemeContext';
 import { useAuth } from '@clerk/expo';
 
+// Importar la función para renderizar iconos
+import { renderCategoryIcon } from '@/features/wallet/category.utils';
+
 type ModalMode = 'form' | 'edit' | 'delete' | 'success' | null;
 
 type MovementManagerScreenProps = {
@@ -465,11 +468,15 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
 
             const accountName = movement.account?.name ?? 'Cuenta';
             const canEdit = movement.source === 'manual';
+            
+            // Obtener el icono y color de la categoría con valores por defecto
+            const categoryIcon = movement.category_icon || 'Wallet';
+            const categoryColor = movement.category_color || '#D9D9D9';
 
             return (
               <View key={movement.id} style={styles.movementCard}>
-                <View style={styles.movementIcon}>
-                  <Wallet size={25} color="#FFFFFF" />
+                <View style={[styles.movementIcon, { backgroundColor: categoryColor }]}>
+                  {renderCategoryIcon(categoryIcon, 25, '#FFFFFF')}
                 </View>
 
                 <View style={styles.movementInfo}>
@@ -482,9 +489,12 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
                   </Text>
 
                   {movement.category_name && (
-                    <Text style={styles.movementSubtitle}>
-                      ♟ {movement.category_name}
-                    </Text>
+                    <View style={styles.movementCategoryRow}>
+                      {renderCategoryIcon(categoryIcon, 14, theme.colors.textSecondary)}
+                      <Text style={styles.movementSubtitle}>
+                        {movement.category_name}
+                      </Text>
+                    </View>
                   )}
 
                   <Text style={styles.movementDate}>
@@ -899,13 +909,11 @@ function MovementForm({
         onPress={onToggleCategoryOptions}
       >
         <View style={styles.selectorLeft}>
-        <Text style={styles.categoryIcon}>
-  {
-    categories.find(
-      (c) => c.name === selectedCategory
-    )?.icon ?? '📁'
-  }
-</Text>
+          {renderCategoryIcon(
+            categories.find((c) => c.name === selectedCategory)?.icon,
+            22,
+            '#4B5563'
+          )}
           <Text style={styles.selectorText}>
             {selectedCategory || 'Selecciona una categoría'}
           </Text>
@@ -917,18 +925,19 @@ function MovementForm({
       {showCategoryOptions && (
         <View style={styles.optionsBox}>
           {categories.map((category) => (
-  <Pressable
-    key={category.id}
-    style={styles.optionItem}
-    onPress={() =>
-      onSelectCategory(category.name)
-    }
-  >
-    <Text style={styles.optionText}>
-      {category.icon ?? '📁'} {category.name}
-    </Text>
-  </Pressable>
-))}
+            <Pressable
+              key={category.id}
+              style={styles.optionItem}
+              onPress={() => onSelectCategory(category.name)}
+            >
+              <View style={styles.categoryOptionRow}>
+                {renderCategoryIcon(category.icon, 20, '#4B5563')}
+                <Text style={styles.optionText}>
+                  {category.name}
+                </Text>
+              </View>
+            </Pressable>
+          ))}
         </View>
       )}
 
@@ -1069,7 +1078,6 @@ function createStyles(
       width: 46,
       height: 46,
       borderRadius: 23,
-      backgroundColor: '#D9D9D9',
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -1237,10 +1245,6 @@ function createStyles(
       color: theme.colors.textSecondary,
       fontSize: 15,
     },
-    categoryIcon: {
-      fontSize: 21,
-      color: '#4B5563',
-    },
     optionsBox: {
       borderWidth: 1,
       borderColor: theme.colors.border,
@@ -1333,6 +1337,17 @@ function createStyles(
       marginTop: 14,
       color: theme.colors.text,
       fontWeight: '800',
+    },
+    movementCategoryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 4,
+    },
+    categoryOptionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
     },
   });
 }
