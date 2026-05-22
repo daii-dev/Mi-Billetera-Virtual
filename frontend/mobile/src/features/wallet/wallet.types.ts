@@ -60,6 +60,7 @@ export type Category = {
   color: string | null;
   created_at: string;
 };
+
 export type Budget = {
   id: string;
   clerk_user_id: string;
