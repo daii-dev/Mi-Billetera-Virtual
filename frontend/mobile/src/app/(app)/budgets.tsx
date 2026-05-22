@@ -245,11 +245,9 @@ export default function BudgetsScreen() {
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           }]);
-
         if (error) throw error;
         Alert.alert("¡Éxito!", "Presupuesto configurado correctamente.");
       }
-
       setModalVisible(false);
       resetForm();
       loadBudgetsData();
