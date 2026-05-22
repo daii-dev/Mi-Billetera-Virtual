@@ -46,7 +46,10 @@ export type Movement = {
   created_at: string;
   updated_at: string;
   source: MovementSource;
-  account?: Account;
+  account?: {
+    name: string;
+  } | null;
+  savings_goal_account_names?: string | null;
 };
 export type Category = {
   id: string;

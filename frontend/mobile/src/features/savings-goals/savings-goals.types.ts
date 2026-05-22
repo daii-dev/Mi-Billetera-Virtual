@@ -12,6 +12,13 @@ export type SavingsGoal = {
   visible: boolean;
   creado_en: string;
   actualizado_en: string;
+  contribution_accounts?: GoalContributionAccount[];
+};
+
+export type GoalContributionAccount = {
+  accountId: string;
+  accountName: string;
+  amount: number;
 };
 
 export type CreateSavingsGoalParams = {

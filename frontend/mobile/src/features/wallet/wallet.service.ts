@@ -142,6 +142,141 @@ export async function getUserAccounts(
   return (data ?? []) as Account[];
 }
 
+export async function getRecentMovements(
+  supabase: SupabaseClient,
+  clerkUserId: string,
+  limit = 10
+): Promise<Movement[]> {
+  const { data, error } = await supabase
+    .from('movements')
+    .select(`
+      *,
+      account:accounts (
+        name
+      )
+    `)
+    .eq('clerk_user_id', clerkUserId)
+    .order('movement_date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return enrichSavingsGoalMovementAccounts(
+    supabase,
+    clerkUserId,
+    (data ?? []) as Movement[]
+  );
+}
+
+async function enrichSavingsGoalMovementAccounts(
+  supabase: SupabaseClient,
+  clerkUserId: string,
+  movements: Movement[]
+): Promise<Movement[]> {
+  const metaIds = Array.from(new Set(
+    movements
+      .filter((movement) => movement.source === 'savings_goal' && movement.meta_id)
+      .map((movement) => movement.meta_id as string)
+  ));
+
+  if (metaIds.length === 0) {
+    return movements;
+  }
+
+  const { data, error } = await supabase
+    .from('abonos_metas_ahorro')
+    .select(`
+      meta_id,
+      cuenta_id,
+      account:accounts (
+        name
+      )
+    `)
+    .eq('usuario_clerk_id', clerkUserId)
+    .in('meta_id', metaIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const accountNamesByMeta = new Map<string, string[]>();
+
+  (data ?? []).forEach((contribution: any) => {
+    const metaId = contribution.meta_id as string;
+    const accountName = contribution.account?.name as string | undefined;
+
+    if (!accountName) {
+      return;
+    }
+
+    const currentNames = accountNamesByMeta.get(metaId) ?? [];
+
+    if (!currentNames.includes(accountName)) {
+      accountNamesByMeta.set(metaId, [...currentNames, accountName]);
+    }
+  });
+
+  return movements.map((movement) => {
+    if (movement.source !== 'savings_goal' || !movement.meta_id) {
+      return movement;
+    }
+
+    const accountNames = accountNamesByMeta.get(movement.meta_id);
+
+    if (!accountNames || accountNames.length === 0) {
+      return movement;
+    }
+
+    return {
+      ...movement,
+      savings_goal_account_names: accountNames.join(', '),
+    };
+  });
+}
+
+async function createInitialBalanceMovement(
+  supabase: SupabaseClient,
+  account: Account
+): Promise<void> {
+  const { data: existingMovement, error: existingMovementError } = await supabase
+    .from('movements')
+    .select('id')
+    .eq('account_id', account.id)
+    .eq('source', 'initial_balance')
+    .maybeSingle();
+
+  if (existingMovementError) {
+    throw new Error(existingMovementError.message);
+  }
+
+  if (existingMovement) {
+    return;
+  }
+
+  const amount = Number(account.initial_balance ?? account.current_balance ?? 0);
+
+  const { error } = await supabase
+    .from('movements')
+    .insert({
+      clerk_user_id: account.clerk_user_id,
+      account_id: account.id,
+      type: 'income',
+      source: 'initial_balance',
+      title: 'Saldo inicial',
+      description: 'Movimiento generado automáticamente al crear la cuenta',
+      amount,
+      currency: account.currency ?? 'BOB',
+      movement_date: new Date().toISOString().slice(0, 10),
+    });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 export async function getPersonalAccount(
   supabase: SupabaseClient,
   clerkUserId: string
@@ -385,6 +520,7 @@ type ManualMovementPayload = {
 type GoalExpensePayload = {
   metaId: string;
   accountId: string;
+  amount: number;
   description: string;
   categoryName: string;
 };
@@ -446,7 +582,11 @@ export async function getMovementsByType(
     throw new Error(error.message);
   }
 
-  return (data ?? []) as Movement[];
+  return enrichSavingsGoalMovementAccounts(
+    supabase,
+    clerkUserId,
+    (data ?? []) as Movement[]
+  );
 }
 
 export async function createManualMovement(
@@ -495,6 +635,7 @@ export async function registerExpenseFromGoal(
   const { data, error } = await supabase.rpc('registrar_gasto_desde_meta', {
     p_meta_id: payload.metaId,
     p_cuenta_id: payload.accountId,
+    p_monto: payload.amount,
     p_descripcion: payload.description,
     p_categoria: payload.categoryName,
   });
