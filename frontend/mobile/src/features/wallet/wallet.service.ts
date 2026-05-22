@@ -1,12 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-
 import {
   Account,
-  Budget,
+  Category,
   Movement,
   Profile,
   WalletStatus,
-  Category,
 } from './wallet.types';
 
 const INITIAL_ACCOUNT_NAME = 'Personal';
@@ -16,6 +14,8 @@ type EnsureWalletParams = {
   email: string;
   fullName?: string | null;
 };
+
+// --- SERVICIOS DE CONFIGURACIÓN INICIAL Y PERFIL ---
 
 export async function ensureUserWallet(
   supabase: SupabaseClient,
@@ -123,6 +123,8 @@ export async function getUserProfile(
   return data as Profile | null;
 }
 
+// --- SERVICIOS DE CUENTAS BANCARIAS ---
+
 export async function getUserAccounts(
   supabase: SupabaseClient,
   clerkUserId: string
@@ -138,71 +140,6 @@ export async function getUserAccounts(
   }
 
   return (data ?? []) as Account[];
-}
-
-export async function getRecentMovements(
-  supabase: SupabaseClient,
-  clerkUserId: string,
-  limit = 10
-): Promise<Movement[]> {
-  const { data, error } = await supabase
-    .from('movements')
-    .select(`
-      *,
-      account:accounts (
-        name
-      )
-    `)
-    .eq('clerk_user_id', clerkUserId)
-    .order('movement_date', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return (data ?? []) as Movement[];
-}
-
-async function createInitialBalanceMovement(
-  supabase: SupabaseClient,
-  account: Account
-): Promise<void> {
-  const { data: existingMovement, error: existingMovementError } = await supabase
-    .from('movements')
-    .select('id')
-    .eq('account_id', account.id)
-    .eq('source', 'initial_balance')
-    .maybeSingle();
-
-  if (existingMovementError) {
-    throw new Error(existingMovementError.message);
-  }
-
-  if (existingMovement) {
-    return;
-  }
-
-  const amount = Number(account.initial_balance ?? account.current_balance ?? 0);
-
-  const { error } = await supabase
-    .from('movements')
-    .insert({
-      clerk_user_id: account.clerk_user_id,
-      account_id: account.id,
-      type: 'income',
-      source: 'initial_balance',
-      title: 'Saldo inicial',
-      description: 'Movimiento generado automáticamente al crear la cuenta',
-      amount,
-      currency: account.currency ?? 'BOB',
-      movement_date: new Date().toISOString().slice(0, 10),
-    });
-
-  if (error) {
-    throw new Error(error.message);
-  }
 }
 
 export async function getPersonalAccount(
@@ -359,13 +296,81 @@ export function getAccountsTotal(accounts: Account[]): number {
   }, 0);
 }
 
+// --- UTILITARIOS FORMATO DINERO BO ---
+
 export function money(value: number | string | null | undefined): string {
   const amount = Number(value ?? 0);
-
   return `Bs. ${amount.toLocaleString('es-BO', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+}
+
+// --- SERVICIOS DE MOVIMIENTOS / TRANSACCIONES ---
+
+export async function getRecentMovements(
+  supabase: SupabaseClient,
+  clerkUserId: string,
+  limit = 10
+): Promise<Movement[]> {
+  const { data, error } = await supabase
+    .from('movements')
+    .select(`
+      *,
+      account:accounts (
+        name
+      )
+    `)
+    .eq('clerk_user_id', clerkUserId)
+    .order('movement_date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as Movement[];
+}
+
+async function createInitialBalanceMovement(
+  supabase: SupabaseClient,
+  account: Account
+): Promise<void> {
+  const { data: existingMovement, error: existingMovementError } = await supabase
+    .from('movements')
+    .select('id')
+    .eq('account_id', account.id)
+    .eq('source', 'initial_balance')
+    .maybeSingle();
+
+  if (existingMovementError) {
+    throw new Error(existingMovementError.message);
+  }
+
+  if (existingMovement) {
+    return;
+  }
+
+  const amount = Number(account.initial_balance ?? account.current_balance ?? 0);
+
+  const { error } = await supabase
+    .from('movements')
+    .insert({
+      clerk_user_id: account.clerk_user_id,
+      account_id: account.id,
+      type: 'income',
+      source: 'initial_balance',
+      title: 'Saldo inicial',
+      description: 'Movimiento generado automáticamente al crear la cuenta',
+      amount,
+      currency: account.currency ?? 'BOB',
+      movement_date: new Date().toISOString().slice(0, 10),
+    });
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 type ManualMovementPayload = {
@@ -374,6 +379,13 @@ type ManualMovementPayload = {
   type: 'income' | 'expense';
   title: string;
   amount: number;
+  categoryName: string;
+};
+
+type GoalExpensePayload = {
+  metaId: string;
+  accountId: string;
+  description: string;
   categoryName: string;
 };
 
@@ -476,6 +488,24 @@ export async function createManualMovement(
   return data as Movement;
 }
 
+export async function registerExpenseFromGoal(
+  supabase: SupabaseClient,
+  payload: GoalExpensePayload
+): Promise<Movement> {
+  const { data, error } = await supabase.rpc('registrar_gasto_desde_meta', {
+    p_meta_id: payload.metaId,
+    p_cuenta_id: payload.accountId,
+    p_descripcion: payload.description,
+    p_categoria: payload.categoryName,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as Movement;
+}
+
 export async function updateManualMovement(
   supabase: SupabaseClient,
   movementId: string,
@@ -573,10 +603,140 @@ export async function deleteManualMovement(
   );
 }
 
+// --- SERVICIOS DE GESTIÓN DE CATEGORÍAS (DINÁMICAS SUPABASE) ---
+
+export async function getCategoriesByType(
+  supabase: SupabaseClient,
+  clerkUserId: string,
+  type: 'income' | 'expense'
+): Promise<Category[]> {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('clerk_user_id', clerkUserId)
+    .eq('type', type)
+    .order('name', { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as Category[];
+}
+
+type CreateCategoryPayload = {
+  clerkUserId: string;
+  type: 'income' | 'expense';
+  name: string;
+  icon?: string;
+  color?: string;
+};
+
+export async function createCategory(
+  supabase: SupabaseClient,
+  payload: CreateCategoryPayload
+): Promise<Category> {
+  const cleanName = payload.name.trim();
+
+  const { data, error } = await supabase
+    .from('categories')
+    .insert({
+      clerk_user_id: payload.clerkUserId,
+      type: payload.type,
+      name: cleanName,
+      icon: payload.icon ?? null,
+      color: payload.color ?? null,
+    })
+    .select('*')
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as Category;
+}
+
+export async function updateCategory(
+  supabase: SupabaseClient,
+  categoryId: string,
+  payload: {
+    name: string;
+    icon?: string | null;
+    color?: string | null;
+  }
+): Promise<Category> {
+  const cleanName = payload.name.trim();
+
+  const { data, error } = await supabase
+    .from('categories')
+    .update({
+      name: cleanName,
+      icon: payload.icon ?? null,
+      color: payload.color ?? null,
+    })
+    .eq('id', categoryId)
+    .select('*')
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as Category;
+}
+
+export async function deleteCategory(
+  supabase: SupabaseClient,
+  categoryId: string
+): Promise<void> {
+  const { data: category, error: categoryError } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('id', categoryId)
+    .single();
+
+  if (categoryError) {
+    throw new Error(categoryError.message);
+  }
+
+  const { data: movementUsingCategory } = await supabase
+    .from('movements')
+    .select('id')
+    .eq('category_name', category.name)
+    .eq('type', category.type)
+    .eq('clerk_user_id', category.clerk_user_id)
+    .limit(1)
+    .maybeSingle();
+
+  if (movementUsingCategory) {
+    throw new Error(
+      'No puedes eliminar una categoría que ya está siendo utilizada.'
+    );
+  }
+
+  const { error } = await supabase
+    .from('categories')
+    .delete()
+    .eq('id', categoryId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+// --- NUEVA LÓGICA DE PRESUPUESTOS (VINCULADO A CUENTAS + RANGO FECHAS) ---
+
 export async function getBudgets(supabase: any, userId: string) {
   const { data, error } = await supabase
-    .from('budgets') // Asegúrate de que en Supabase se llame 'budgets' con 's'
-    .select('*')
+    .from('budgets')
+    .select(`
+      *,
+      account:accounts (
+        name,
+        current_balance
+      )
+    `)
     .eq('clerk_user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -584,87 +744,39 @@ export async function getBudgets(supabase: any, userId: string) {
   return data || [];
 }
 
-export async function getCategorySpent(
-  supabase: any, 
-  userId: string, 
-  category: string, 
-  month: number | null, 
-  year: number, 
-  accountId?: string | null,
-  periodType: 'monthly' | 'weekly' = 'monthly'
-) {
-  const now = new Date();
-  let startDate: string;
-  let endDate: string;
-
-  if (periodType === 'monthly') {
-    // Mes actual: del día 1 al último día
-    const targetMonth = month || (now.getMonth() + 1);
-    const firstDay = new Date(year, targetMonth - 1, 1);
-    const lastDay = new Date(year, targetMonth, 0);
-    
-    startDate = firstDay.toISOString().split('T')[0];
-    endDate = lastDay.toISOString().split('T')[0];
-  } else {
-    // Semana actual: de Lunes a Domingo
-    const curr = new Date();
-    const day = curr.getDay(); 
-    // Ajuste para que el lunes sea el día 1 y domingo el 7
-    const diff = curr.getDate() - (day === 0 ? 6 : day - 1); 
-    
-    const monday = new Date(new Date().setDate(diff));
-    const sunday = new Date(new Date().setDate(diff + 6));
-    
-    startDate = monday.toISOString().split('T')[0];
-    endDate = sunday.toISOString().split('T')[0];
-  }
-
-  let query = supabase
+export async function getBudgetAccountSpent(
+  supabase: any,
+  userId: string,
+  accountId: string,
+  startDate: string,
+  endDate: string
+): Promise<number> {
+  const { data, error } = await supabase
     .from('movements')
     .select('amount')
     .eq('clerk_user_id', userId)
+    .eq('account_id', accountId)
     .eq('type', 'expense')
-    .eq('category_name', category)
     .gte('movement_date', startDate)
     .lte('movement_date', endDate);
 
-  if (accountId) {
-    query = query.eq('account_id', accountId);
-  }
-
-  const { data, error } = await query;
   if (error) throw error;
 
   return data?.reduce((acc: number, m: any) => acc + Number(m.amount), 0) || 0;
 }
 
-export async function getUsedCategories(supabase: any, userId: string): Promise<string[]> {
-  const { data, error } = await supabase
-    .from('movements')
-    .select('category_name')
-    .eq('clerk_user_id', userId)
-    .eq('type', 'expense');
-
-  if (error || !data) return [];
-  const categories = data.map((m: any) => m.category_name).filter(Boolean);
-  return Array.from(new Set(categories ));
-}
-
-
-export async function saveBudget(supabase: any, budgetData: any) {
-  // Primero verificamos si ya existe uno para evitar el error del Criterio de Aceptación
+export async function saveAccountBudget(supabase: any, budgetData: any) {
   const { data: existing } = await supabase
     .from('budgets')
     .select('id')
     .eq('clerk_user_id', budgetData.clerk_user_id)
-    .eq('category_name', budgetData.category_name)
-    .eq('period_type', budgetData.period_type)
-    .eq('period_month', budgetData.period_month)
-    .eq('period_year', budgetData.period_year)
+    .eq('account_id', budgetData.account_id)
+    .gte('start_date', budgetData.start_date)
+    .lte('end_date', budgetData.end_date)
     .maybeSingle();
 
   if (existing) {
-    throw new Error('Ya existe un presupuesto para esa categoría en este período.');
+    throw new Error('Ya existe un presupuesto configurado para esta cuenta en este rango de fechas.');
   }
 
   const { error } = await supabase
@@ -679,86 +791,6 @@ export async function deleteBudget(supabase: any, budgetId: string) {
     .from('budgets')
     .delete()
     .eq('id', budgetId);
-
-  if (error) throw error;
-}
-
-export async function updateBudget(supabase: any, budgetId: string, amount: number) {
-  const { error } = await supabase
-    .from('budgets')
-    .update({ 
-      amount, 
-      updated_at: new Date().toISOString() 
-    })
-    .eq('id', budgetId);
-
-  if (error) throw error;
-}
-export async function checkBudgetAlert(supabase: any, userId: string, category: string) {
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
-  const { data: budget } = await supabase
-    .from('budgets')
-    .select('*')
-    .eq('clerk_user_id', userId)
-    .eq('category_name', category)
-    .eq('period_type', 'monthly')
-    .eq('period_month', month)
-    .eq('period_year', year)
-    .maybeSingle();
-
-  if (!budget) return null;
-
-  const spent = await getCategorySpent(supabase, userId, category, month, year);
-  const percentage = (spent / budget.amount) * 100;
-
-  return {
-    exceeded: percentage >= 80,
-    percentage,
-    limit: budget.amount,
-    spent
-  };
-}
-
-export async function getCategoriesByType(
-  supabase: any,
-  userId: string,
-  type: 'income' | 'expense'
-): Promise<any[]> {
-  const { data, error } = await supabase
-    .from('categories')
-    .select('*')
-    .eq('clerk_user_id', userId)
-    .eq('type', type)
-    .order('name', { ascending: true });
-
-  if (error) throw error;
-  return data || [];
-}
-
-export async function createCategory(
-  supabase: any,
-  payload: { clerkUserId: string; type: 'income' | 'expense'; name: string; color: string; icon: string }
-): Promise<void> {
-  const { error } = await supabase
-    .from('categories')
-    .insert({
-      clerk_user_id: payload.clerkUserId,
-      type: payload.type,
-      name: payload.name.trim(),
-      color: payload.color,
-      icon: payload.icon,
-    });
-
-  if (error) throw error;
-}
-
-export async function deleteCategory(supabase: any, categoryId: string): Promise<void> {
-  const { error } = await supabase
-    .from('categories')
-    .delete()
-    .eq('id', categoryId);
 
   if (error) throw error;
 }

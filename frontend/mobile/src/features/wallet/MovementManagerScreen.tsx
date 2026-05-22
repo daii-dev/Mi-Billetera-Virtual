@@ -19,6 +19,7 @@ import {
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Modal,
   Pressable,
   RefreshControl,
@@ -29,6 +30,10 @@ import {
   View,
 } from 'react-native';
 
+import {
+  getCompletedSavingsGoals,
+} from '@/features/savings-goals/savings-goals.service';
+import { SavingsGoal } from '@/features/savings-goals/savings-goals.types';
 import { AccountFilterModal } from '@/features/wallet/AccountFilterModal';
 import {
   formatMoneyInput,
@@ -42,13 +47,14 @@ import {
   getMovementsByType,
   getUserAccounts,
   money,
+  registerExpenseFromGoal,
   updateManualMovement,
 } from '@/features/wallet/wallet.service';
 import {
   Account,
   Category,
+  ManualMovementType,
   Movement,
-  MovementType,
 } from '@/features/wallet/wallet.types';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
@@ -58,10 +64,17 @@ import {
 } from '@/theme/ThemeContext';
 import { useAuth } from '@clerk/expo';
 
+// Importar la función para renderizar iconos
+import { renderCategoryIcon } from '@/features/wallet/category.utils';
+
 type ModalMode = 'form' | 'edit' | 'delete' | 'success' | null;
+const registerPigImages = {
+  income: require('../../../assets/chanchito-ingreso.png'),
+  expense: require('../../../assets/chanchito-gasto.png'),
+};
 
 type MovementManagerScreenProps = {
-  type: MovementType;
+  type: ManualMovementType;
   title: string;
   listTitle: string;
   registerButtonText: string;
@@ -102,6 +115,7 @@ export function MovementManagerScreen({
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [movements, setMovements] = useState<Movement[]>([]);
+  const [completedGoals, setCompletedGoals] = useState<SavingsGoal[]>([]);
 
   const [filterVisible, setFilterVisible] = useState(false);
 const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
@@ -116,9 +130,12 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
   const [amountText, setAmountText] = useState('');
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [useSavingsGoal, setUseSavingsGoal] = useState(false);
+  const [selectedGoalId, setSelectedGoalId] = useState('');
 
   const [showAccountOptions, setShowAccountOptions] = useState(false);
   const [showCategoryOptions, setShowCategoryOptions] = useState(false);
+  const [showGoalOptions, setShowGoalOptions] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [openedParamEditId, setOpenedParamEditId] = useState<string | null>(null);
@@ -138,11 +155,17 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
         setLoading(true);
       }
 
-      const userAccounts = await getUserAccounts(supabase, userId);
-      const userMovements = await getMovementsByType(supabase, userId, type);
+      const [userAccounts, userMovements, userCompletedGoals] = await Promise.all([
+        getUserAccounts(supabase, userId),
+        getMovementsByType(supabase, userId, type),
+        type === 'expense'
+          ? getCompletedSavingsGoals(supabase, userId)
+          : Promise.resolve([]),
+      ]);
 
       setAccounts(userAccounts);
       setMovements(userMovements);
+      setCompletedGoals(userCompletedGoals);
     } catch (error: any) {
       Alert.alert(
         'Error',
@@ -191,6 +214,10 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
   }
 
   function handleChangeAmount(value: string) {
+    if (useSavingsGoal && type === 'expense') {
+      return;
+    }
+
     setAmountText(sanitizeMoneyInput(value, amountText));
   }
 
@@ -208,8 +235,11 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
     setAmountText('');
     setSelectedAccountId(getDefaultAccountId());
     setSelectedCategory(getDefaultCategory());
+    setUseSavingsGoal(false);
+    setSelectedGoalId('');
     setShowAccountOptions(false);
     setShowCategoryOptions(false);
+    setShowGoalOptions(false);
     setModalMode('form');
   }
 
@@ -223,8 +253,11 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
     setAmountText(formatMoneyInput(movement.amount));
     setSelectedAccountId(movement.account_id);
     setSelectedCategory(movement.category_name || getDefaultCategory());
+    setUseSavingsGoal(false);
+    setSelectedGoalId('');
     setShowAccountOptions(false);
     setShowCategoryOptions(false);
+    setShowGoalOptions(false);
     setModalMode('edit');
   }
 
@@ -233,9 +266,31 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
     setSelectedMovement(null);
     setDescription('');
     setAmountText('');
+    setUseSavingsGoal(false);
+    setSelectedGoalId('');
     setShowAccountOptions(false);
     setShowCategoryOptions(false);
+    setShowGoalOptions(false);
     setSaving(false);
+  }
+
+  function handleToggleSavingsGoal(enabled: boolean) {
+    setUseSavingsGoal(enabled);
+    setSelectedGoalId('');
+    setShowGoalOptions(false);
+
+    if (enabled) {
+      setAmountText('');
+      return;
+    }
+
+    setAmountText('');
+  }
+
+  function handleSelectGoal(goal: SavingsGoal) {
+    setSelectedGoalId(goal.id_meta);
+    setAmountText(formatMoneyInput(goal.monto_actual));
+    setShowGoalOptions(false);
   }
 
   function validateForm(): {
@@ -243,6 +298,7 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
     amount: number;
     accountId: string;
     category: string;
+    goalId: string | null;
   } | null {
     const cleanDescription = description.trim();
     const cleanAmountText = amountText.trim();
@@ -255,6 +311,11 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
     }
 
     
+    if (type === 'expense' && useSavingsGoal && !selectedGoalId) {
+      Alert.alert('Meta requerida', 'Selecciona una meta de ahorro completada');
+      return null;
+    }
+
     if (!isValidMoneyInput(cleanAmountText)) {
         Alert.alert(
             'Monto inválido',
@@ -296,6 +357,7 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
       amount,
       accountId,
       category,
+      goalId: type === 'expense' && useSavingsGoal ? selectedGoalId : null,
     };
   }
 
@@ -309,14 +371,23 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
     try {
       setSaving(true);
 
-      await createManualMovement(supabase, {
-        clerkUserId: userId,
-        accountId: form.accountId,
-        type,
-        title: form.cleanDescription,
-        amount: form.amount,
-        categoryName: form.category,
-      });
+      if (form.goalId) {
+        await registerExpenseFromGoal(supabase, {
+          metaId: form.goalId,
+          accountId: form.accountId,
+          description: form.cleanDescription,
+          categoryName: form.category,
+        });
+      } else {
+        await createManualMovement(supabase, {
+          clerkUserId: userId,
+          accountId: form.accountId,
+          type,
+          title: form.cleanDescription,
+          amount: form.amount,
+          categoryName: form.category,
+        });
+      }
 
       await loadData(false);
       setSuccessAction('create');
@@ -394,6 +465,9 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
   const selectedAccount = accounts.find(
     (account) => account.id === selectedAccountId
   );
+  const selectedGoal = completedGoals.find(
+    (goal) => goal.id_meta === selectedGoalId
+  ) ?? null;
 
   const isIncome = type === 'income';
   const amountSign = isIncome ? '+' : '-';
@@ -476,11 +550,15 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
 
             const accountName = movement.account?.name ?? 'Cuenta';
             const canEdit = movement.source === 'manual';
+            
+            // Obtener el icono y color de la categoría con valores por defecto
+            const categoryIcon = movement.category_icon || 'Wallet';
+            const categoryColor = movement.category_color || '#D9D9D9';
 
             return (
               <View key={movement.id} style={styles.movementCard}>
-                <View style={styles.movementIcon}>
-                  <Wallet size={25} color="#FFFFFF" />
+                <View style={[styles.movementIcon, { backgroundColor: categoryColor }]}>
+                  {renderCategoryIcon(categoryIcon, 25, '#FFFFFF')}
                 </View>
 
                 <View style={styles.movementInfo}>
@@ -493,9 +571,12 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
                   </Text>
 
                   {movement.category_name && (
-                    <Text style={styles.movementSubtitle}>
-                      ♟ {movement.category_name}
-                    </Text>
+                    <View style={styles.movementCategoryRow}>
+                      {renderCategoryIcon(categoryIcon, 14, theme.colors.textSecondary)}
+                      <Text style={styles.movementSubtitle}>
+                        {movement.category_name}
+                      </Text>
+                    </View>
                   )}
 
                   <Text style={styles.movementDate}>
@@ -557,13 +638,19 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
         amountText={amountText}
         selectedAccountName={selectedAccount?.name ?? ''}
         selectedCategory={selectedCategory}
+        useSavingsGoal={useSavingsGoal}
+        selectedGoal={selectedGoal}
+        completedGoals={completedGoals}
         accounts={accounts}
         categories={categories}
         showAccountOptions={showAccountOptions}
         showCategoryOptions={showCategoryOptions}
+        showGoalOptions={showGoalOptions}
         saving={saving}
         onChangeDescription={setDescription}
         onChangeAmount={handleChangeAmount}
+        onToggleSavingsGoal={handleToggleSavingsGoal}
+        onSelectGoal={handleSelectGoal}
         onSelectAccount={(accountId) => {
           setSelectedAccountId(accountId);
           setShowAccountOptions(false);
@@ -574,6 +661,7 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
         }}
         onToggleAccountOptions={() => setShowAccountOptions(!showAccountOptions)}
         onToggleCategoryOptions={() => setShowCategoryOptions(!showCategoryOptions)}
+        onToggleGoalOptions={() => setShowGoalOptions(!showGoalOptions)}
         onClose={closeModal}
         onCreate={handleCreateMovement}
         onUpdate={handleUpdateMovement}
@@ -588,7 +676,7 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
 type MovementModalProps = {
   mode: ModalMode;
   styles: ReturnType<typeof createStyles>;
-  type: MovementType;
+  type: ManualMovementType;
   successAction: 'create' | 'edit';
   registerTitle: string;
   editTitle: string;
@@ -601,17 +689,24 @@ type MovementModalProps = {
   amountText: string;
   selectedAccountName: string;
   selectedCategory: string;
+  useSavingsGoal: boolean;
+  selectedGoal: SavingsGoal | null;
+  completedGoals: SavingsGoal[];
   accounts: Account[];
   categories: Category[];
   showAccountOptions: boolean;
   showCategoryOptions: boolean;
+  showGoalOptions: boolean;
   saving: boolean;
   onChangeDescription: (value: string) => void;
   onChangeAmount: (value: string) => void;
+  onToggleSavingsGoal: (enabled: boolean) => void;
+  onSelectGoal: (goal: SavingsGoal) => void;
   onSelectAccount: (accountId: string) => void;
   onSelectCategory: (category: string) => void;
   onToggleAccountOptions: () => void;
   onToggleCategoryOptions: () => void;
+  onToggleGoalOptions: () => void;
   onClose: () => void;
   onCreate: () => void;
   onUpdate: () => void;
@@ -636,17 +731,24 @@ function MovementModal({
   amountText,
   selectedAccountName,
   selectedCategory,
+  useSavingsGoal,
+  selectedGoal,
+  completedGoals,
   accounts,
   categories,
   showAccountOptions,
   showCategoryOptions,
+  showGoalOptions,
   saving,
   onChangeDescription,
   onChangeAmount,
+  onToggleSavingsGoal,
+  onSelectGoal,
   onSelectAccount,
   onSelectCategory,
   onToggleAccountOptions,
   onToggleCategoryOptions,
+  onToggleGoalOptions,
   onClose,
   onCreate,
   onUpdate,
@@ -691,11 +793,15 @@ function MovementModal({
     >
       <View style={isCreate ? styles.fullFormPage : styles.modalOverlay}>
         {isCreate ? (
-          <View style={styles.registerPageContent}>
+          <ScrollView contentContainerStyle={styles.registerPageContent}>
             <Text style={styles.registerPageTitle}>{registerTitle}</Text>
 
             <View style={styles.pigBox}>
-              <PiggyBank size={90} color={colors.secondary} strokeWidth={2.6} />
+              <Image
+                source={registerPigImages[type]}
+                style={styles.pigImage}
+                resizeMode="contain"
+              />
             </View>
 
             <View style={styles.formCard}>
@@ -706,23 +812,31 @@ function MovementModal({
                 amountText={amountText}
                 selectedAccountName={selectedAccountName}
                 selectedCategory={selectedCategory}
+                type={type}
+                useSavingsGoal={useSavingsGoal}
+                selectedGoal={selectedGoal}
+                completedGoals={completedGoals}
                 accounts={accounts}
                 categories={categories}
                 showAccountOptions={showAccountOptions}
                 showCategoryOptions={showCategoryOptions}
+                showGoalOptions={showGoalOptions}
                 saving={saving}
                 onChangeDescription={onChangeDescription}
                 onChangeAmount={onChangeAmount}
+                onToggleSavingsGoal={onToggleSavingsGoal}
+                onSelectGoal={onSelectGoal}
                 onSelectAccount={onSelectAccount}
                 onSelectCategory={onSelectCategory}
                 onToggleAccountOptions={onToggleAccountOptions}
                 onToggleCategoryOptions={onToggleCategoryOptions}
+                onToggleGoalOptions={onToggleGoalOptions}
                 onClose={onClose}
                 onSave={onCreate}
                 saveText="Guardar"
               />
             </View>
-          </View>
+          </ScrollView>
         ) : (
           <View style={styles.modalBox}>
             <View style={styles.modalHeader}>
@@ -746,17 +860,25 @@ function MovementModal({
                   amountText={amountText}
                   selectedAccountName={selectedAccountName}
                   selectedCategory={selectedCategory}
+                  type={type}
+                  useSavingsGoal={false}
+                  selectedGoal={null}
+                  completedGoals={[]}
                   accounts={accounts}
                   categories={categories}
                   showAccountOptions={showAccountOptions}
                   showCategoryOptions={showCategoryOptions}
+                  showGoalOptions={false}
                   saving={saving}
                   onChangeDescription={onChangeDescription}
                   onChangeAmount={onChangeAmount}
+                  onToggleSavingsGoal={onToggleSavingsGoal}
+                  onSelectGoal={onSelectGoal}
                   onSelectAccount={onSelectAccount}
                   onSelectCategory={onSelectCategory}
                   onToggleAccountOptions={onToggleAccountOptions}
                   onToggleCategoryOptions={onToggleCategoryOptions}
+                  onToggleGoalOptions={onToggleGoalOptions}
                   onClose={onClose}
                   onSave={onUpdate}
                   saveText="Guardar"
@@ -813,17 +935,25 @@ type MovementFormProps = {
   amountText: string;
   selectedAccountName: string;
   selectedCategory: string;
+  type: ManualMovementType;
+  useSavingsGoal: boolean;
+  selectedGoal: SavingsGoal | null;
+  completedGoals: SavingsGoal[];
   accounts: Account[];
   categories: Category[];
   showAccountOptions: boolean;
   showCategoryOptions: boolean;
+  showGoalOptions: boolean;
   saving: boolean;
   onChangeDescription: (value: string) => void;
   onChangeAmount: (value: string) => void;
+  onToggleSavingsGoal: (enabled: boolean) => void;
+  onSelectGoal: (goal: SavingsGoal) => void;
   onSelectAccount: (accountId: string) => void;
   onSelectCategory: (category: string) => void;
   onToggleAccountOptions: () => void;
   onToggleCategoryOptions: () => void;
+  onToggleGoalOptions: () => void;
   onClose: () => void;
   onSave: () => void;
   saveText: string;
@@ -836,17 +966,25 @@ function MovementForm({
   amountText,
   selectedAccountName,
   selectedCategory,
+  type,
+  useSavingsGoal,
+  selectedGoal,
+  completedGoals,
   accounts,
   categories,
   showAccountOptions,
   showCategoryOptions,
+  showGoalOptions,
   saving,
   onChangeDescription,
   onChangeAmount,
+  onToggleSavingsGoal,
+  onSelectGoal,
   onSelectAccount,
   onSelectCategory,
   onToggleAccountOptions,
   onToggleCategoryOptions,
+  onToggleGoalOptions,
   onClose,
   onSave,
   saveText,
@@ -862,6 +1000,74 @@ function MovementForm({
         style={styles.input}
       />
 
+      {type === 'expense' && (
+        <>
+          <Pressable
+            style={styles.goalToggleRow}
+            onPress={() => onToggleSavingsGoal(!useSavingsGoal)}
+            disabled={saving}
+          >
+            <View style={[
+              styles.checkbox,
+              useSavingsGoal && styles.checkboxSelected,
+            ]}>
+              {useSavingsGoal && <Text style={styles.checkboxMark}>✓</Text>}
+            </View>
+            <Text style={styles.goalToggleText}>Usar meta de ahorro completada</Text>
+          </Pressable>
+
+          {useSavingsGoal && (
+            <>
+              <Text style={styles.inputLabel}>Seleccionar Meta de Ahorro</Text>
+              <Pressable
+                style={styles.selectorBox}
+                onPress={onToggleGoalOptions}
+              >
+                <View style={styles.selectorLeft}>
+                  <PiggyBank size={22} color="#4B5563" />
+                  <Text style={styles.selectorText}>
+                    {selectedGoal?.nombre || 'Selecciona una meta completada'}
+                  </Text>
+                </View>
+
+                <ChevronDown size={20} color="#6B7280" />
+              </Pressable>
+
+              {showGoalOptions && (
+                <View style={styles.optionsBox}>
+                  {completedGoals.length === 0 ? (
+                    <Text style={styles.emptyOptionText}>No tienes metas completadas disponibles</Text>
+                  ) : (
+                    completedGoals.map((goal) => (
+                      <Pressable
+                        key={goal.id_meta}
+                        style={styles.optionItem}
+                        onPress={() => onSelectGoal(goal)}
+                      >
+                        <Text style={styles.optionText}>
+                          {goal.nombre} · {money(goal.monto_actual)}
+                        </Text>
+                      </Pressable>
+                    ))
+                  )}
+                </View>
+              )}
+
+              {selectedGoal && (
+                <View style={styles.goalSummaryCard}>
+                  <Text style={styles.goalSummaryTitle}>{selectedGoal.nombre}</Text>
+                  <Text style={styles.goalSummaryText}>Monto ahorrado: {money(selectedGoal.monto_actual)}</Text>
+                  <Text style={styles.goalSummaryText}>Fecha limite: {formatGoalDate(selectedGoal.fecha_limite)}</Text>
+                  <Text style={styles.goalSummaryNotice}>
+                    Esta cuenta se usará solo como referencia del movimiento. No se descontará nuevamente el saldo.
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </>
+      )}
+
       <Text style={styles.inputLabel}>Ingresar Monto</Text>
       <View style={styles.amountInputBox}>
         <Text style={styles.amountPrefix}>Bs.</Text>
@@ -871,6 +1077,7 @@ function MovementForm({
           placeholder="0,00"
           placeholderTextColor="#A8A8A8"
           keyboardType="decimal-pad"
+          editable={!useSavingsGoal}
           style={styles.amountInput}
         />
       </View>
@@ -910,13 +1117,11 @@ function MovementForm({
         onPress={onToggleCategoryOptions}
       >
         <View style={styles.selectorLeft}>
-        <Text style={styles.categoryIcon}>
-  {
-    categories.find(
-      (c) => c.name === selectedCategory
-    )?.icon ?? '📁'
-  }
-</Text>
+          {renderCategoryIcon(
+            categories.find((c) => c.name === selectedCategory)?.icon,
+            22,
+            '#4B5563'
+          )}
           <Text style={styles.selectorText}>
             {selectedCategory || 'Selecciona una categoría'}
           </Text>
@@ -928,18 +1133,19 @@ function MovementForm({
       {showCategoryOptions && (
         <View style={styles.optionsBox}>
           {categories.map((category) => (
-  <Pressable
-    key={category.id}
-    style={styles.optionItem}
-    onPress={() =>
-      onSelectCategory(category.name)
-    }
-  >
-    <Text style={styles.optionText}>
-      {category.icon ?? '📁'} {category.name}
-    </Text>
-  </Pressable>
-))}
+            <Pressable
+              key={category.id}
+              style={styles.optionItem}
+              onPress={() => onSelectCategory(category.name)}
+            >
+              <View style={styles.categoryOptionRow}>
+                {renderCategoryIcon(category.icon, 20, '#4B5563')}
+                <Text style={styles.optionText}>
+                  {category.name}
+                </Text>
+              </View>
+            </Pressable>
+          ))}
         </View>
       )}
 
@@ -964,6 +1170,20 @@ function MovementForm({
       </View>
     </>
   );
+}
+
+function formatGoalDate(dateString: string) {
+  const date = new Date(`${dateString}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateString;
+  }
+
+  return date.toLocaleDateString('es-BO', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 function createStyles(
@@ -1080,7 +1300,6 @@ function createStyles(
       width: 46,
       height: 46,
       borderRadius: 23,
-      backgroundColor: '#D9D9D9',
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -1120,8 +1339,9 @@ function createStyles(
       backgroundColor: theme.colors.background,
     },
     registerPageContent: {
-      flex: 1,
+      flexGrow: 1,
       alignItems: 'center',
+      paddingBottom: 26,
     },
     registerPageTitle: {
       width: '100%',
@@ -1134,12 +1354,16 @@ function createStyles(
       fontWeight: '900',
     },
     pigBox: {
-      width: 130,
-      height: 110,
+      width: 140,
+      height: 120,
       alignItems: 'center',
       justifyContent: 'center',
       marginTop: 12,
       marginBottom: 4,
+    },
+    pigImage: {
+      width: 120,
+      height: 110,
     },
     formCard: {
       width: '90%',
@@ -1204,6 +1428,72 @@ function createStyles(
       fontSize: 15,
       marginBottom: 10,
     },
+    goalToggleRow: {
+      minHeight: 42,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 10,
+    },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 5,
+      borderWidth: 1.5,
+      borderColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.colors.surface,
+    },
+    checkboxSelected: {
+      backgroundColor: colors.secondary,
+      borderColor: colors.secondary,
+    },
+    checkboxMark: {
+      color: '#FFFFFF',
+      fontSize: 15,
+      fontWeight: '900',
+      lineHeight: 18,
+    },
+    goalToggleText: {
+      flex: 1,
+      color: theme.colors.text,
+      fontSize: 14,
+      fontWeight: '900',
+    },
+    emptyOptionText: {
+      color: theme.colors.textSecondary,
+      fontSize: 13,
+      fontWeight: '700',
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+    },
+    goalSummaryCard: {
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.mode === 'dark' ? '#0F172A' : '#F8FAFC',
+      padding: 11,
+      gap: 4,
+      marginBottom: 10,
+    },
+    goalSummaryTitle: {
+      color: theme.colors.text,
+      fontSize: 14,
+      fontWeight: '900',
+    },
+    goalSummaryText: {
+      color: theme.colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    goalSummaryNotice: {
+      color: colors.expense,
+      fontSize: 12,
+      fontWeight: '800',
+      lineHeight: 17,
+      marginTop: 3,
+    },
     amountInputBox: {
       height: 40,
       borderWidth: 1.5,
@@ -1247,10 +1537,6 @@ function createStyles(
     selectorText: {
       color: theme.colors.textSecondary,
       fontSize: 15,
-    },
-    categoryIcon: {
-      fontSize: 21,
-      color: '#4B5563',
     },
     optionsBox: {
       borderWidth: 1,
@@ -1344,6 +1630,17 @@ function createStyles(
       marginTop: 14,
       color: theme.colors.text,
       fontWeight: '800',
+    },
+    movementCategoryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 4,
+    },
+    categoryOptionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
     },
   });
 }
