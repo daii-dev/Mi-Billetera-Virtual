@@ -32,6 +32,7 @@ import {
 import { useSupabase } from '@/lib/useSupabase';
 import { renderCategoryIcon } from '@/features/wallet/category.utils';
 import { colors } from '@/theme/colors';
+import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import {
   AppTheme,
   useAppTheme,
@@ -84,6 +85,9 @@ export default function CategoriesScreen() {
   const [name, setName] = useState('');
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   const [selectedIcon, setSelectedIcon] = useState('Wallet');
+
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [selectedSidebarItem, setSelectedSidebarItem] = useState('categories');
 
   async function handleLogout() {
     try {
@@ -201,6 +205,39 @@ export default function CategoriesScreen() {
     setDeleteModalVisible(true);
   }
 
+  function handleSelectSidebarItem(item: { key: string; label: string }) {
+    setSelectedSidebarItem(item.key);
+
+    if (item.key === 'home') {
+      setSidebarVisible(false);
+      router.push('/home');
+      return;
+    }
+
+    if (item.key === 'accounts') {
+      setSidebarVisible(false);
+      router.push('/accounts');
+      return;
+    }
+
+    if (item.key === 'categories') {
+      setSidebarVisible(false);
+      return;
+    }
+
+    if (item.key === 'goals') {
+      setSidebarVisible(false);
+      router.push('/goals');
+      return;
+    }
+
+    if (item.key === 'budgets') {
+      setSidebarVisible(false);
+      router.push('/budgets');
+      return;
+    }
+  }
+
   async function handleConfirmDelete() {
     if (!selectedCategory) return;
 
@@ -247,7 +284,7 @@ export default function CategoriesScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.topBar}>
         <View style={styles.topTitleBox}>
-          <Pressable onPress={() => router.back()} hitSlop={10}>
+          <Pressable onPress={() => setSidebarVisible(true)} hitSlop={10}>
             <Menu size={28} color="#FFFFFF" />
           </Pressable>
 
@@ -509,6 +546,16 @@ export default function CategoriesScreen() {
           </View>
         </View>
       </Modal>
+
+      <AppSidebar
+        visible={sidebarVisible}
+        userName={''}
+        selectedKey={selectedSidebarItem}
+        visualMode={isDarkMode}
+        onToggleVisualMode={setDarkMode}
+        onClose={() => setSidebarVisible(false)}
+        onSelectItem={handleSelectSidebarItem}
+      />
     </SafeAreaView>
   );
 }
