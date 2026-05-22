@@ -5,8 +5,8 @@ import { colors } from '@/theme/colors';
 import { useSupabase } from '@/lib/useSupabase';
 import { useAuth, useUser } from '@clerk/expo';
 import { useRouter } from 'expo-router';
-import { getBudgets, getBudgetAccountSpent, deleteBudget, getUserAccounts, money } from '@/features/wallet/wallet.service'; 
-import { Plus, Menu, LogOut, X, ChevronDown, MoreVertical, Calendar } from 'lucide-react-native';
+import { getBudgets, getBudgetAccountSpent, getUserAccounts, deleteBudget } from '@/features/wallet/wallet.service'; 
+import { Plus, Menu, LogOut, X, ChevronDown, MoreVertical, Calendar, AlertTriangle, Edit2, Trash2, Tag } from 'lucide-react-native';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -24,6 +24,8 @@ export default function BudgetsScreen() {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);  
   const [modalVisible, setModalVisible] = useState(false);
   
+  // 🔥 NUEVO ESTADO: Nombre personalizado para el presupuesto
+  const [budgetName, setBudgetName] = useState('');
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [selectedAccountName, setSelectedAccountName] = useState('');
   const [amount, setAmount] = useState('');
@@ -56,10 +58,18 @@ export default function BudgetsScreen() {
         const progress = b.amount > 0 ? (spent / b.amount) * 100 : 0;
         
         let barColor = '#4CAF50'; 
-        if (progress >= 100) barColor = colors.expense; 
-        else if (progress >= 70) barColor = '#FFC107'; 
+        let statusText = 'Normal';
+        if (progress >= 100) {
+          barColor = colors.expense; 
+          statusText = 'Excedido ⚠️';
+        } else if (progress >= 70) {
+          barColor = '#FFC107'; 
+          statusText = 'Cerca del límite ⏳';
+        }
 
-        return { ...b, spent, progress, barColor };
+        const overspentAmount = spent > b.amount ? spent - b.amount : 0;
+
+        return { ...b, spent, progress, barColor, statusText, overspentAmount };
       }));
       setBudgets(enriched);
     } catch (e) {
@@ -73,7 +83,7 @@ export default function BudgetsScreen() {
       const accs = await getUserAccounts(supabase, userId);
       setMyAccounts(accs);
     } catch (e) {
-      console.error("Error cargando cuentas:", e); // 🔥 Corregido: Imprime 'e' en vez de 'accs'
+      console.error("Error cargando cuentas:", e);
     }
   };
 
@@ -84,24 +94,60 @@ export default function BudgetsScreen() {
 
   const onStartDateChange = (event: any, selectedDate?: Date) => {
     setShowStartPicker(false); 
-    if (selectedDate) {
-      setStartDate(selectedDate);
-    }
+    if (selectedDate) setStartDate(selectedDate);
   };
 
   const onEndDateChange = (event: any, selectedDate?: Date) => {
     setShowEndPicker(false); 
-    if (selectedDate) {
-      setEndDate(selectedDate);
-    }
+    if (selectedDate) setEndDate(selectedDate);
+  };
+
+  const handleEditPress = (item: any) => {
+    setActiveMenuId(null); 
+    setEditingBudgetId(item.id);
+    // 🔥 Cargamos el nombre guardado al editar
+    setBudgetName(item.category_name || '');
+    setSelectedAccountId(item.account_id);
+    setSelectedAccountName(item.account?.name || 'Cuenta Seleccionada');
+    setAmount(item.amount.toString());
+    
+    if (item.start_date) setStartDate(new Date(item.start_date + 'T12:00:00'));
+    if (item.end_date) setEndDate(new Date(item.end_date + 'T12:00:00'));
+    
+    setModalVisible(true);
+  };
+
+  const handleDeletePress = (id: string) => {
+    setActiveMenuId(null);
+    Alert.alert(
+      "¿Eliminar Presupuesto?",
+      "Esta acción no se puede deshacer. ¿Estás seguro?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { 
+          text: "Eliminar", 
+          style: "destructive", 
+          onPress: async () => {
+            try {
+              await deleteBudget(supabase, id);
+              Alert.alert("Eliminado", "El presupuesto ha sido removido.");
+              loadBudgetsData();
+            } catch (error: any) {
+              Alert.alert("Error", "No se pudo eliminar.");
+            }
+          } 
+        }
+      ]
+    );
   };
 
   const handleCreateBudget = async () => {
     const clerkId = userId;
     if (!clerkId) return;
 
-    if (!selectedAccountId || !amount) {
-      Alert.alert("Campos requeridos", "Por favor completa todos los campos.");
+    // 🔥 Validación: El nombre ahora es obligatorio
+    if (!budgetName.trim() || !selectedAccountId || !amount) {
+      Alert.alert("Campos requeridos", "Por favor completa todos los campos (incluyendo el nombre del presupuesto).");
       return;
     }
 
@@ -116,6 +162,17 @@ export default function BudgetsScreen() {
       return;
     }
 
+    const accountObj = myAccounts.find(a => a.id === selectedAccountId);
+    if (!accountObj) return;
+
+    if (!editingBudgetId && numAmount > Number(accountObj.current_balance)) {
+      Alert.alert(
+        "Saldo Insuficiente ❌",
+        `No puedes asignar un presupuesto de Bs. ${numAmount.toFixed(2)} porque el saldo actual en la cuenta es de Bs. ${Number(accountObj.current_balance).toFixed(2)}.`
+      );
+      return;
+    }
+
     const startDateString = startDate.toISOString().split('T')[0];
     const endDateString = endDate.toISOString().split('T')[0];
 
@@ -125,6 +182,7 @@ export default function BudgetsScreen() {
         const { error } = await supabase
           .from('budgets')
           .update({ 
+            category_name: budgetName.trim(), // 🔥 Actualiza el nombre modificado
             amount: numAmount, 
             start_date: startDateString, 
             end_date: endDateString, 
@@ -135,13 +193,12 @@ export default function BudgetsScreen() {
         if (error) throw error;
         Alert.alert("¡Éxito!", "Presupuesto actualizado.");
       } else {
-        // 🔥 Corregido: Enviamos 'monthly' en period_type para cumplir el constraint de la BD
         const { error } = await supabase
           .from('budgets')
           .insert([{
             clerk_user_id: clerkId,
             account_id: selectedAccountId,
-            category_name: 'General', 
+            category_name: budgetName.trim(), // 🔥 Guardamos el nombre en category_name
             amount: numAmount,
             period_type: 'monthly', 
             start_date: startDateString,
@@ -166,6 +223,7 @@ export default function BudgetsScreen() {
   };
 
   const resetForm = () => {
+    setBudgetName(''); // Limpiar casilla de nombre
     setSelectedAccountId('');
     setSelectedAccountName('');
     setAmount('');
@@ -188,47 +246,80 @@ export default function BudgetsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {budgets.length === 0 ? (
-          <Text style={{ textAlign: 'center', color: '#888', marginTop: 40 }}>
-            No tienes presupuestos activos. Presiona (+) para configurar uno.
-          </Text>
-        ) : (
-          budgets.map((item) => {
-            const visualProgress = Math.min(item.progress, 100);
-            return (
-              <View key={item.id} style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-                <View style={styles.cardHeader}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.catTitle, { color: theme.colors.text }]}>💼 {item.account?.name || 'Cuenta'}</Text>
-                    <Text style={{ fontSize: 12, color: '#F39C12', fontWeight: '700', marginTop: 4 }}>
-                      🗓 Vigencia: {item.start_date} al {item.end_date}
-                    </Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={[styles.amountLabel, { color: item.barColor, marginRight: 10 }]}>
-                      -Bs. {item.spent.toFixed(2)}
-                    </Text>
-                    <Pressable onPress={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)} hitSlop={20}>
-                      <MoreVertical size={24} color="#6B7280" />
-                    </Pressable>
-                  </View>
-                </View>
-                <View style={styles.progressContainer}>
-                  <View style={[styles.progressBar, { width: `${visualProgress}%`, backgroundColor: item.barColor }]} />
-                </View>
-                <View style={styles.cardFooter}>
-                  <Text style={styles.footerText}>Límite: Bs. {item.amount}</Text>
-                  <Text style={styles.footerText}>
-                    {item.progress > 100 ? 'Excedido ⚠️' : `${item.progress.toFixed(0)}% usado`}
+        {budgets.map((item) => {
+          const visualProgress = Math.min(item.progress, 100);
+          const isMenuOpen = activeMenuId === item.id;
+
+          return (
+            <View key={item.id} style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              
+              {item.progress >= 70 && (
+                <View style={[styles.notificationBanner, { backgroundColor: item.progress >= 100 ? '#FADBD8' : '#FCF3CF' }]}>
+                  <AlertTriangle size={16} color={item.progress >= 100 ? '#C0392B' : '#B7950B'} />
+                  <Text style={[styles.notificationText, { color: item.progress >= 100 ? '#C0392B' : '#7D6608' }]}>
+                    {item.progress >= 100 
+                      ? `¡Atención! Excediste el límite por Bs. ${item.overspentAmount.toFixed(2)} (${item.progress.toFixed(0)}% utilizado)` 
+                      : `Advertencia: Estás llegando al límite de tu presupuesto (${item.progress.toFixed(0)}% utilizado)`}
                   </Text>
                 </View>
+              )}
+
+              <View style={styles.cardHeader}>
+                <View style={{ flex: 1 }}>
+                  {/* 🔥 VISUALIZACIÓN: Muestra el nombre personalizado arriba y la cuenta abajo */}
+                  <Text style={[styles.catTitle, { color: theme.colors.text }]}>📌 {item.category_name}</Text>
+                  <Text style={styles.accountSubLabel}>💼 Cuenta: {item.account?.name || 'Personal'}</Text>
+                  <Text style={{ fontSize: 11, color: '#F39C12', fontWeight: '700', marginTop: 4 }}>
+                    🗓 Vigencia: {item.start_date} al {item.end_date}
+                  </Text>
+                </View>
+                
+                <View style={{ flexDirection: 'row', alignItems: 'center', position: 'relative' }}>
+                  <Text style={[styles.amountLabel, { color: item.barColor, marginRight: 10 }]}>
+                    -Bs. {item.spent.toFixed(2)}
+                  </Text>
+                  
+                  <Pressable onPress={() => setActiveMenuId(isMenuOpen ? null : item.id)} hitSlop={20}>
+                    <MoreVertical size={24} color="#6B7280" />
+                  </Pressable>
+
+                  {isMenuOpen && (
+                    <View style={[styles.contextMenu, { backgroundColor: theme.colors.card }]}>
+                      <Pressable style={styles.menuOption} onPress={() => handleEditPress(item)}>
+                        <Edit2 size={14} color="#082B8C" />
+                        <Text style={[styles.menuOptionText, { color: theme.colors.text }]}>Editar</Text>
+                      </Pressable>
+                      <Pressable style={[styles.menuOption, { borderBottomWidth: 0 }]} onPress={() => handleDeletePress(item.id)}>
+                        <Trash2 size={14} color={colors.expense} />
+                        <Text style={[styles.menuOptionText, { color: colors.expense }]}>Eliminar</Text>
+                      </Pressable>
+                    </View>
+                  )}
+                </View>
               </View>
-            );
-          })
-        )}
+
+              <View style={styles.progressContainer}>
+                <View style={[styles.progressBar, { width: `${visualProgress}%`, backgroundColor: item.barColor }]} />
+              </View>
+
+              <View style={styles.cardFooter}>
+                <Text style={styles.footerText}>Límite: Bs. {item.amount}</Text>
+                <Text style={[styles.footerText, { color: item.barColor }]}>
+                  {item.statusText}
+                </Text>
+              </View>
+
+              {item.overspentAmount > 0 && (
+                <View style={styles.overspentBox}>
+                  <Text style={styles.overspentText}>Monto rebasado: +Bs. {item.overspentAmount.toFixed(2)}</Text>
+                </View>
+              )}
+            </View>
+          );
+        })}
       </ScrollView>
 
-      <Pressable style={styles.fab} onPress={() => setModalVisible(true)}>
+      <Pressable style={styles.fab} onPress={() => { resetForm(); setModalVisible(true); }}>
         <Plus color="white" size={30} />
       </Pressable>
 
@@ -241,12 +332,24 @@ export default function BudgetsScreen() {
             </View>
             
             <View style={styles.modalContent}>
-               <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Billetera / Cuenta</Text>
-               <Pressable style={styles.selectorBox} onPress={() => !editingBudgetId && setShowAccountOptions(!showAccountOptions)}>
-                 <Text style={{ color: selectedAccountName ? theme.colors.text : '#888' }}>
-                   {selectedAccountName || "Selecciona una cuenta"}
-                 </Text>
-                 <ChevronDown size={20} color="#6B7280" />
+               
+               {/* 🔥 CASILLA NUEVA: Nombre descriptivo del presupuesto */}
+               <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Nombre del Presupuesto</Text>
+               <TextInput 
+                 style={styles.input} 
+                 placeholder="Ej. Calcetines, Comida, Viaje..." 
+                 placeholderTextColor="#888"
+                 value={budgetName} 
+                 onChangeText={setBudgetName} 
+               />
+
+               <Text style={[styles.inputLabel, { color: theme.colors.text, marginTop: 4 }]}>Billetera / Cuenta</Text>
+               <Pressable 
+                 style={[styles.selectorBox, editingBudgetId && { backgroundColor: '#E5E7EB', borderColor: '#9CA3AF' }]} 
+                 onPress={() => !editingBudgetId && setShowAccountOptions(!showAccountOptions)}
+               >
+                 <Text style={{ color: theme.colors.text }}>{selectedAccountName || "Selecciona una cuenta"}</Text>
+                 {!editingBudgetId && <ChevronDown size={20} color="#6B7280" />}
                </Pressable>
 
                {showAccountOptions && (
@@ -264,7 +367,6 @@ export default function BudgetsScreen() {
                <Text style={[styles.inputLabel, { color: theme.colors.text, marginTop: 12 }]}>Monto Límite (Bs.)</Text>
                <TextInput style={styles.input} placeholder="0.00" keyboardType="numeric" value={amount} onChangeText={setAmount} />
 
-               {/* SECTOR INTERACTIVO FECHA INICIO */}
                <Text style={[styles.inputLabel, { color: theme.colors.text, marginTop: 12 }]}>Fecha de Inicio</Text>
                <Pressable style={styles.datePickerButton} onPress={() => setShowStartPicker(true)}>
                  <Text style={styles.dateText}>{startDate.toISOString().split('T')[0]}</Text>
@@ -274,7 +376,6 @@ export default function BudgetsScreen() {
                  <DateTimePicker value={startDate} mode="date" display="calendar" onChange={onStartDateChange} />
                )}
 
-               {/* SECTOR INTERACTIVO FECHA FIN */}
                <Text style={[styles.inputLabel, { color: theme.colors.text, marginTop: 12 }]}>Fecha de Fin</Text>
                <Pressable style={styles.datePickerButton} onPress={() => setShowEndPicker(true)}>
                  <Text style={styles.dateText}>{endDate.toISOString().split('T')[0]}</Text>
@@ -292,19 +393,7 @@ export default function BudgetsScreen() {
         </View>
       </Modal>
 
-      <AppSidebar 
-        visible={sidebarVisible} 
-        userName={profileName} 
-        selectedKey="budgets" 
-        visualMode={isDarkMode} 
-        onToggleVisualMode={setDarkMode} 
-        onClose={() => setSidebarVisible(false)} 
-        onSelectItem={(item) => { 
-          setSidebarVisible(false); 
-          // 🔥 Corregido: Navegación dinámica limpia desde cualquier pantalla de la app
-          router.replace(`/${item.key}`); 
-        }} 
-      />
+      <AppSidebar visible={sidebarVisible} userName={profileName} selectedKey="budgets" visualMode={isDarkMode} onToggleVisualMode={setDarkMode} onClose={() => setSidebarVisible(false)} onSelectItem={(item) => { setSidebarVisible(false); router.replace(`/${item.key}`); }} />
     </View>
   );
 }
@@ -315,14 +404,24 @@ const styles = StyleSheet.create({
   topTitleBox: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingRight: 28 }, 
   topTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '900' },
   content: { padding: 16 },
-  card: { borderRadius: 12, padding: 16, marginBottom: 15, borderWidth: 1, elevation: 3 },
+  card: { borderRadius: 12, padding: 16, marginBottom: 15, borderWidth: 1, elevation: 3, position: 'relative' },
+  notificationBanner: { flexDirection: 'row', alignItems: 'center', padding: 8, borderRadius: 6, marginBottom: 10, gap: 6 },
+  notificationText: { fontSize: 11, fontWeight: 'bold', flex: 1 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
   catTitle: { fontSize: 16, fontWeight: '900' },
+  accountSubLabel: { fontSize: 12, color: '#6B7280', fontWeight: '700', marginTop: 2 },
   amountLabel: { fontSize: 15, fontWeight: 'bold' },
+  
+  contextMenu: { position: 'absolute', right: 0, top: 28, width: 110, borderRadius: 8, borderWidth: 1, borderColor: '#DDD', elevation: 5, zIndex: 999, paddingVertical: 4 },
+  menuOption: { flexDirection: 'row', alignItems: 'center', padding: 10, gap: 8, borderBottomWidth: 0.5, borderBottomColor: '#EEE' },
+  menuOptionText: { fontSize: 13, fontWeight: 'bold' },
+
   progressContainer: { height: 12, backgroundColor: '#E0E0E0', borderRadius: 6, overflow: 'hidden', marginBottom: 8 },
   progressBar: { height: '100%', borderRadius: 6 },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between' },
   footerText: { fontSize: 12, color: '#888', fontWeight: 'bold' },
+  overspentBox: { marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#EEE' },
+  overspentText: { fontSize: 12, color: '#C0392B', fontWeight: '900' },
   fab: { position: 'absolute', bottom: 30, right: 30, backgroundColor: '#F39C12', width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', elevation: 5 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 },
   modalBox: { borderRadius: 14, overflow: 'hidden' },
@@ -330,8 +429,8 @@ const styles = StyleSheet.create({
   modalTitle: { color: 'white', fontSize: 18, fontWeight: '900' },
   modalContent: { padding: 20 }, 
   inputLabel: { fontSize: 13, fontWeight: '900', marginBottom: 6 },
-  selectorBox: { height: 45, borderWidth: 1.5, borderColor: '#082B8C', borderRadius: 8, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  optionsDropdown: { borderWidth: 1, borderColor: '#DDD', borderRadius: 8, maxHeight: 110, marginTop: 4 },
+  selectorBox: { height: 45, borderWidth: 1.5, borderColor: '#082B8C', borderRadius: 8, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFF' },
+  optionsDropdown: { borderWidth: 1, borderColor: '#DDD', borderRadius: 8, maxHeight: 110, marginTop: 4, backgroundColor: '#FFF' },
   optionItem: { padding: 10, borderBottomWidth: 1, borderBottomColor: '#EEE' },
   input: { height: 45, borderWidth: 1.5, borderColor: '#082B8C', borderRadius: 8, paddingHorizontal: 12, fontSize: 15, marginBottom: 10, color: '#000', backgroundColor: '#FFF' },
   datePickerButton: { height: 45, borderWidth: 1.5, borderColor: '#082B8C', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, marginBottom: 10, backgroundColor: '#FFF' },
