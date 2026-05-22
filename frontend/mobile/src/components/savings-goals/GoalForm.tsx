@@ -12,7 +12,6 @@ import {
   Modal,
   Pressable,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from 'react-native';
@@ -75,7 +74,6 @@ const colorOptions = [
 
 export function GoalForm({
   initialGoal,
-  personalAccount,
   submitLabel,
   loading = false,
   onSubmit,
@@ -101,9 +99,7 @@ export function GoalForm({
       : new Date();
   });
 
-  const hasPersonalAccount = Boolean(personalAccount?.id);
   const isEditing = Boolean(initialGoal);
-  const associateAccount = hasPersonalAccount && values.cuentaId === personalAccount?.id;
 
   function setValue<K extends keyof GoalFormValues>(key: K, value: GoalFormValues[K]) {
     setValues((current) => ({
@@ -212,26 +208,6 @@ export function GoalForm({
         </Pressable>
         <Text style={styles.errorText}>{errors.fechaLimite}</Text>
       </View>
-
-      {hasPersonalAccount && !isEditing && (
-        <View style={styles.accountRow}>
-          <View style={styles.accountTextBox}>
-            <Text style={styles.label}>Cuenta asociada</Text>
-            <Text style={styles.accountName}>{personalAccount?.name}</Text>
-          </View>
-          <Switch
-            value={associateAccount}
-            onValueChange={(enabled) => {
-              setValue('cuentaId', enabled ? personalAccount?.id ?? null : null);
-            }}
-            trackColor={{
-              false: '#D9D9D9',
-              true: '#A7E3FF',
-            }}
-            thumbColor={associateAccount ? colors.primary : '#F4F4F4'}
-          />
-        </View>
-      )}
 
       <View style={styles.field}>
         <Text style={styles.label}>Icono</Text>
@@ -521,26 +497,6 @@ function createStyles(theme: AppTheme) {
       fontSize: 12,
       fontWeight: '700',
       flex: 1,
-    },
-    accountRow: {
-      minHeight: 64,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      backgroundColor: theme.colors.card,
-      paddingHorizontal: 14,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    accountTextBox: {
-      flex: 1,
-    },
-    accountName: {
-      marginTop: 4,
-      color: theme.colors.textSecondary,
-      fontSize: 13,
-      fontWeight: '800',
     },
     readOnlyBox: {
       minHeight: 52,
