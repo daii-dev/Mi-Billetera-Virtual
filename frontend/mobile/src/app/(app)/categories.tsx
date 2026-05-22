@@ -74,7 +74,7 @@ export default function CategoriesScreen() {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>('create');
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  // removed active menu state: clicking the 3-dots now opens the edit modal directly
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [successModalVisible, setSuccessModalVisible] = useState(false);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
@@ -259,7 +259,6 @@ export default function CategoriesScreen() {
   function handleDeletePress(category: Category) {
     setSelectedCategory(category);
     setDeleteModalVisible(true);
-    setActiveMenuId(null);
   }
 
   async function handleConfirmDelete() {
@@ -295,37 +294,14 @@ export default function CategoriesScreen() {
 
       <View style={{ position: 'relative', zIndex: 10 }}>
         <Pressable
-          onPress={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)}
+          onPress={() => handleOpenEditCategory(item)}
           hitSlop={10}
         >
           <MoreVertical size={24} color="#6B7280" />
         </Pressable>
-
-        {activeMenuId === item.id && (
-          <View style={styles.menuOverlay}>
-            <Pressable
-              style={styles.menuOption}
-              onPress={() => {
-                handleOpenEditCategory(item);
-                setActiveMenuId(null);
-              }}
-            >
-              <Menu size={16} color={theme.colors.text} />
-              <Text style={styles.menuText}>Editar</Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.menuOption}
-              onPress={() => handleDeletePress(item)}
-            >
-              <Trash2 size={16} color={colors.expense} />
-              <Text style={[styles.menuText, { color: colors.expense }]}>Eliminar</Text>
-            </Pressable>
-          </View>
-        )}
       </View>
     </View>
-    );
+  );
 
   return (
     <SafeAreaView style={styles.container}>
