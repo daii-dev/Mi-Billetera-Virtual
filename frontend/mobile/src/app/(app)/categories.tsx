@@ -12,7 +12,7 @@ import {
   View,
   TouchableOpacity,
 } from 'react-native';
-import { Trash2, Plus, Menu, LogOut } from 'lucide-react-native';
+import { Trash2, Plus, MoreVertical, Menu, LogOut } from 'lucide-react-native';
 
 import { useAuth } from '@clerk/expo';
 import { useClerk } from '@clerk/expo';
@@ -20,13 +20,14 @@ import { router } from 'expo-router';
 
 import {
   Category,
-  MovementType,
+  ManualMovementType,
 } from '@/features/wallet/wallet.types';
 
 import {
   createCategory,
   deleteCategory,
   getCategoriesByType,
+  updateCategory,
 } from '@/features/wallet/wallet.service';
 
 import { useSupabase } from '@/lib/useSupabase';
@@ -66,12 +67,14 @@ export default function CategoriesScreen() {
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
   const styles = createStyles(theme);
 
-  const [type, setType] = useState<MovementType>('expense');
+  const [type, setType] = useState<ManualMovementType>('income');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>('create');
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [successModalVisible, setSuccessModalVisible] = useState(false);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
@@ -185,9 +188,78 @@ export default function CategoriesScreen() {
     }
   }
 
+  function handleOpenCreateCategory() {
+    setSelectedCategory(null);
+    setName('');
+    setSelectedColor(COLORS[0]);
+    setSelectedIcon('Wallet');
+    setModalMode('create');
+    setModalVisible(true);
+  }
+
+  function handleOpenEditCategory(category: Category) {
+    setSelectedCategory(category);
+    setName(category.name);
+    setSelectedColor(category.color || COLORS[0]);
+    setSelectedIcon(category.icon || 'Wallet');
+    setModalMode('edit');
+    setModalVisible(true);
+  }
+
+  async function handleUpdateCategory() {
+    if (!userId || !selectedCategory) return;
+
+    const trimmedName = name.trim();
+
+    if (!trimmedName) {
+      setErrorMessage('Por favor, ingresa un nombre para la categoría.');
+      setErrorModalVisible(true);
+      return;
+    }
+
+    const alreadyExists = categories.some(
+      (category) =>
+        category.id !== selectedCategory.id &&
+        category.name.trim().toLowerCase() === trimmedName.toLowerCase()
+    );
+
+    if (alreadyExists) {
+      setErrorMessage(`Ya existe una categoría llamada "${trimmedName}".`);
+      setErrorModalVisible(true);
+      return;
+    }
+
+    try {
+      setCreating(true);
+
+      await updateCategory(supabase, selectedCategory.id, {
+        name: trimmedName,
+        color: selectedColor,
+        icon: selectedIcon,
+      });
+
+      closeModal();
+      await loadCategories();
+
+      setSuccessMessage('Categoría actualizada correctamente');
+      setSuccessModalVisible(true);
+
+      setTimeout(() => {
+        setSuccessModalVisible(false);
+      }, 2000);
+    } catch (error: any) {
+      console.error('Error updating category:', error);
+      setErrorMessage(error.message ?? 'No se pudo actualizar la categoría.');
+      setErrorModalVisible(true);
+    } finally {
+      setCreating(false);
+    }
+  }
+
   function handleDeletePress(category: Category) {
     setSelectedCategory(category);
     setDeleteModalVisible(true);
+    setActiveMenuId(null);
   }
 
   async function handleConfirmDelete() {
@@ -221,25 +293,45 @@ export default function CategoriesScreen() {
         <Text style={styles.categoryName}>{item.name}</Text>
       </View>
 
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={() => handleDeletePress(item)}
-        activeOpacity={0.7}
-      >
-        <Trash2 size={20} color="#EF4444" />
-      </TouchableOpacity>
+      <View style={{ position: 'relative', zIndex: 10 }}>
+        <Pressable
+          onPress={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)}
+          hitSlop={10}
+        >
+          <MoreVertical size={24} color="#6B7280" />
+        </Pressable>
+
+        {activeMenuId === item.id && (
+          <View style={styles.menuOverlay}>
+            <Pressable
+              style={styles.menuOption}
+              onPress={() => {
+                handleOpenEditCategory(item);
+                setActiveMenuId(null);
+              }}
+            >
+              <Menu size={16} color={theme.colors.text} />
+              <Text style={styles.menuText}>Editar</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.menuOption}
+              onPress={() => handleDeletePress(item)}
+            >
+              <Trash2 size={16} color={colors.expense} />
+              <Text style={[styles.menuText, { color: colors.expense }]}>Eliminar</Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
     </View>
-  );
+    );
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header consistente con home.tsx y accounts.tsx */}
       <View style={styles.topBar}>
         <View style={styles.topTitleBox}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={10}
-          >
+          <Pressable onPress={() => router.back()} hitSlop={10}>
             <Menu size={28} color="#FFFFFF" />
           </Pressable>
 
@@ -256,24 +348,6 @@ export default function CategoriesScreen() {
         <TouchableOpacity
           style={[
             styles.segmentButton,
-            type === 'expense' && styles.segmentButtonActiveExpense,
-          ]}
-          onPress={() => setType('expense')}
-          activeOpacity={0.7}
-        >
-          <Text
-            style={[
-              styles.segmentText,
-              type === 'expense' && styles.segmentTextActive,
-            ]}
-          >
-            Gastos
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.segmentButton,
             type === 'income' && styles.segmentButtonActiveIncome,
           ]}
           onPress={() => setType('income')}
@@ -286,6 +360,24 @@ export default function CategoriesScreen() {
             ]}
           >
             Ingresos
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.segmentButton,
+            type === 'expense' && styles.segmentButtonActiveExpense,
+          ]}
+          onPress={() => setType('expense')}
+          activeOpacity={0.7}
+        >
+          <Text
+            style={[
+              styles.segmentText,
+              type === 'expense' && styles.segmentTextActive,
+            ]}
+          >
+            Gastos
           </Text>
         </TouchableOpacity>
       </View>
@@ -312,13 +404,13 @@ export default function CategoriesScreen() {
       {/* FAB - Botón flotante */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => setModalVisible(true)}
+        onPress={handleOpenCreateCategory}
         activeOpacity={0.8}
       >
         <Plus size={28} color="#FFF" />
       </TouchableOpacity>
 
-      {/* Modal Crear Categoría */}
+      {/* Modal Crear/Editar Categoría */}
       <Modal
         visible={modalVisible}
         transparent
@@ -327,8 +419,16 @@ export default function CategoriesScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalHeaderTitle}>Nueva Categoría</Text>
+            <View style={styles.modalHeaderRow}>
+              <Text style={styles.modalHeaderTitle}>
+                {modalMode === 'edit' ? 'Editar Categoría' : 'Nueva Categoría'}
+              </Text>
+
+              {modalMode === 'edit' && selectedCategory ? (
+                <Pressable onPress={() => setDeleteModalVisible(true)} hitSlop={10}>
+                  <Trash2 size={26} color="#FFFFFF" />
+                </Pressable>
+              ) : null}
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -391,11 +491,11 @@ export default function CategoriesScreen() {
 
               <TouchableOpacity
                 style={[styles.modalButton, styles.createButton, creating && styles.buttonDisabled]}
-                onPress={handleCreateCategory}
+                onPress={modalMode === 'edit' ? handleUpdateCategory : handleCreateCategory}
                 disabled={creating}
               >
                 <Text style={styles.createButtonText}>
-                  {creating ? 'Creando...' : 'Crear'}
+                  {creating ? (modalMode === 'edit' ? 'Guardando...' : 'Creando...') : modalMode === 'edit' ? 'Guardar' : 'Crear'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -654,11 +754,47 @@ function createStyles(theme: AppTheme) {
       paddingHorizontal: 24,
     },
 
+    modalHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: '#3B82F6',
+      paddingVertical: 20,
+      paddingHorizontal: 24,
+    },
+
     modalHeaderTitle: {
       fontSize: 20,
       fontWeight: '700',
       color: '#FFF',
-      textAlign: 'center',
+    },
+
+    menuOverlay: {
+      position: 'absolute',
+      top: 36,
+      right: 0,
+      width: 150,
+      borderRadius: 14,
+      backgroundColor: theme.colors.card,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 14,
+      overflow: 'hidden',
+    },
+
+    menuOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+    },
+
+    menuText: {
+      marginLeft: 10,
+      fontSize: 15,
+      color: theme.colors.text,
     },
 
     input: {

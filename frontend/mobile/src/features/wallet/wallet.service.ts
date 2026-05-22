@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   Account,
   Category,
+  Budget,
   Movement,
   Profile,
   WalletStatus,
@@ -376,6 +377,13 @@ type ManualMovementPayload = {
   categoryName: string;
 };
 
+type GoalExpensePayload = {
+  metaId: string;
+  accountId: string;
+  description: string;
+  categoryName: string;
+};
+
 function getMovementDelta(type: 'income' | 'expense', amount: number): number {
   return type === 'income' ? amount : -amount;
 }
@@ -397,6 +405,10 @@ async function adjustAccountBalance(
 
   const currentBalance = Number(account.current_balance ?? 0);
   const newBalance = currentBalance + delta;
+
+  if (newBalance < 0) {
+    throw new Error('No tienes los suficientes fondos para retirar dinero de esta cuenta');
+  }
 
   const { error: updateError } = await supabase
     .from('accounts')
@@ -471,6 +483,24 @@ export async function createManualMovement(
 
   const delta = getMovementDelta(payload.type, payload.amount);
   await adjustAccountBalance(supabase, payload.accountId, delta);
+
+  return data as Movement;
+}
+
+export async function registerExpenseFromGoal(
+  supabase: SupabaseClient,
+  payload: GoalExpensePayload
+): Promise<Movement> {
+  const { data, error } = await supabase.rpc('registrar_gasto_desde_meta', {
+    p_meta_id: payload.metaId,
+    p_cuenta_id: payload.accountId,
+    p_descripcion: payload.description,
+    p_categoria: payload.categoryName,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
 
   return data as Movement;
 }
@@ -623,6 +653,35 @@ export async function createCategory(
   return data as Category;
 }
 
+export async function updateCategory(
+  supabase: SupabaseClient,
+  categoryId: string,
+  payload: {
+    name: string;
+    icon?: string | null;
+    color?: string | null;
+  }
+): Promise<Category> {
+  const cleanName = payload.name.trim();
+
+  const { data, error } = await supabase
+    .from('categories')
+    .update({
+      name: cleanName,
+      icon: payload.icon ?? null,
+      color: payload.color ?? null,
+    })
+    .eq('id', categoryId)
+    .select('*')
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as Category;
+}
+
 export async function deleteCategory(
   supabase: SupabaseClient,
   categoryId: string
@@ -641,6 +700,8 @@ export async function deleteCategory(
     .from('movements')
     .select('id')
     .eq('category_name', category.name)
+    .eq('type', category.type)
+    .eq('clerk_user_id', category.clerk_user_id)
     .limit(1)
     .maybeSingle();
 
@@ -658,4 +719,135 @@ export async function deleteCategory(
   if (error) {
     throw new Error(error.message);
   }
+}
+
+export async function getBudgets(supabase: any, userId: string) {
+  const { data, error } = await supabase
+    .from('budgets') // Asegúrate de que en Supabase se llame 'budgets' con 's'
+    .select('*')
+    .eq('clerk_user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getCategorySpent(
+  supabase: any, 
+  userId: string, 
+  category: string, 
+  month: number | null, 
+  year: number, 
+  accountId?: string | null,
+  periodType: 'monthly' | 'weekly' = 'monthly'
+) {
+  const now = new Date();
+  let startDate: string;
+  let endDate: string;
+
+  if (periodType === 'monthly') {
+    // Mes actual: del día 1 al último día
+    const targetMonth = month || (now.getMonth() + 1);
+    const firstDay = new Date(year, targetMonth - 1, 1);
+    const lastDay = new Date(year, targetMonth, 0);
+    
+    startDate = firstDay.toISOString().split('T')[0];
+    endDate = lastDay.toISOString().split('T')[0];
+  } else {
+    // Semana actual: de Lunes a Domingo
+    const curr = new Date();
+    const day = curr.getDay(); 
+    // Ajuste para que el lunes sea el día 1 y domingo el 7
+    const diff = curr.getDate() - (day === 0 ? 6 : day - 1); 
+    
+    const monday = new Date(new Date().setDate(diff));
+    const sunday = new Date(new Date().setDate(diff + 6));
+    
+    startDate = monday.toISOString().split('T')[0];
+    endDate = sunday.toISOString().split('T')[0];
+  }
+
+  let query = supabase
+    .from('movements')
+    .select('amount')
+    .eq('clerk_user_id', userId)
+    .eq('type', 'expense')
+    .eq('category_name', category)
+    .gte('movement_date', startDate)
+    .lte('movement_date', endDate);
+
+  if (accountId) {
+    query = query.eq('account_id', accountId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return data?.reduce((acc: number, m: any) => acc + Number(m.amount), 0) || 0;
+}
+
+export async function getUsedCategories(supabase: any, userId: string): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from('movements')
+      .select('category_name')
+      .eq('clerk_user_id', userId)
+      .eq('type', 'expense');
+
+    if (error || !data) return [];
+
+    const categories = data
+      .map((m: any) => m.category_name)
+      .filter((name: any) => name !== null && name !== undefined && name !== '');
+      
+    return Array.from(new Set(categories as string[]));
+  } catch (e) {
+    console.error("Error en getUsedCategories:", e);
+    return [];
+  }
+}
+
+
+export async function saveBudget(supabase: any, budgetData: any) {
+  // Primero verificamos si ya existe uno para evitar el error del Criterio de Aceptación
+  const { data: existing } = await supabase
+    .from('budgets')
+    .select('id')
+    .eq('clerk_user_id', budgetData.clerk_user_id)
+    .eq('category_name', budgetData.category_name)
+    .eq('period_type', budgetData.period_type)
+    .eq('period_month', budgetData.period_month)
+    .eq('period_year', budgetData.period_year)
+    .maybeSingle();
+
+  if (existing) {
+    throw new Error('Ya existe un presupuesto para esa categoría en este período.');
+  }
+
+  const { error } = await supabase
+    .from('budgets')
+    .insert(budgetData);
+
+  if (error) throw error;
+}
+
+export async function deleteBudget(supabase: any, budgetId: string) {
+  const { error } = await supabase
+    .from('budgets')
+    .delete()
+    .eq('id', budgetId);
+
+  if (error) throw error;
+}
+
+export async function updateBudget(supabase: any, budgetId: string, amount: number) {
+  const { error } = await supabase
+    .from('budgets')
+    .update({ 
+      amount, 
+      updated_at: new Date().toISOString() 
+    })
+    .eq('id', budgetId);
+
+  if (error) throw error;
 }

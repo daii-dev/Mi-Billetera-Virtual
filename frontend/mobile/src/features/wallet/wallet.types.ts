@@ -24,51 +24,54 @@ export type WalletStatus = {
   initialBalanceConfigured: boolean;
 };
 
-export type MovementType = 'income' | 'expense';
+export type MovementType = 'income' | 'expense' | 'ahorro';
 
-export type MovementSource = 'initial_balance' | 'manual';
+export type ManualMovementType = 'income' | 'expense';
+
+export type MovementSource = 'initial_balance' | 'manual' | 'savings_goal';
 
 export type Movement = {
   id: string;
-  user_id: string;
+  clerk_user_id: string;
   account_id: string;
+  meta_id?: string | null;
   type: MovementType;
   title: string;
+  description?: string | null;
   amount: number;
   category_name: string | null;
-  category_icon: string | null;  // ← AGREGAR ESTA LÍNEA
-  category_color: string | null; // ← AGREGAR ESTA LÍNEA
+  category_icon?: string | null;
+  category_color?: string | null;
   movement_date: string;
   created_at: string;
-  source: 'manual' | 'system';
+  updated_at: string;
+  source: MovementSource;
   account?: Account;
 };
 export type Category = {
   id: string;
   clerk_user_id: string;
-  type: MovementType;
+  type: ManualMovementType;
   name: string;
   icon: string | null;
   color: string | null;
   created_at: string;
 };
-export async function getCategoriesByType(
-  supabase: any,
-  clerkUserId: string,
-  type: 'income' | 'expense'
-) {
-  const { data, error } = await supabase
-    .from('categories')
-    .select('*')
-    .eq('clerk_user_id', clerkUserId)
-    .eq('type', type)
-    .order('created_at', {
-      ascending: true,
-    });
+export type Budget = {
+  id: string;
+  clerk_user_id: string;
+  category_name: string;
+  amount: number;
+  period_type: 'monthly' | 'weekly';
+  period_year: number;
+  period_month: number | null;
+  period_week: number | null;
+  account_id: string | null;
+  created_at: string;
+};
 
-  if (error) {
-    throw error;
-  }
-
-  return data;
+export interface BudgetWithProgress extends Budget {
+  spent: number;
+  progress: number; // Porcentaje 0-100
+  color: string; // 'green' | 'yellow' | 'red'
 }

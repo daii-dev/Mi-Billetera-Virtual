@@ -1,11 +1,24 @@
 import {
+  ComponentType,
   useEffect,
   useRef,
   useState,
 } from 'react';
 
 import {
+  BarChart3,
+  CalendarClock,
+  ChartPie,
+  HandCoins,
+  Home,
+  PiggyBank,
+  ReceiptText,
+  Tags,
+  WalletCards,
+} from 'lucide-react-native';
+import {
   Animated,
+  Image,
   Modal,
   PanResponder,
   Pressable,
@@ -22,24 +35,30 @@ import {
 } from '@/theme/ThemeContext';
 
 const SIDEBAR_WIDTH = 270;
+const appLogo = require('../../../assets/logo-app.png');
+
+type SidebarIcon = ComponentType<{
+  size?: number;
+  color?: string;
+  strokeWidth?: number;
+}>;
 
 type SidebarItem = {
   key: string;
   label: string;
-  icon: string;
+  icon: SidebarIcon;
 };
 
 const sidebarItems: SidebarItem[] = [
-  { key: 'home', label: 'Inicio', icon: '🏠' },
-  { key: 'accounts', label: 'Cuentas', icon: '👛' },
-  { key: 'categories', label: 'Categorias', icon: '🔷' },
-  { key: 'budgets', label: 'Presupuestos', icon: '💰' },
-  { key: 'goals', label: 'Metas de Ahorro', icon: '🐷' },
-  { key: 'planned-payments', label: 'Pagos Planificados', icon: '🤲' },
-  { key: 'shopping-list', label: 'Lista de Compras', icon: '🛒' },
-  { key: 'debts', label: 'Deudas', icon: '💸' },
-  { key: 'collections', label: 'Cobros', icon: '📖' },
-  { key: 'statistics', label: 'Estadisticas', icon: '📈' },
+  { key: 'home', label: 'Inicio', icon: Home },
+  { key: 'accounts', label: 'Cuentas', icon: WalletCards },
+  { key: 'categories', label: 'Categorías', icon: Tags },
+  { key: 'budgets', label: 'Presupuestos', icon: ChartPie },
+  { key: 'goals', label: 'Metas de Ahorro', icon: PiggyBank },
+  { key: 'planned-payments', label: 'Pagos Planificados', icon: CalendarClock },
+  { key: 'debts', label: 'Deudas', icon: ReceiptText },
+  { key: 'collections', label: 'Cobros', icon: HandCoins },
+  { key: 'statistics', label: 'Estadísticas', icon: BarChart3 },
 ];
 
 type AppSidebarProps = {
@@ -208,7 +227,11 @@ export function AppSidebar({
         >
           <View style={styles.header}>
             <View style={styles.logoBox}>
-              <Text style={styles.logo}>💵</Text>
+              <Image
+                source={appLogo}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
 
             <View style={styles.headerTextBox}>
@@ -222,6 +245,13 @@ export function AppSidebar({
           <View style={styles.menuContainer}>
             {sidebarItems.map((item) => {
               const isSelected = selectedKey === item.key;
+              const Icon = item.icon;
+
+              const iconColor = isSelected
+                ? theme.mode === 'dark'
+                  ? '#FFFFFF'
+                  : colors.primary
+                : theme.colors.textSecondary;
 
               return (
                 <Pressable
@@ -232,7 +262,19 @@ export function AppSidebar({
                     isSelected && styles.menuItemSelected,
                   ]}
                 >
-                  <Text style={styles.menuIcon}>{item.icon}</Text>
+                  <View
+                    style={[
+                      styles.menuIconBox,
+                      isSelected && styles.menuIconBoxSelected,
+                    ]}
+                  >
+                    <Icon
+                      size={20}
+                      color={iconColor}
+                      strokeWidth={2.6}
+                    />
+                  </View>
+
                   <Text
                     style={[
                       styles.menuText,
@@ -295,12 +337,15 @@ function createStyles(theme: AppTheme) {
       paddingHorizontal: 16,
     },
     logoBox: {
-      width: 42,
-      height: 42,
-      borderRadius: 8,
-      backgroundColor: colors.secondary,
+      width: 52,
+      height: 52,
+      borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    logoImage: {
+      width: 52,
+      height: 52,
     },
     logo: {
       fontSize: 28,
@@ -335,13 +380,19 @@ function createStyles(theme: AppTheme) {
     menuItemSelected: {
       backgroundColor: theme.colors.sidebarSelected,
     },
-    menuIcon: {
-      width: 28,
-      fontSize: 20,
-      textAlign: 'center',
+    menuIconBox: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.mode === 'dark' ? '#1E293B' : '#F3F4F6',
+    },
+    menuIconBoxSelected: {
+      backgroundColor: theme.mode === 'dark' ? '#2563EB' : '#DDF3FF',
     },
     menuText: {
-      marginLeft: 8,
+      marginLeft: 10,
       fontSize: 14,
       fontWeight: '800',
       color: theme.colors.textSecondary,
