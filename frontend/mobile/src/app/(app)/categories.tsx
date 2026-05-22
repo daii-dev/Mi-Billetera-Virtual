@@ -27,7 +27,6 @@ import {
   createCategory,
   deleteCategory,
   getCategoriesByType,
-  updateCategory,
 } from '@/features/wallet/wallet.service';
 
 import { useSupabase } from '@/lib/useSupabase';
@@ -73,8 +72,7 @@ export default function CategoriesScreen() {
   const [creating, setCreating] = useState(false);
 
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>('create');
-  // removed active menu state: clicking the 3-dots now opens the edit modal directly
+  // modalMode removed — only creation modal is supported now
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [successModalVisible, setSuccessModalVisible] = useState(false);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
@@ -193,68 +191,10 @@ export default function CategoriesScreen() {
     setName('');
     setSelectedColor(COLORS[0]);
     setSelectedIcon('Wallet');
-    setModalMode('create');
     setModalVisible(true);
   }
 
-  function handleOpenEditCategory(category: Category) {
-    setSelectedCategory(category);
-    setName(category.name);
-    setSelectedColor(category.color || COLORS[0]);
-    setSelectedIcon(category.icon || 'Wallet');
-    setModalMode('edit');
-    setModalVisible(true);
-  }
-
-  async function handleUpdateCategory() {
-    if (!userId || !selectedCategory) return;
-
-    const trimmedName = name.trim();
-
-    if (!trimmedName) {
-      setErrorMessage('Por favor, ingresa un nombre para la categoría.');
-      setErrorModalVisible(true);
-      return;
-    }
-
-    const alreadyExists = categories.some(
-      (category) =>
-        category.id !== selectedCategory.id &&
-        category.name.trim().toLowerCase() === trimmedName.toLowerCase()
-    );
-
-    if (alreadyExists) {
-      setErrorMessage(`Ya existe una categoría llamada "${trimmedName}".`);
-      setErrorModalVisible(true);
-      return;
-    }
-
-    try {
-      setCreating(true);
-
-      await updateCategory(supabase, selectedCategory.id, {
-        name: trimmedName,
-        color: selectedColor,
-        icon: selectedIcon,
-      });
-
-      closeModal();
-      await loadCategories();
-
-      setSuccessMessage('Categoría actualizada correctamente');
-      setSuccessModalVisible(true);
-
-      setTimeout(() => {
-        setSuccessModalVisible(false);
-      }, 2000);
-    } catch (error: any) {
-      console.error('Error updating category:', error);
-      setErrorMessage(error.message ?? 'No se pudo actualizar la categoría.');
-      setErrorModalVisible(true);
-    } finally {
-      setCreating(false);
-    }
-  }
+  // Edit functionality removed — only allow creation and deletion
 
   function handleDeletePress(category: Category) {
     setSelectedCategory(category);
@@ -294,10 +234,10 @@ export default function CategoriesScreen() {
 
       <View style={{ position: 'relative', zIndex: 10 }}>
         <Pressable
-          onPress={() => handleOpenEditCategory(item)}
+          onPress={() => handleDeletePress(item)}
           hitSlop={10}
         >
-          <MoreVertical size={24} color="#6B7280" />
+          <Trash2 size={22} color={colors.expense} />
         </Pressable>
       </View>
     </View>
@@ -397,14 +337,8 @@ export default function CategoriesScreen() {
           <View style={styles.modalCard}>
             <View style={styles.modalHeaderRow}>
               <Text style={styles.modalHeaderTitle}>
-                {modalMode === 'edit' ? 'Editar Categoría' : 'Nueva Categoría'}
+                Nueva Categoría
               </Text>
-
-              {modalMode === 'edit' && selectedCategory ? (
-                <Pressable onPress={() => setDeleteModalVisible(true)} hitSlop={10}>
-                  <Trash2 size={26} color="#FFFFFF" />
-                </Pressable>
-              ) : null}
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -467,11 +401,11 @@ export default function CategoriesScreen() {
 
               <TouchableOpacity
                 style={[styles.modalButton, styles.createButton, creating && styles.buttonDisabled]}
-                onPress={modalMode === 'edit' ? handleUpdateCategory : handleCreateCategory}
+                onPress={handleCreateCategory}
                 disabled={creating}
               >
                 <Text style={styles.createButtonText}>
-                  {creating ? (modalMode === 'edit' ? 'Guardando...' : 'Creando...') : modalMode === 'edit' ? 'Guardar' : 'Crear'}
+                  {creating ? 'Creando...' : 'Crear'}
                 </Text>
               </TouchableOpacity>
             </View>
