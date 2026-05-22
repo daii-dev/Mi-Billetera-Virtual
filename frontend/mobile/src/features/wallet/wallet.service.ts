@@ -745,26 +745,36 @@ export async function getBudgets(supabase: any, userId: string) {
 }
 
 export async function getBudgetAccountSpent(
-  supabase: any,
-  userId: string,
-  accountId: string,
-  startDate: string,
-  endDate: string
+  supabase: any, // Cliente va directo aquí
+  params: {
+    userId: string;
+    accountId: string;
+    categoryName: string;
+    startDate: string;
+    endDate: string;
+  }
 ): Promise<number> {
+  const { userId, accountId, categoryName, startDate, endDate } = params;
+
   const { data, error } = await supabase
     .from('movements')
     .select('amount')
     .eq('clerk_user_id', userId)
     .eq('account_id', accountId)
+    .eq('category_name', categoryName)
     .eq('type', 'expense')
     .gte('movement_date', startDate)
     .lte('movement_date', endDate);
 
-  if (error) throw error;
+  if (error) {
+    console.error("Error en consulta híbrida de presupuesto:", error);
+    throw error;
+  }
 
   return data?.reduce((acc: number, m: any) => acc + Number(m.amount), 0) || 0;
 }
 
+ 
 export async function saveAccountBudget(supabase: any, budgetData: any) {
   const { data: existing } = await supabase
     .from('budgets')
