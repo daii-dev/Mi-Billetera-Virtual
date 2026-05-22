@@ -2,14 +2,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
   Account,
-<<<<<<< HEAD
   Budget,
-=======
-  Category,
->>>>>>> origin/feat/HU12-13-categorias
   Movement,
   Profile,
   WalletStatus,
+  Category,
 } from './wallet.types';
 
 const INITIAL_ACCOUNT_NAME = 'Personal';
@@ -402,10 +399,6 @@ async function adjustAccountBalance(
   const currentBalance = Number(account.current_balance ?? 0);
   const newBalance = currentBalance + delta;
 
-  if (newBalance < 0) {
-    throw new Error('No tienes los suficientes fondos para retirar dinero de esta cuenta');
-  }
-
   const { error: updateError } = await supabase
     .from('accounts')
     .update({
@@ -579,7 +572,6 @@ export async function deleteManualMovement(
     -delta
   );
 }
-<<<<<<< HEAD
 
 export async function getBudgets(supabase: any, userId: string) {
   const { data, error } = await supabase
@@ -647,24 +639,15 @@ export async function getCategorySpent(
 }
 
 export async function getUsedCategories(supabase: any, userId: string): Promise<string[]> {
-  try {
-    const { data, error } = await supabase
-      .from('movements')
-      .select('category_name')
-      .eq('clerk_user_id', userId)
-      .eq('type', 'expense');
+  const { data, error } = await supabase
+    .from('movements')
+    .select('category_name')
+    .eq('clerk_user_id', userId)
+    .eq('type', 'expense');
 
-    if (error || !data) return [];
-
-    const categories = data
-      .map((m: any) => m.category_name)
-      .filter((name: any) => name !== null && name !== undefined && name !== '');
-      
-    return Array.from(new Set(categories as string[]));
-  } catch (e) {
-    console.error("Error en getUsedCategories:", e);
-    return [];
-  }
+  if (error || !data) return [];
+  const categories = data.map((m: any) => m.category_name).filter(Boolean);
+  return Array.from(new Set(categories ));
 }
 
 
@@ -710,93 +693,72 @@ export async function updateBudget(supabase: any, budgetId: string, amount: numb
     .eq('id', budgetId);
 
   if (error) throw error;
-=======
+}
+export async function checkBudgetAlert(supabase: any, userId: string, category: string) {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const year = now.getFullYear();
+  const { data: budget } = await supabase
+    .from('budgets')
+    .select('*')
+    .eq('clerk_user_id', userId)
+    .eq('category_name', category)
+    .eq('period_type', 'monthly')
+    .eq('period_month', month)
+    .eq('period_year', year)
+    .maybeSingle();
+
+  if (!budget) return null;
+
+  const spent = await getCategorySpent(supabase, userId, category, month, year);
+  const percentage = (spent / budget.amount) * 100;
+
+  return {
+    exceeded: percentage >= 80,
+    percentage,
+    limit: budget.amount,
+    spent
+  };
+}
+
 export async function getCategoriesByType(
-  supabase: SupabaseClient,
-  clerkUserId: string,
+  supabase: any,
+  userId: string,
   type: 'income' | 'expense'
-): Promise<Category[]> {
+): Promise<any[]> {
   const { data, error } = await supabase
     .from('categories')
     .select('*')
-    .eq('clerk_user_id', clerkUserId)
+    .eq('clerk_user_id', userId)
     .eq('type', type)
     .order('name', { ascending: true });
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return (data ?? []) as Category[];
+  if (error) throw error;
+  return data || [];
 }
 
-type CreateCategoryPayload = {
-  clerkUserId: string;
-  type: 'income' | 'expense';
-  name: string;
-  icon?: string;
-  color?: string;
-};
-
 export async function createCategory(
-  supabase: SupabaseClient,
-  payload: CreateCategoryPayload
-): Promise<Category> {
-  const cleanName = payload.name.trim();
-
-  const { data, error } = await supabase
+  supabase: any,
+  payload: { clerkUserId: string; type: 'income' | 'expense'; name: string; color: string; icon: string }
+): Promise<void> {
+  const { error } = await supabase
     .from('categories')
     .insert({
       clerk_user_id: payload.clerkUserId,
       type: payload.type,
-      name: cleanName,
-      icon: payload.icon ?? null,
-      color: payload.color ?? null,
-    })
-    .select('*')
-    .single();
+      name: payload.name.trim(),
+      color: payload.color,
+      icon: payload.icon,
+    });
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data as Category;
+  if (error) throw error;
 }
 
-export async function deleteCategory(
-  supabase: SupabaseClient,
-  categoryId: string
-): Promise<void> {
-  const { data: category, error: categoryError } = await supabase
-    .from('categories')
-    .select('*')
-    .eq('id', categoryId)
-    .single();
-
-  if (categoryError) {
-    throw new Error(categoryError.message);
-  }
-
-  const { data: movementUsingCategory } = await supabase
-    .from('movements')
-    .select('id')
-    .eq('category_name', category.name)
-    .limit(1)
-    .maybeSingle();
-
-  if (movementUsingCategory) {
-    throw new Error(
-      'No puedes eliminar una categoría que ya está siendo utilizada.'
-    );
-  }
-
+export async function deleteCategory(supabase: any, categoryId: string): Promise<void> {
   const { error } = await supabase
     .from('categories')
     .delete()
     .eq('id', categoryId);
 
-  if (error) {
-    throw new Error(error.message);
-  }
->>>>>>> origin/feat/HU12-13-categorias
+  if (error) throw error;
 }

@@ -5,7 +5,7 @@ import { colors } from '@/theme/colors';
 import { useSupabase } from '@/lib/useSupabase';
 import { useAuth, useUser } from '@clerk/expo';
 import { useRouter } from 'expo-router';
-import { getBudgets, getCategorySpent, saveBudget, getUsedCategories, deleteBudget } from '@/features/wallet/wallet.service'; 
+import { getBudgets, getCategorySpent, saveBudget, deleteBudget, getCategoriesByType } from '@/features/wallet/wallet.service'; 
 import { Plus, Menu, LogOut, X, ChevronDown, Trash2, Edit2, MoreVertical} from 'lucide-react-native';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 
@@ -57,8 +57,12 @@ export default function BudgetsScreen() {
 
   const loadBudgets = async () => {
     if (!userId) return;
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+
     try {
       const data = await getBudgets(supabase, userId);
+      
       const enriched = await Promise.all(data.map(async (b: any) => {
         const spent = await getCategorySpent(
           supabase, 
@@ -77,19 +81,37 @@ export default function BudgetsScreen() {
 
         return { ...b, spent, progress, barColor };
       }));
-      setBudgets(enriched.filter(b => b.period_type === activeTab));
+
+      const currentPeriodBudgets = enriched.filter(b => 
+        b.period_type === activeTab && 
+        b.period_year === currentYear &&
+        (b.period_type === 'weekly' || b.period_month === currentMonth)
+      );
+
+      const uniqueBudgets: any[] = [];
+      const seenCategories = new Set<string>();
+
+      currentPeriodBudgets.forEach((budget) => {
+        const normalName = budget.category_name.trim().toLowerCase();
+        if (!seenCategories.has(normalName)) {
+          seenCategories.add(normalName);
+          uniqueBudgets.push(budget);
+        }
+      });
+      setBudgets(uniqueBudgets);
     } catch (e) {
-      console.error(e);
+      console.error("Error al cargar presupuestos unificados:", e);
     }
   };
-
   const loadCategories = async () => {
     if (!userId) return;
     try {
-      const cats = await getUsedCategories(supabase, userId);
-      setMyCategories(cats);
+      const data = await getCategoriesByType(supabase, userId, 'expense');
+      
+      const names = data.map((cat: any) => cat.name);
+      setMyCategories(names);
     } catch (e) {
-      console.error(e);
+      console.error("Error cargando categorías para presupuestos:", e);
     }
   };
 
@@ -97,8 +119,13 @@ export default function BudgetsScreen() {
     loadBudgets();
     loadCategories(); 
   }, [activeTab]);
+const handleCreateBudget = async () => {
+    const clerkId = userId;
+    if (!clerkId) {
+      Alert.alert("Error de Sesión", "No se encontró un usuario autenticado.");
+      return;
+    }
 
-  const handleCreateBudget = async () => {
     if (!selectedCategory || !amount) {
       Alert.alert("Campos requeridos", "Por favor selecciona una categoría e ingresa un monto.");
       return;
@@ -110,29 +137,61 @@ export default function BudgetsScreen() {
       return;
     }
 
+    const alreadyExists = budgets.some(
+      (b) => b.category_name.trim().toLowerCase() === selectedCategory.trim().toLowerCase()
+    );
+
+    if (alreadyExists) {
+      Alert.alert(
+        "Presupuesto Activo", 
+        `Ya tienes un presupuesto asignado a "${selectedCategory}" para este período.\n\nSi deseas modificarlo, usa la opción "Editar".`
+      );
+      return;
+    }
+
     setLoading(true);
     try {
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
+
+      const alreadySpent = await getCategorySpent(
+        supabase,
+        clerkId, // Usamos la constante segura corregida
+        selectedCategory,
+        activeTab === 'monthly' ? currentMonth : null,
+        currentYear,
+        null,
+        activeTab
+      );
+      if (alreadySpent > numAmount) {
+        Alert.alert(
+          "Límite Insuficiente",
+          `No puedes poner un tope de Bs. ${numAmount.toFixed(2)} porque ya has gastado Bs. ${alreadySpent.toFixed(2)} en "${selectedCategory}" durante este período.\n\nPor favor, ingresa un monto mayor a lo gastado.`
+        );
+        setLoading(false);
+        return;
+      }
+
       const newBudget = {
-        clerk_user_id: userId,
+        clerk_user_id: clerkId,
         category_name: selectedCategory,
         amount: numAmount,
         period_type: activeTab,
-        period_month: activeTab === 'monthly' ? new Date().getMonth() + 1 : null,
-        period_year: new Date().getFullYear(),
+        period_month: currentMonth, 
+        period_year: currentYear,
       };
 
       await saveBudget(supabase, newBudget);
-      Alert.alert("¡Éxito!", "Presupuesto creado correctamente.");
+      Alert.alert("¡Éxito!", "Presupuesto configurado correctamente.");
       setModalVisible(false);
       resetForm();
       loadBudgets();
     } catch (error: any) {
-      Alert.alert("Error", error.message || "No se pudo crear el presupuesto.");
+      Alert.alert("Error", error.message || "No se pudo guardar el presupuesto.");
     } finally {
       setLoading(false);
     }
   };
-
   const resetForm = () => {
     setSelectedCategory('');
     setAmount('');

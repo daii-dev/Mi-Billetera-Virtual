@@ -359,17 +359,21 @@ export default function HomeScreen() {
 
   function handleSelectSidebarItem(item: { key: string; label: string }) {
     setSelectedSidebarItem(item.key);
-<<<<<<< HEAD
   setSidebarVisible(false); 
   
   if (item.key === 'home') {
-    router.push('/home');
-  } else if (item.key === 'accounts') {
-    router.push('/accounts');
-  } else if (item.key === 'budgets') {
-    router.push('/budgets'); 
-  } else  if (item.key === 'goals') {
-=======
+      router.push('/home');
+    } else if (item.key === 'accounts') {
+      router.push('/accounts');
+    } else if (item.key === 'budgets') {
+      router.push('/budgets'); 
+    } else if (item.key === 'categories') {
+      router.push('/categories');
+    } else if (item.key === 'goals') {
+      router.push('/goals');
+    }
+
+
 
     if (item.key === 'home') {
       setSidebarVisible(false);
@@ -391,7 +395,6 @@ export default function HomeScreen() {
     setSidebarVisible(false);
 
     if (item.key === 'goals') {
->>>>>>> origin/feat/HU12-13-categorias
       router.push('/goals');
     }
     }
