@@ -48,6 +48,7 @@ export type Movement = {
   account?: {
     name: string;
   } | null;
+  savings_goal_account_names?: string | null;
 };
 
 export type Budget = {

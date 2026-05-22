@@ -505,7 +505,9 @@ export default function HomeScreen() {
           filteredHomeMovements.map((movement) => {
 
             const isIncome = movement.type === 'income';
-            const accountName = movement.account?.name ?? 'Cuenta';
+            const accountName = movement.savings_goal_account_names
+              || movement.account?.name
+              || 'Cuenta';
             const sign = isIncome ? '+' : '-';
 
             return (

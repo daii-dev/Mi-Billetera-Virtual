@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   AbonoMetaAhorro,
   CreateSavingsGoalParams,
+  GoalContributionAccount,
   GoalDeletionRefundSummary,
   GoalSavingsNeeded,
   RegisterGoalContributionParams,
@@ -69,6 +70,7 @@ export async function getSavingsGoals(
     .select('*')
     .eq('usuario_clerk_id', clerkUserId)
     .eq('visible', true)
+    .in('estado', ['activa', 'completada'])
     .order('creado_en', { ascending: false });
 
   if (error) {
@@ -82,7 +84,7 @@ export async function getCompletedSavingsGoals(
   supabase: SupabaseClient,
   clerkUserId: string
 ): Promise<SavingsGoal[]> {
-  const { data, error } = await supabase
+  const { data: goals, error } = await supabase
     .from('metas_ahorro')
     .select('*')
     .eq('usuario_clerk_id', clerkUserId)
@@ -94,7 +96,51 @@ export async function getCompletedSavingsGoals(
     throw new Error(error.message);
   }
 
-  return (data || []) as SavingsGoal[];
+  const completedGoals = (goals || []) as SavingsGoal[];
+  const goalIds = completedGoals.map((goal) => goal.id_meta);
+
+  if (goalIds.length === 0) {
+    return completedGoals;
+  }
+
+  const { data: contributions, error: contributionsError } = await supabase
+    .from('abonos_metas_ahorro')
+    .select(`
+      meta_id,
+      cuenta_id,
+      monto,
+      account:accounts (
+        name
+      )
+    `)
+    .eq('usuario_clerk_id', clerkUserId)
+    .in('meta_id', goalIds);
+
+  if (contributionsError) {
+    throw new Error(contributionsError.message);
+  }
+
+  const accountsByGoal = new Map<string, Map<string, GoalContributionAccount>>();
+
+  (contributions || []).forEach((contribution: any) => {
+    const goalId = contribution.meta_id as string;
+    const accountId = contribution.cuenta_id as string;
+    const goalAccounts = accountsByGoal.get(goalId) ?? new Map<string, GoalContributionAccount>();
+    const current = goalAccounts.get(accountId);
+    const accountName = contribution.account?.name || 'Cuenta';
+
+    goalAccounts.set(accountId, {
+      accountId,
+      accountName: current?.accountName ?? accountName,
+      amount: (current?.amount ?? 0) + Number(contribution.monto ?? 0),
+    });
+    accountsByGoal.set(goalId, goalAccounts);
+  });
+
+  return completedGoals.map((goal) => ({
+    ...goal,
+    contribution_accounts: Array.from(accountsByGoal.get(goal.id_meta)?.values() ?? []),
+  }));
 }
 
 

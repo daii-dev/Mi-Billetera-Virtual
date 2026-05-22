@@ -274,6 +274,7 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
     setUseSavingsGoal(enabled);
     setSelectedGoalId('');
     setShowGoalOptions(false);
+    setShowAccountOptions(false);
 
     if (enabled) {
       setAmountText('');
@@ -283,8 +284,21 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
     setAmountText('');
   }
 
+  function getGoalReferenceAccountId(goal: SavingsGoal) {
+    if (goal.cuenta_id) {
+      return goal.cuenta_id;
+    }
+
+    const contributionAccount = goal.contribution_accounts
+      ?.slice()
+      .sort((first, second) => second.amount - first.amount)[0];
+
+    return contributionAccount?.accountId ?? getDefaultAccountId();
+  }
+
   function handleSelectGoal(goal: SavingsGoal) {
     setSelectedGoalId(goal.id_meta);
+    setSelectedAccountId(getGoalReferenceAccountId(goal));
     setAmountText(formatMoneyInput(goal.monto_actual));
     setShowGoalOptions(false);
   }
@@ -337,7 +351,14 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
       return null;
     }
 
-    if (!isIncome && selectedAccount) {
+    if (type === 'expense' && useSavingsGoal) {
+      const goalBalance = Number(selectedGoal?.monto_actual ?? 0);
+
+      if (amount > goalBalance) {
+        Alert.alert('Fondos insuficientes', 'Saldo insuficiente en la meta de ahorro');
+        return null;
+      }
+    } else if (!isIncome && selectedAccount) {
       const currentBalance = Number(selectedAccount.current_balance ?? 0);
       if (amount > currentBalance) {
         Alert.alert(
@@ -371,6 +392,7 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
         await registerExpenseFromGoal(supabase, {
           metaId: form.goalId,
           accountId: form.accountId,
+          amount: form.amount,
           description: form.cleanDescription,
           categoryName: form.category,
         });
@@ -544,7 +566,9 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
         ) : (
           filteredMovements.map((movement) => {
 
-            const accountName = movement.account?.name ?? 'Cuenta';
+            const accountName = movement.savings_goal_account_names
+              || movement.account?.name
+              || 'Cuenta';
             const canEdit = movement.source === 'manual';
 
             return (
@@ -565,6 +589,12 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
                   {movement.category_name && (
                     <Text style={styles.movementSubtitle}>
                       ♟ {movement.category_name}
+                    </Text>
+                  )}
+
+                  {movement.source === 'savings_goal' && movement.description && (
+                    <Text style={styles.movementSubtitle}>
+                      {movement.description}
                     </Text>
                   )}
 
@@ -628,6 +658,7 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
         selectedAccountName={selectedAccount?.name ?? ''}
         selectedCategory={selectedCategory}
         useSavingsGoal={useSavingsGoal}
+        accountDisabled={useSavingsGoal}
         selectedGoal={selectedGoal}
         completedGoals={completedGoals}
         accounts={accounts}
@@ -679,6 +710,7 @@ type MovementModalProps = {
   selectedAccountName: string;
   selectedCategory: string;
   useSavingsGoal: boolean;
+  accountDisabled: boolean;
   selectedGoal: SavingsGoal | null;
   completedGoals: SavingsGoal[];
   accounts: Account[];
@@ -721,6 +753,7 @@ function MovementModal({
   selectedAccountName,
   selectedCategory,
   useSavingsGoal,
+  accountDisabled,
   selectedGoal,
   completedGoals,
   accounts,
@@ -803,6 +836,7 @@ function MovementModal({
                 selectedCategory={selectedCategory}
                 type={type}
                 useSavingsGoal={useSavingsGoal}
+                accountDisabled={useSavingsGoal}
                 selectedGoal={selectedGoal}
                 completedGoals={completedGoals}
                 accounts={accounts}
@@ -851,6 +885,7 @@ function MovementModal({
                   selectedCategory={selectedCategory}
                   type={type}
                   useSavingsGoal={false}
+                  accountDisabled={false}
                   selectedGoal={null}
                   completedGoals={[]}
                   accounts={accounts}
@@ -926,6 +961,7 @@ type MovementFormProps = {
   selectedCategory: string;
   type: ManualMovementType;
   useSavingsGoal: boolean;
+  accountDisabled: boolean;
   selectedGoal: SavingsGoal | null;
   completedGoals: SavingsGoal[];
   accounts: Account[];
@@ -957,6 +993,7 @@ function MovementForm({
   selectedCategory,
   type,
   useSavingsGoal,
+  accountDisabled,
   selectedGoal,
   completedGoals,
   accounts,
@@ -988,6 +1025,150 @@ function MovementForm({
         placeholderTextColor="#A8A8A8"
         style={styles.input}
       />
+
+      {false && type === 'expense' && (
+        <>
+          <Pressable
+            style={styles.goalToggleRow}
+            onPress={() => onToggleSavingsGoal(!useSavingsGoal)}
+            disabled={saving}
+          >
+            <View style={[
+              styles.checkbox,
+              useSavingsGoal && styles.checkboxSelected,
+            ]}>
+              {useSavingsGoal && <Text style={styles.checkboxMark}>✓</Text>}
+            </View>
+            <Text style={styles.goalToggleText}>Usar meta de ahorro completada</Text>
+          </Pressable>
+
+          {useSavingsGoal && (
+            <>
+              <Text style={styles.inputLabel}>Seleccionar Meta de Ahorro</Text>
+              <Pressable
+                style={styles.selectorBox}
+                onPress={onToggleGoalOptions}
+              >
+                <View style={styles.selectorLeft}>
+                  <PiggyBank size={22} color="#4B5563" />
+                  <Text style={styles.selectorText}>
+                    {selectedGoal?.nombre || 'Selecciona una meta completada'}
+                  </Text>
+                </View>
+
+                <ChevronDown size={20} color="#6B7280" />
+              </Pressable>
+
+              {showGoalOptions && (
+                <View style={styles.optionsBox}>
+                  {completedGoals.length === 0 ? (
+                    <Text style={styles.emptyOptionText}>No tienes metas completadas disponibles</Text>
+                  ) : (
+                    completedGoals.map((goal) => (
+                      <Pressable
+                        key={goal.id_meta}
+                        style={styles.optionItem}
+                        onPress={() => onSelectGoal(goal)}
+                      >
+                        <Text style={styles.optionText}>
+                          {goal.nombre} · {money(goal.monto_actual)}
+                        </Text>
+                      </Pressable>
+                    ))
+                  )}
+                </View>
+              )}
+
+              {selectedGoal && (
+                <View style={styles.goalSummaryCard}>
+                  <Text style={styles.goalSummaryTitle}>{selectedGoal!.nombre}</Text>
+                  <Text style={styles.goalSummaryText}>Monto ahorrado: {money(selectedGoal!.monto_actual)}</Text>
+                  <Text style={styles.goalSummaryText}>Fecha limite: {formatGoalDate(selectedGoal!.fecha_limite)}</Text>
+                  <Text style={styles.goalSummaryNotice}>
+                    Esta cuenta se usará solo como referencia del movimiento. No se descontará nuevamente el saldo.
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      <Text style={styles.inputLabel}>Ingresar Monto</Text>
+      <View style={styles.amountInputBox}>
+        <Text style={styles.amountPrefix}>Bs.</Text>
+        <TextInput
+          value={amountText}
+          onChangeText={onChangeAmount}
+          placeholder="0,00"
+          placeholderTextColor="#A8A8A8"
+          keyboardType="decimal-pad"
+          editable={!useSavingsGoal}
+          style={styles.amountInput}
+        />
+      </View>
+
+      <Text style={styles.inputLabel}>Seleccionar Cuenta</Text>
+      <Pressable
+        style={[
+          styles.selectorBox,
+          accountDisabled && styles.selectorBoxDisabled,
+        ]}
+        disabled={accountDisabled}
+        onPress={accountDisabled ? undefined : onToggleAccountOptions}
+      >
+        <View style={styles.selectorLeft}>
+          <Wallet size={22} color="#4B5563" />
+          <Text style={styles.selectorText}>
+            {selectedAccountName || 'Selecciona una cuenta'}
+          </Text>
+        </View>
+
+        <ChevronDown size={20} color="#6B7280" />
+      </Pressable>
+
+      {!accountDisabled && showAccountOptions && (
+        <View style={styles.optionsBox}>
+          {accounts.map((account) => (
+            <Pressable
+              key={account.id}
+              style={styles.optionItem}
+              onPress={() => onSelectAccount(account.id)}
+            >
+              <Text style={styles.optionText}>{account.name}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      <Text style={styles.inputLabel}>Categoria</Text>
+      <Pressable
+        style={styles.selectorBox}
+        onPress={onToggleCategoryOptions}
+      >
+        <View style={styles.selectorLeft}>
+          <Text style={styles.categoryIcon}>♟</Text>
+          <Text style={styles.selectorText}>
+            {selectedCategory || 'Selecciona una categoría'}
+          </Text>
+        </View>
+
+        <ChevronDown size={20} color="#6B7280" />
+      </Pressable>
+
+      {showCategoryOptions && (
+        <View style={styles.optionsBox}>
+          {categories.map((category) => (
+            <Pressable
+              key={category}
+              style={styles.optionItem}
+              onPress={() => onSelectCategory(category)}
+            >
+              <Text style={styles.optionText}>{category}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       {type === 'expense' && (
         <>
@@ -1044,89 +1225,22 @@ function MovementForm({
 
               {selectedGoal && (
                 <View style={styles.goalSummaryCard}>
-                  <Text style={styles.goalSummaryTitle}>{selectedGoal.nombre}</Text>
-                  <Text style={styles.goalSummaryText}>Monto ahorrado: {money(selectedGoal.monto_actual)}</Text>
-                  <Text style={styles.goalSummaryText}>Fecha limite: {formatGoalDate(selectedGoal.fecha_limite)}</Text>
+                  <Text style={styles.goalSummaryTitle}>{selectedGoal!.nombre}</Text>
+                  <Text style={styles.goalSummaryText}>Monto ahorrado: {money(selectedGoal!.monto_actual)}</Text>
+                  <Text style={styles.goalSummaryText}>Fecha limite: {formatGoalDate(selectedGoal!.fecha_limite)}</Text>
+                  {selectedGoal.contribution_accounts && selectedGoal.contribution_accounts.length > 0 && (
+                    <Text style={styles.goalSummaryText}>
+                      Cuentas usadas: {selectedGoal.contribution_accounts.map((account) => account.accountName).join(', ')}
+                    </Text>
+                  )}
                   <Text style={styles.goalSummaryNotice}>
-                    Esta cuenta se usará solo como referencia del movimiento. No se descontará nuevamente el saldo.
+                    La cuenta se usará como referencia del movimiento. No se descontará nuevamente el saldo.
                   </Text>
                 </View>
               )}
             </>
           )}
         </>
-      )}
-
-      <Text style={styles.inputLabel}>Ingresar Monto</Text>
-      <View style={styles.amountInputBox}>
-        <Text style={styles.amountPrefix}>Bs.</Text>
-        <TextInput
-          value={amountText}
-          onChangeText={onChangeAmount}
-          placeholder="0,00"
-          placeholderTextColor="#A8A8A8"
-          keyboardType="decimal-pad"
-          editable={!useSavingsGoal}
-          style={styles.amountInput}
-        />
-      </View>
-
-      <Text style={styles.inputLabel}>Seleccionar Cuenta</Text>
-      <Pressable
-        style={styles.selectorBox}
-        onPress={onToggleAccountOptions}
-      >
-        <View style={styles.selectorLeft}>
-          <Wallet size={22} color="#4B5563" />
-          <Text style={styles.selectorText}>
-            {selectedAccountName || 'Selecciona una cuenta'}
-          </Text>
-        </View>
-
-        <ChevronDown size={20} color="#6B7280" />
-      </Pressable>
-
-      {showAccountOptions && (
-        <View style={styles.optionsBox}>
-          {accounts.map((account) => (
-            <Pressable
-              key={account.id}
-              style={styles.optionItem}
-              onPress={() => onSelectAccount(account.id)}
-            >
-              <Text style={styles.optionText}>{account.name}</Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
-
-      <Text style={styles.inputLabel}>Categoria</Text>
-      <Pressable
-        style={styles.selectorBox}
-        onPress={onToggleCategoryOptions}
-      >
-        <View style={styles.selectorLeft}>
-          <Text style={styles.categoryIcon}>♟</Text>
-          <Text style={styles.selectorText}>
-            {selectedCategory || 'Selecciona una categoría'}
-          </Text>
-        </View>
-
-        <ChevronDown size={20} color="#6B7280" />
-      </Pressable>
-
-      {showCategoryOptions && (
-        <View style={styles.optionsBox}>
-          {categories.map((category) => (
-            <Pressable
-              key={category}
-              style={styles.optionItem}
-              onPress={() => onSelectCategory(category)}
-            >
-              <Text style={styles.optionText}>{category}</Text>
-            </Pressable>
-          ))}
-        </View>
       )}
 
       <View style={styles.modalButtonsRow}>
@@ -1508,6 +1622,9 @@ function createStyles(
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: 8,
+    },
+    selectorBoxDisabled: {
+      opacity: 0.55,
     },
     selectorLeft: {
       flexDirection: 'row',
