@@ -36,21 +36,30 @@ export type Movement = {
   account_id: string;
   meta_id?: string | null;
   type: MovementType;
-  source: MovementSource;
   title: string;
-  description: string | null;
-  amount: number | string;
-  currency: string;
+  description?: string | null;
+  amount: number;
   category_name: string | null;
+  category_icon?: string | null;
+  category_color?: string | null;
   movement_date: string;
   created_at: string;
   updated_at: string;
+  source: MovementSource;
   account?: {
     name: string;
   } | null;
   savings_goal_account_names?: string | null;
 };
-
+export type Category = {
+  id: string;
+  clerk_user_id: string;
+  type: ManualMovementType;
+  name: string;
+  icon: string | null;
+  color: string | null;
+  created_at: string;
+};
 export type Budget = {
   id: string;
   clerk_user_id: string;

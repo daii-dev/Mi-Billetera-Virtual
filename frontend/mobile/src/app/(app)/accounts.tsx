@@ -327,6 +327,12 @@ export default function AccountsScreen() {
       return;
     }
 
+    if (item.key === 'categories') {
+      setSidebarVisible(false);
+      router.push('/categories');
+      return;
+    }
+
     if (item.key === 'budgets') {
       setSidebarVisible(false);
       router.push('/budgets');
