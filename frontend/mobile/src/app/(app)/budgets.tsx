@@ -39,10 +39,20 @@ export default function BudgetsScreen() {
   const [showAccountOptions, setShowAccountOptions] = useState(false);
   const [showCategoryOptions, setShowCategoryOptions] = useState(false);
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
-
+const resetForm = () => {
+    setSelectedCategory('');
+    setSelectedAccountId('');
+    setSelectedAccountName('');
+    setAmount('');
+    setStartDate(new Date());
+    setEndDate(new Date(new Date().setDate(new Date().getDate() + 7)));
+    setShowAccountOptions(false);
+    setShowCategoryOptions(false);
+    setEditingBudgetId(null);
+  };
   const profileName = user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Usuario';
 
- const loadBudgetsData = async () => {
+  const loadBudgetsData = async () => {
     if (!userId) return;
     try {
       const data = await getBudgets(supabase, userId);
@@ -54,7 +64,6 @@ export default function BudgetsScreen() {
         const catName = b.category_name ? String(b.category_name) : 'General';
 
         try {
-          // 🔥 LLAMADA CORREGIDA: Pasamos 'supabase' como primer argumento directo
           const spent = await getBudgetAccountSpent(supabase, {
             userId,
             accountId: b.account_id,
@@ -204,12 +213,11 @@ export default function BudgetsScreen() {
     const startDateString = startDate.toISOString().split('T')[0];
     const endDateString = endDate.toISOString().split('T')[0];
 
-   setLoading(true);
+    setLoading(true);
     try {
       if (editingBudgetId) {
         // ... (Tu código actual de update se queda igual)
       } else {
-        // 🔥 CANDADO DE DUPLICADOS: Verificamos si ya hay un presupuesto para esta cuenta y categoría
         const { data: existingDuplicate, error: checkError } = await supabase
           .from('budgets')
           .select('id, start_date, end_date')
@@ -221,7 +229,6 @@ export default function BudgetsScreen() {
         if (checkError) throw checkError;
 
         if (existingDuplicate) {
-          // Si las fechas se cruzan, frenamos la creación
           Alert.alert(
             "Presupuesto Duplicado ⚠️",
             `Ya tienes configurado un presupuesto de "${selectedCategory}" para esta billetera. Si deseas cambiar el monto límite, búscalo en la lista principal y presiona "Editar".`
@@ -230,7 +237,6 @@ export default function BudgetsScreen() {
           return;
         }
 
-        // Si no hay duplicados, procede el insert limpio
         const { error } = await supabase
           .from('budgets')
           .insert([{
@@ -256,18 +262,6 @@ export default function BudgetsScreen() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const resetForm = () => {
-    setSelectedCategory('');
-    setSelectedAccountId('');
-    setSelectedAccountName('');
-    setAmount('');
-    setStartDate(new Date());
-    setEndDate(new Date(new Date().setDate(new Date().getDate() + 7)));
-    setShowAccountOptions(false);
-    setShowCategoryOptions(false);
-    setEditingBudgetId(null);
   };
 
   return (
@@ -319,8 +313,8 @@ export default function BudgetsScreen() {
                   </Pressable>
 
                   {isMenuOpen && (
-                    <View style={[styles.contextMenu, { backgroundColor: theme.colors.card }]}>
-                      <Pressable style={styles.menuOption} onPress={() => handleEditPress(item)}>
+                    <View style={[styles.contextMenu, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                      <Pressable style={[styles.menuOption, { borderBottomColor: theme.colors.border }]} onPress={() => handleEditPress(item)}>
                         <Edit2 size={14} color="#082B8C" />
                         <Text style={[styles.menuOptionText, { color: theme.colors.text }]}>Editar</Text>
                       </Pressable>
@@ -345,7 +339,7 @@ export default function BudgetsScreen() {
               </View>
 
               {item.overspentAmount > 0 && (
-                <View style={styles.overspentBox}>
+                <View style={[styles.overspentBox, { borderTopColor: theme.colors.border }]}>
                   <Text style={styles.overspentText}>Monto rebasado: +Bs. {item.overspentAmount.toFixed(2)}</Text>
                 </View>
               )}
@@ -369,7 +363,11 @@ export default function BudgetsScreen() {
             <View style={styles.modalContent}>
                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Categoría del Gasto</Text>
                <Pressable 
-                 style={[styles.selectorBox, editingBudgetId && { backgroundColor: '#E5E7EB', borderColor: '#9CA3AF' }]} 
+                 style={[
+                   styles.selectorBox, 
+                   { backgroundColor: theme.colors.background, borderColor: '#082B8C' },
+                   editingBudgetId && { backgroundColor: isDarkMode ? '#374151' : '#E5E7EB', borderColor: '#9CA3AF' }
+                 ]} 
                  onPress={() => !editingBudgetId && setShowCategoryOptions(!showCategoryOptions)}
                >
                  <Text style={{ color: theme.colors.text }}>{selectedCategory || "Selecciona un rubro (Comida, Pasajes...)"}</Text>
@@ -377,10 +375,10 @@ export default function BudgetsScreen() {
                </Pressable>
 
                {showCategoryOptions && (
-                 <View style={styles.optionsDropdown}>
+                 <View style={[styles.optionsDropdown, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
                    <ScrollView nestedScrollEnabled={true}>
                      {myCategories.map((cat) => (
-                       <Pressable key={cat.id} style={styles.optionItem} onPress={() => { setSelectedCategory(cat.name); setShowCategoryOptions(false); }}>
+                       <Pressable key={cat.id} style={[styles.optionItem, { borderBottomColor: theme.colors.border }]} onPress={() => { setSelectedCategory(cat.name); setShowCategoryOptions(false); }}>
                          <Text style={{ color: theme.colors.text }}>{cat.name}</Text>
                        </Pressable>
                      ))}
@@ -390,7 +388,11 @@ export default function BudgetsScreen() {
 
                <Text style={[styles.inputLabel, { color: theme.colors.text, marginTop: 12 }]}>Billetera / Cuenta de Origen</Text>
                <Pressable 
-                 style={[styles.selectorBox, editingBudgetId && { backgroundColor: '#E5E7EB', borderColor: '#9CA3AF' }]} 
+                 style={[
+                   styles.selectorBox, 
+                   { backgroundColor: theme.colors.background, borderColor: '#082B8C' },
+                   editingBudgetId && { backgroundColor: isDarkMode ? '#374151' : '#E5E7EB', borderColor: '#9CA3AF' }
+                 ]} 
                  onPress={() => !editingBudgetId && setShowAccountOptions(!showAccountOptions)}
                >
                  <Text style={{ color: theme.colors.text }}>{selectedAccountName || "Selecciona una cuenta"}</Text>
@@ -398,10 +400,10 @@ export default function BudgetsScreen() {
                </Pressable>
 
                {showAccountOptions && (
-                 <View style={styles.optionsDropdown}>
+                 <View style={[styles.optionsDropdown, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
                    <ScrollView nestedScrollEnabled={true}>
                      {myAccounts.map((acc) => (
-                       <Pressable key={acc.id} style={styles.optionItem} onPress={() => { setSelectedAccountId(acc.id); setSelectedAccountName(acc.name); setShowAccountOptions(false); }}>
+                       <Pressable key={acc.id} style={[styles.optionItem, { borderBottomColor: theme.colors.border }]} onPress={() => { setSelectedAccountId(acc.id); setSelectedAccountName(acc.name); setShowAccountOptions(false); }}>
                          <Text style={{ color: theme.colors.text }}>{acc.name} (Saldo: Bs. {acc.current_balance})</Text>
                        </Pressable>
                      ))}
@@ -411,7 +413,7 @@ export default function BudgetsScreen() {
 
                <Text style={[styles.inputLabel, { color: theme.colors.text, marginTop: 12 }]}>Monto Límite (Bs.)</Text>
                <TextInput 
-                 style={styles.input} 
+                 style={[styles.input, { backgroundColor: theme.colors.background, color: theme.colors.text, borderColor: '#082B8C' }]} 
                  placeholder="0.00" 
                  placeholderTextColor="#888"
                  keyboardType="decimal-pad" 
@@ -423,8 +425,8 @@ export default function BudgetsScreen() {
                />
 
                <Text style={[styles.inputLabel, { color: theme.colors.text, marginTop: 12 }]}>Fecha de Inicio</Text>
-               <Pressable style={styles.datePickerButton} onPress={() => setShowStartPicker(true)}>
-                 <Text style={styles.dateText}>{startDate.toISOString().split('T')[0]}</Text>
+               <Pressable style={[styles.datePickerButton, { backgroundColor: theme.colors.background, borderColor: '#082B8C' }]} onPress={() => setShowStartPicker(true)}>
+                 <Text style={[styles.dateText, { color: theme.colors.text }]}>{startDate.toISOString().split('T')[0]}</Text>
                  <Calendar size={20} color="#082B8C" />
                </Pressable>
                {showStartPicker && (
@@ -438,8 +440,8 @@ export default function BudgetsScreen() {
                )}
 
                <Text style={[styles.inputLabel, { color: theme.colors.text, marginTop: 12 }]}>Fecha de Fin</Text>
-               <Pressable style={styles.datePickerButton} onPress={() => setShowEndPicker(true)}>
-                 <Text style={styles.dateText}>{endDate.toISOString().split('T')[0]}</Text>
+               <Pressable style={[styles.datePickerButton, { backgroundColor: theme.colors.background, borderColor: '#082B8C' }]} onPress={() => setShowEndPicker(true)}>
+                 <Text style={[styles.dateText, { color: theme.colors.text }]}>{endDate.toISOString().split('T')[0]}</Text>
                  <Calendar size={20} color="#082B8C" />
                </Pressable>
                {showEndPicker && (
@@ -478,14 +480,14 @@ const styles = StyleSheet.create({
   catTitle: { fontSize: 15, fontWeight: '900' },
   accountSubLabel: { fontSize: 12, color: '#6B7280', fontWeight: '700', marginTop: 2 },
   amountLabel: { fontSize: 15, fontWeight: 'bold' },
-  contextMenu: { position: 'absolute', right: 0, top: 28, width: 110, borderRadius: 8, borderWidth: 1, borderColor: '#DDD', elevation: 5, zIndex: 999, paddingVertical: 4 },
-  menuOption: { flexDirection: 'row', alignItems: 'center', padding: 10, gap: 8, borderBottomWidth: 0.5, borderBottomColor: '#EEE' },
+  contextMenu: { position: 'absolute', right: 0, top: 28, width: 110, borderRadius: 8, borderWidth: 1, elevation: 5, zIndex: 999, paddingVertical: 4 },
+  menuOption: { flexDirection: 'row', alignItems: 'center', padding: 10, gap: 8, borderBottomWidth: 0.5 },
   menuOptionText: { fontSize: 13, fontWeight: 'bold' },
   progressContainer: { height: 12, backgroundColor: '#E0E0E0', borderRadius: 6, overflow: 'hidden', marginBottom: 8 },
   progressBar: { height: '100%', borderRadius: 6 },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between' },
   footerText: { fontSize: 12, color: '#888', fontWeight: 'bold' },
-  overspentBox: { marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#EEE' },
+  overspentBox: { marginTop: 8, paddingTop: 6, borderTopWidth: 1 },
   overspentText: { fontSize: 12, color: '#C0392B', fontWeight: '900' },
   fab: { position: 'absolute', bottom: 30, right: 30, backgroundColor: '#F39C12', width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', elevation: 5 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 },
@@ -494,12 +496,12 @@ const styles = StyleSheet.create({
   modalTitle: { color: 'white', fontSize: 18, fontWeight: '900' },
   modalContent: { padding: 20 }, 
   inputLabel: { fontSize: 13, fontWeight: '900', marginBottom: 6 },
-  selectorBox: { height: 45, borderWidth: 1.5, borderColor: '#082B8C', borderRadius: 8, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFF', marginBottom: 4 },
-  optionsDropdown: { borderWidth: 1, borderColor: '#DDD', borderRadius: 8, maxHeight: 110, marginTop: 2, backgroundColor: '#FFF', marginBottom: 10 },
-  optionItem: { padding: 10, borderBottomWidth: 1, borderBottomColor: '#EEE' },
-  input: { height: 45, borderWidth: 1.5, borderColor: '#082B8C', borderRadius: 8, paddingHorizontal: 12, fontSize: 15, marginBottom: 10, color: '#000', backgroundColor: '#FFF' },
-  datePickerButton: { height: 45, borderWidth: 1.5, borderColor: '#082B8C', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, marginBottom: 10, backgroundColor: '#FFF' },
-  dateText: { fontSize: 15, color: '#333' },
+  selectorBox: { height: 45, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  optionsDropdown: { borderWidth: 1, borderRadius: 8, maxHeight: 110, marginTop: 2, marginBottom: 10 },
+  optionItem: { padding: 10, borderBottomWidth: 1 },
+  input: { height: 45, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 12, fontSize: 15, marginBottom: 10 },
+  datePickerButton: { height: 45, borderWidth: 1.5, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, marginBottom: 10 },
+  dateText: { fontSize: 15 },
   saveButton: { backgroundColor: '#F39C12', height: 48, borderRadius: 24, marginTop: 15, justifyContent: 'center', alignItems: 'center' },
   saveButtonText: { color: 'white', fontWeight: '900', fontSize: 16 }
 });
