@@ -1,7 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+
 import {
   Account,
   Category,
+  Budget,
   Movement,
   Profile,
   WalletStatus,
@@ -14,8 +16,6 @@ type EnsureWalletParams = {
   email: string;
   fullName?: string | null;
 };
-
-// --- SERVICIOS DE CONFIGURACIÓN INICIAL Y PERFIL ---
 
 export async function ensureUserWallet(
   supabase: SupabaseClient,
@@ -122,8 +122,6 @@ export async function getUserProfile(
 
   return data as Profile | null;
 }
-
-// --- SERVICIOS DE CUENTAS BANCARIAS ---
 
 export async function getUserAccounts(
   supabase: SupabaseClient,
@@ -431,81 +429,13 @@ export function getAccountsTotal(accounts: Account[]): number {
   }, 0);
 }
 
-// --- UTILITARIOS FORMATO DINERO BO ---
-
 export function money(value: number | string | null | undefined): string {
   const amount = Number(value ?? 0);
+
   return `Bs. ${amount.toLocaleString('es-BO', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
-}
-
-// --- SERVICIOS DE MOVIMIENTOS / TRANSACCIONES ---
-
-export async function getRecentMovements(
-  supabase: SupabaseClient,
-  clerkUserId: string,
-  limit = 10
-): Promise<Movement[]> {
-  const { data, error } = await supabase
-    .from('movements')
-    .select(`
-      *,
-      account:accounts (
-        name
-      )
-    `)
-    .eq('clerk_user_id', clerkUserId)
-    .order('movement_date', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return (data ?? []) as Movement[];
-}
-
-async function createInitialBalanceMovement(
-  supabase: SupabaseClient,
-  account: Account
-): Promise<void> {
-  const { data: existingMovement, error: existingMovementError } = await supabase
-    .from('movements')
-    .select('id')
-    .eq('account_id', account.id)
-    .eq('source', 'initial_balance')
-    .maybeSingle();
-
-  if (existingMovementError) {
-    throw new Error(existingMovementError.message);
-  }
-
-  if (existingMovement) {
-    return;
-  }
-
-  const amount = Number(account.initial_balance ?? account.current_balance ?? 0);
-
-  const { error } = await supabase
-    .from('movements')
-    .insert({
-      clerk_user_id: account.clerk_user_id,
-      account_id: account.id,
-      type: 'income',
-      source: 'initial_balance',
-      title: 'Saldo inicial',
-      description: 'Movimiento generado automáticamente al crear la cuenta',
-      amount,
-      currency: account.currency ?? 'BOB',
-      movement_date: new Date().toISOString().slice(0, 10),
-    });
-
-  if (error) {
-    throw new Error(error.message);
-  }
 }
 
 type ManualMovementPayload = {
@@ -546,6 +476,10 @@ async function adjustAccountBalance(
 
   const currentBalance = Number(account.current_balance ?? 0);
   const newBalance = currentBalance + delta;
+
+  if (newBalance < 0) {
+    throw new Error('No tienes los suficientes fondos para retirar dinero de esta cuenta');
+  }
 
   const { error: updateError } = await supabase
     .from('accounts')
@@ -743,9 +677,6 @@ export async function deleteManualMovement(
     -delta
   );
 }
-
-// --- SERVICIOS DE GESTIÓN DE CATEGORÍAS (DINÁMICAS SUPABASE) ---
-
 export async function getCategoriesByType(
   supabase: SupabaseClient,
   clerkUserId: string,
@@ -866,18 +797,10 @@ export async function deleteCategory(
   }
 }
 
-// --- NUEVA LÓGICA DE PRESUPUESTOS (VINCULADO A CUENTAS + RANGO FECHAS) ---
-
 export async function getBudgets(supabase: any, userId: string) {
   const { data, error } = await supabase
-    .from('budgets')
-    .select(`
-      *,
-      account:accounts (
-        name,
-        current_balance
-      )
-    `)
+    .from('budgets') // Asegúrate de que en Supabase se llame 'budgets' con 's'
+    .select('*')
     .eq('clerk_user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -885,49 +808,96 @@ export async function getBudgets(supabase: any, userId: string) {
   return data || [];
 }
 
-export async function getBudgetAccountSpent(
-  supabase: any, // Cliente va directo aquí
-  params: {
-    userId: string;
-    accountId: string;
-    categoryName: string;
-    startDate: string;
-    endDate: string;
-  }
-): Promise<number> {
-  const { userId, accountId, categoryName, startDate, endDate } = params;
+export async function getCategorySpent(
+  supabase: any, 
+  userId: string, 
+  category: string, 
+  month: number | null, 
+  year: number, 
+  accountId?: string | null,
+  periodType: 'monthly' | 'weekly' = 'monthly'
+) {
+  const now = new Date();
+  let startDate: string;
+  let endDate: string;
 
-  const { data, error } = await supabase
+  if (periodType === 'monthly') {
+    // Mes actual: del día 1 al último día
+    const targetMonth = month || (now.getMonth() + 1);
+    const firstDay = new Date(year, targetMonth - 1, 1);
+    const lastDay = new Date(year, targetMonth, 0);
+    
+    startDate = firstDay.toISOString().split('T')[0];
+    endDate = lastDay.toISOString().split('T')[0];
+  } else {
+    // Semana actual: de Lunes a Domingo
+    const curr = new Date();
+    const day = curr.getDay(); 
+    // Ajuste para que el lunes sea el día 1 y domingo el 7
+    const diff = curr.getDate() - (day === 0 ? 6 : day - 1); 
+    
+    const monday = new Date(new Date().setDate(diff));
+    const sunday = new Date(new Date().setDate(diff + 6));
+    
+    startDate = monday.toISOString().split('T')[0];
+    endDate = sunday.toISOString().split('T')[0];
+  }
+
+  let query = supabase
     .from('movements')
     .select('amount')
     .eq('clerk_user_id', userId)
-    .eq('account_id', accountId)
-    .eq('category_name', categoryName)
     .eq('type', 'expense')
+    .eq('category_name', category)
     .gte('movement_date', startDate)
     .lte('movement_date', endDate);
 
-  if (error) {
-    console.error("Error en consulta híbrida de presupuesto:", error);
-    throw error;
+  if (accountId) {
+    query = query.eq('account_id', accountId);
   }
+
+  const { data, error } = await query;
+  if (error) throw error;
 
   return data?.reduce((acc: number, m: any) => acc + Number(m.amount), 0) || 0;
 }
 
- 
-export async function saveAccountBudget(supabase: any, budgetData: any) {
+export async function getUsedCategories(supabase: any, userId: string): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from('movements')
+      .select('category_name')
+      .eq('clerk_user_id', userId)
+      .eq('type', 'expense');
+
+    if (error || !data) return [];
+
+    const categories = data
+      .map((m: any) => m.category_name)
+      .filter((name: any) => name !== null && name !== undefined && name !== '');
+      
+    return Array.from(new Set(categories as string[]));
+  } catch (e) {
+    console.error("Error en getUsedCategories:", e);
+    return [];
+  }
+}
+
+
+export async function saveBudget(supabase: any, budgetData: any) {
+  // Primero verificamos si ya existe uno para evitar el error del Criterio de Aceptación
   const { data: existing } = await supabase
     .from('budgets')
     .select('id')
     .eq('clerk_user_id', budgetData.clerk_user_id)
-    .eq('account_id', budgetData.account_id)
-    .gte('start_date', budgetData.start_date)
-    .lte('end_date', budgetData.end_date)
+    .eq('category_name', budgetData.category_name)
+    .eq('period_type', budgetData.period_type)
+    .eq('period_month', budgetData.period_month)
+    .eq('period_year', budgetData.period_year)
     .maybeSingle();
 
   if (existing) {
-    throw new Error('Ya existe un presupuesto configurado para esta cuenta en este rango de fechas.');
+    throw new Error('Ya existe un presupuesto para esa categoría en este período.');
   }
 
   const { error } = await supabase
@@ -941,6 +911,18 @@ export async function deleteBudget(supabase: any, budgetId: string) {
   const { error } = await supabase
     .from('budgets')
     .delete()
+    .eq('id', budgetId);
+
+  if (error) throw error;
+}
+
+export async function updateBudget(supabase: any, budgetId: string, amount: number) {
+  const { error } = await supabase
+    .from('budgets')
+    .update({ 
+      amount, 
+      updated_at: new Date().toISOString() 
+    })
     .eq('id', budgetId);
 
   if (error) throw error;
