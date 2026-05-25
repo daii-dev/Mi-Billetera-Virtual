@@ -69,9 +69,30 @@ import {
   useClerk,
   useUser,
 } from '@clerk/expo';
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 
 type ModalMode = 'form' | 'edit' | 'delete' | 'success' | null;
 type SuccessAction = 'create' | 'edit';
+
+function formatDateForInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function getDateFromInput(dateString: string): Date {
+  const [year, month, day] = dateString.split('-').map(Number);
+
+  if (!year || !month || !day) {
+    return new Date();
+  }
+
+  return new Date(year, month - 1, day);
+}
 
 export default function PlannedPaymentsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
@@ -107,6 +128,7 @@ export default function PlannedPaymentsScreen() {
 
   const [showAccountOptions, setShowAccountOptions] = useState(false);
   const [showCategoryOptions, setShowCategoryOptions] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [saving, setSaving] = useState(false);
 
@@ -204,16 +226,24 @@ export default function PlannedPaymentsScreen() {
   }
 
   function getTodayDate() {
-    return new Date().toISOString().slice(0, 10);
+    return formatDateForInput(new Date());
   }
 
   function handleChangeAmount(value: string) {
     setAmountText(sanitizeMoneyInput(value, amountText));
   }
 
-  function handleChangeDate(value: string) {
-    const clean = value.replace(/[^0-9-]/g, '').slice(0, 10);
-    setPaymentDate(clean);
+  function handleDatePickerChange(
+    event: DateTimePickerEvent,
+    selectedDate?: Date
+  ) {
+    setShowDatePicker(false);
+
+    if (event.type === 'dismissed' || !selectedDate) {
+        return;
+    }
+
+    setPaymentDate(formatDateForInput(selectedDate));
   }
 
   function openCreateModal() {
@@ -250,6 +280,7 @@ export default function PlannedPaymentsScreen() {
     setPaymentDate('');
     setShowAccountOptions(false);
     setShowCategoryOptions(false);
+    setShowDatePicker(false);
     setSaving(false);
   }
 
@@ -463,20 +494,29 @@ export default function PlannedPaymentsScreen() {
                 <View style={styles.paymentInfo}>
                   <Text style={styles.paymentTitle}>{payment.name}</Text>
 
-                  <Text style={styles.paymentSubtitle}>
-                    💼 Cuenta: {payment.account?.name ?? 'Cuenta'}
-                  </Text>
-
-                  <View style={styles.categoryRow}>
-                    {category ? renderCategoryIcon(category.icon, 15, category.color) : null}
+                  <View style={styles.paymentDetailRow}>
+                    <Wallet size={15} color={theme.colors.textSecondary} />
                     <Text style={styles.paymentSubtitle}>
-                      Categoría: {payment.category_name}
+                        Cuenta: {payment.account?.name ?? 'Cuenta'}
                     </Text>
                   </View>
 
-                  <Text style={styles.paymentDate}>
-                    📅 Fecha de pago: {payment.next_payment_date}
-                  </Text>
+                  <View style={styles.paymentDetailRow}>
+                    {category
+                        ? renderCategoryIcon(category.icon, 15, category.color)
+                        : <CalendarClock size={15} color={theme.colors.textSecondary} />}
+
+                    <Text style={styles.paymentSubtitle}>
+                        Categoría: {payment.category_name}
+                    </Text>
+                  </View>
+
+                  <View style={styles.paymentDetailRow}>
+                    <CalendarDays size={15} color={theme.colors.textSecondary} />
+                    <Text style={styles.paymentDate}>
+                        Fecha de pago: {payment.next_payment_date}
+                    </Text>
+                  </View>
                 </View>
 
                 <View style={styles.paymentRight}>
@@ -523,6 +563,7 @@ export default function PlannedPaymentsScreen() {
         paymentName={paymentName}
         amountText={amountText}
         paymentDate={paymentDate}
+        showDatePicker={showDatePicker}
         selectedAccountName={selectedAccount?.name ?? ''}
         selectedCategory={selectedCategory}
         selectedCategoryData={selectedCategoryData ?? null}
@@ -533,7 +574,8 @@ export default function PlannedPaymentsScreen() {
         saving={saving}
         onChangeName={setPaymentName}
         onChangeAmount={handleChangeAmount}
-        onChangeDate={handleChangeDate}
+        onOpenDatePicker={() => setShowDatePicker(true)}
+        onDatePickerChange={handleDatePickerChange}
         onSelectAccount={(accountId) => {
           setSelectedAccountId(accountId);
           setShowAccountOptions(false);
@@ -572,6 +614,7 @@ type PlannedPaymentModalProps = {
   paymentName: string;
   amountText: string;
   paymentDate: string;
+  showDatePicker: boolean;
   selectedAccountName: string;
   selectedCategory: string;
   selectedCategoryData: Category | null;
@@ -582,7 +625,11 @@ type PlannedPaymentModalProps = {
   saving: boolean;
   onChangeName: (value: string) => void;
   onChangeAmount: (value: string) => void;
-  onChangeDate: (value: string) => void;
+  onOpenDatePicker: () => void;
+  onDatePickerChange: (
+    event: DateTimePickerEvent,
+    selectedDate?: Date
+  ) => void;
   onSelectAccount: (accountId: string) => void;
   onSelectCategory: (category: string) => void;
   onToggleAccountOptions: () => void;
@@ -602,6 +649,7 @@ function PlannedPaymentModal({
   paymentName,
   amountText,
   paymentDate,
+  showDatePicker,
   selectedAccountName,
   selectedCategory,
   selectedCategoryData,
@@ -612,7 +660,8 @@ function PlannedPaymentModal({
   saving,
   onChangeName,
   onChangeAmount,
-  onChangeDate,
+  onOpenDatePicker,
+  onDatePickerChange,
   onSelectAccount,
   onSelectCategory,
   onToggleAccountOptions,
@@ -659,12 +708,6 @@ function PlannedPaymentModal({
                     ? 'Eliminar Pago Planificado'
                     : successTitle}
             </Text>
-
-            {isEdit && (
-              <Pressable onPress={onGoDelete} hitSlop={10}>
-                <Trash2 size={27} color="#FFFFFF" />
-              </Pressable>
-            )}
           </View>
 
           {(isCreate || isEdit) && (
@@ -760,17 +803,31 @@ function PlannedPaymentModal({
               )}
 
               <Text style={styles.inputLabel}>Fecha programada</Text>
-              <View style={styles.dateInputBox}>
-                <TextInput
-                  value={paymentDate}
-                  onChangeText={onChangeDate}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#A8A8A8"
-                  style={styles.dateInput}
-                />
+
+              <Pressable
+                style={styles.dateInputBox}
+                onPress={onOpenDatePicker}
+              >
+                <Text
+                    style={[
+                        styles.dateText,
+                        !paymentDate && styles.datePlaceholder,
+                    ]}
+                >
+                    {paymentDate || 'Selecciona una fecha'}
+                </Text>
 
                 <CalendarDays size={21} color="#6B7280" />
-              </View>
+              </Pressable>
+
+              {showDatePicker && (
+                <DateTimePicker
+                    value={getDateFromInput(paymentDate)}
+                    mode="date"
+                    display="calendar"
+                    onChange={onDatePickerChange}
+                />
+              )}
 
               <View style={styles.modalButtonsRow}>
                 <Pressable
@@ -932,18 +989,17 @@ function createStyles(theme: AppTheme) {
       color: theme.colors.textSecondary,
       fontSize: 12,
       fontWeight: '700',
-      marginBottom: 4,
     },
-    categoryRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
+    paymentDetailRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginBottom: 4,
     },
     paymentDate: {
       color: theme.colors.textSecondary,
       fontSize: 12,
       fontWeight: '800',
-      marginTop: 2,
     },
     paymentRight: {
       alignItems: 'flex-end',
@@ -962,10 +1018,10 @@ function createStyles(theme: AppTheme) {
     fab: {
       position: 'absolute',
       right: 28,
-      bottom: 42,
-      width: 50,
-      height: 50,
-      borderRadius: 12,
+      bottom: 88,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
       backgroundColor: '#28A9D6',
       alignItems: 'center',
       justifyContent: 'center',
@@ -1111,10 +1167,13 @@ function createStyles(theme: AppTheme) {
       justifyContent: 'space-between',
       marginBottom: 10,
     },
-    dateInput: {
-      flex: 1,
-      color: theme.colors.text,
-      fontSize: 15,
+    dateText: {
+        flex: 1,
+        color: theme.colors.text,
+        fontSize: 15,
+    },
+    datePlaceholder: {
+        color: '#A8A8A8',
     },
     modalButtonsRow: {
       flexDirection: 'row',
