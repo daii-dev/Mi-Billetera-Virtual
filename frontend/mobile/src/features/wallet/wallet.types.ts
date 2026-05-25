@@ -35,6 +35,7 @@ export type Movement = {
   clerk_user_id: string;
   account_id: string;
   meta_id?: string | null;
+  planned_payment_id?: string | null;
   type: MovementType;
   title: string;
   description?: string | null;

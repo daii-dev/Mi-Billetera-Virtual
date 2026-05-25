@@ -32,6 +32,9 @@ import {
 } from 'react-native';
 
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
+import {
+  processDuePlannedPayments,
+} from '@/features/planned-payments/planned-payments.service';
 import { AccountFilterModal } from '@/features/wallet/AccountFilterModal';
 import {
   formatMoneyInput,
@@ -39,6 +42,8 @@ import {
   parseMoneyInput,
   sanitizeMoneyInput,
 } from '@/features/wallet/amount.utils';
+// Importar la función para renderizar iconos
+import { renderCategoryIcon } from '@/features/wallet/category.utils';
 import {
   deleteManualMovement,
   getAccountsTotal,
@@ -63,13 +68,11 @@ import {
   AppTheme,
   useAppTheme,
 } from '@/theme/ThemeContext';
-
-import { useAuth } from '@clerk/expo';
-import { useClerk } from '@clerk/expo';
-import { useUser } from '@clerk/expo';
-
-// Importar la función para renderizar iconos
-import { renderCategoryIcon } from '@/features/wallet/category.utils';
+import {
+  useAuth,
+  useClerk,
+  useUser,
+} from '@clerk/expo';
 
 type HomeMovementModalMode = 'edit' | 'delete' | 'success' | null;
 
@@ -145,6 +148,7 @@ export default function HomeScreen() {
       if (showFullLoader) {
         setLoading(true);
       }
+      await processDuePlannedPayments(supabase);
 
       const userAccounts = await getUserAccounts(supabase, userId);
       const data = await getPersonalAccount(supabase, userId);
@@ -388,52 +392,37 @@ export default function HomeScreen() {
 
   function handleSelectSidebarItem(item: { key: string; label: string }) {
     setSelectedSidebarItem(item.key);
-  setSidebarVisible(false); 
-  
-  if (item.key === 'home') {
-      router.push('/home');
-    } else if (item.key === 'accounts') {
-      router.push('/accounts');
-    } else if (item.key === 'budgets') {
-      router.push('/budgets'); 
-    } else if (item.key === 'categories') {
-      router.push('/categories');
-    } else if (item.key === 'goals') {
-      router.push('/goals');
-    }
-
-
+    setSidebarVisible(false);
 
     if (item.key === 'home') {
-      setSidebarVisible(false);
+      router.push('/home');
       return;
     }
 
     if (item.key === 'accounts') {
-      setSidebarVisible(false);
       router.push('/accounts');
       return;
     }
 
     if (item.key === 'categories') {
-      setSidebarVisible(false);
       router.push('/categories');
       return;
     }
 
-    setSidebarVisible(false);
+    if (item.key === 'budgets') {
+      router.push('/budgets');
+      return;
+    }
 
     if (item.key === 'goals') {
-      setSidebarVisible(false);
       router.push('/goals');
-    }
-    if (item.key === 'budgets') {
-      setSidebarVisible(false);
-      router.push('/budgets');
+      return;
     }
 
-    // Después de manejar la navegación, salimos de la función
-    return;
+    if (item.key === 'planned-payments') {
+      router.push('/planned-payments');
+      return;
+    }
   }
 
   if (loading && !account) {
