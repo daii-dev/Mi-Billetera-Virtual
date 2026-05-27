@@ -5,13 +5,58 @@ import {
   PlannedPaymentPayload,
 } from './planned-payments.types';
 
+function formatDateInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
 function validatePaymentDate(dateString: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
     return false;
   }
 
-  const date = new Date(`${dateString}T00:00:00`);
-  return !Number.isNaN(date.getTime());
+  const [year, month, day] = dateString.split('-').map(Number);
+
+  const date = new Date(year, month - 1, day);
+
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  );
+}
+
+function addOneMonthKeepingDay(dateString: string): string {
+  const [year, month, day] = dateString.split('-').map(Number);
+
+  const nextMonthIndex = month;
+  const lastDayOfNextMonth = new Date(year, nextMonthIndex + 1, 0).getDate();
+  const finalDay = Math.min(day, lastDayOfNextMonth);
+
+  const nextDate = new Date(year, nextMonthIndex, finalDay);
+
+  return formatDateInput(nextDate);
+}
+
+function normalizePlannedPaymentDate(dateString: string): string {
+  if (!validatePaymentDate(dateString)) {
+    throw new Error('Ingresa una fecha válida con formato YYYY-MM-DD');
+  }
+
+  const today = formatDateInput(new Date());
+
+  if (dateString < today) {
+    throw new Error('La fecha programada no puede ser anterior a hoy');
+  }
+
+  if (dateString === today) {
+    return addOneMonthKeepingDay(dateString);
+  }
+
+  return dateString;
 }
 
 export async function processDuePlannedPayments(
@@ -73,9 +118,9 @@ export async function createPlannedPayment(
     throw new Error('Selecciona una categoría');
   }
 
-  if (!validatePaymentDate(payload.nextPaymentDate)) {
-    throw new Error('Ingresa una fecha válida con formato YYYY-MM-DD');
-  }
+  const scheduledPaymentDate = normalizePlannedPaymentDate(
+    payload.nextPaymentDate
+  );
 
   const { data, error } = await supabase
     .from('planned_payments')
@@ -85,7 +130,7 @@ export async function createPlannedPayment(
       name: cleanName,
       amount: payload.amount,
       category_name: cleanCategory,
-      next_payment_date: payload.nextPaymentDate,
+      next_payment_date: scheduledPaymentDate,
       recurrence: 'monthly',
       is_active: true,
     })
@@ -128,9 +173,9 @@ export async function updatePlannedPayment(
     throw new Error('Selecciona una categoría');
   }
 
-  if (!validatePaymentDate(payload.nextPaymentDate)) {
-    throw new Error('Ingresa una fecha válida con formato YYYY-MM-DD');
-  }
+  const scheduledPaymentDate = normalizePlannedPaymentDate(
+    payload.nextPaymentDate
+  );
 
   const { data, error } = await supabase
     .from('planned_payments')
@@ -139,7 +184,7 @@ export async function updatePlannedPayment(
       name: cleanName,
       amount: payload.amount,
       category_name: cleanCategory,
-      next_payment_date: payload.nextPaymentDate,
+      next_payment_date: scheduledPaymentDate,
       updated_at: new Date().toISOString(),
     })
     .eq('id', paymentId)

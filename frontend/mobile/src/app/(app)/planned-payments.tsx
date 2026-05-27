@@ -826,6 +826,7 @@ function PlannedPaymentModal({
                     value={getDateFromInput(paymentDate)}
                     mode="date"
                     display="calendar"
+                    minimumDate={new Date()}
                     onChange={onDatePickerChange}
                 />
               )}
