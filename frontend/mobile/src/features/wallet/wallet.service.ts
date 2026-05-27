@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { formatLocalDate } from '@/shared/utils/date';
 import {
   Account,
   Category,
@@ -435,7 +436,7 @@ async function createInitialBalanceMovement(
       description: 'Movimiento generado automáticamente al crear la cuenta',
       amount,
       currency: account.currency ?? 'BOB',
-      movement_date: new Date().toISOString().slice(0, 10),
+      movement_date: formatLocalDate(),
     });
 
   if (error) {
@@ -543,7 +544,7 @@ export async function createManualMovement(
       amount: payload.amount,
       currency: 'BOB',
       category_name: cleanCategory,
-      movement_date: new Date().toISOString().slice(0, 10),
+      movement_date: formatLocalDate(),
     })
     .select(`
       *,
