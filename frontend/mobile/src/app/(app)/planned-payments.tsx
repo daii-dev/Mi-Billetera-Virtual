@@ -10,9 +10,9 @@ import {
   CalendarClock,
   CalendarDays,
   ChevronDown,
-  Edit3,
   LogOut,
   Menu,
+  Pencil,
   Plus,
   Trash2,
   Wallet,
@@ -525,8 +525,9 @@ export default function PlannedPaymentsScreen() {
                     <Pressable
                       onPress={() => openEditModal(payment)}
                       hitSlop={10}
+                      style={styles.iconButton}
                     >
-                      <Edit3 size={20} color={colors.primary} />
+                      <Pencil size={18} color={theme.colors.primary} />
                     </Pressable>
 
                     <Pressable
@@ -535,8 +536,9 @@ export default function PlannedPaymentsScreen() {
                         setModalMode('delete');
                       }}
                       hitSlop={10}
+                      style={styles.iconButton}
                     >
-                      <Trash2 size={20} color={colors.expense} />
+                      <Trash2 size={18} color={colors.expense} />
                     </Pressable>
                   </View>
 
@@ -1010,7 +1012,15 @@ function createStyles(theme: AppTheme) {
     },
     cardActions: {
       flexDirection: 'row',
-      gap: 14,
+      gap: 4,
+    },
+    iconButton: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.mode === 'dark' ? '#0F172A' : '#F8FAFC',
     },
     paymentAmount: {
       color: '#28A9D6',
