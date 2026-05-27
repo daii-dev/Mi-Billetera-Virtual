@@ -10,7 +10,7 @@ import {
 import {
   ArrowLeft,
   ChevronDown,
-  MoreVertical,
+  Pencil,
   PiggyBank,
   SlidersHorizontal,
   Trash2,
@@ -41,6 +41,8 @@ import {
   parseMoneyInput,
   sanitizeMoneyInput,
 } from '@/features/wallet/amount.utils';
+// Importar la función para renderizar iconos
+import { renderCategoryIcon } from '@/features/wallet/category.utils';
 import {
   createManualMovement,
   deleteManualMovement,
@@ -63,9 +65,6 @@ import {
   useAppTheme,
 } from '@/theme/ThemeContext';
 import { useAuth } from '@clerk/expo';
-
-// Importar la función para renderizar iconos
-import { renderCategoryIcon } from '@/features/wallet/category.utils';
 
 type ModalMode = 'form' | 'edit' | 'delete' | 'success' | null;
 const registerPigImages = {
@@ -616,15 +615,27 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
 
                 <View style={styles.amountBox}>
                   {canEdit && (
-                    <Pressable
-                      onPress={() => openEditModal(movement)}
-                      hitSlop={10}
-                      style={styles.moreButton}
-                    >
-                      <MoreVertical size={23} color={theme.colors.textSecondary} />
-                    </Pressable>
-                  )}
+                    <View style={styles.cardActions}>
+                      <Pressable
+                        onPress={() => openEditModal(movement)}
+                        hitSlop={10}
+                        style={styles.iconButton}
+                      >
+                        <Pencil size={18} color={theme.colors.primary} />
+                      </Pressable>
 
+                      <Pressable
+                        onPress={() => {
+                          setSelectedMovement(movement);
+                          setModalMode('delete');
+                        }}
+                        hitSlop={10}
+                        style={styles.iconButton}
+                      >
+                        <Trash2 size={18} color={colors.expense} />
+                      </Pressable>
+                    </View>
+                  )}
                   <Text
                     style={[
                       styles.movementAmount,
@@ -877,12 +888,6 @@ function MovementModal({
               <Text style={styles.modalTitle}>
                 {isEdit ? editTitle : isDelete ? deleteTitle : finalSuccessTitle}
               </Text>
-
-              {isEdit && (
-                <Pressable onPress={onGoDelete} hitSlop={10}>
-                  <Trash2 size={27} color="#FFFFFF" />
-                </Pressable>
-              )}
             </View>
 
             {isEdit && (
@@ -1164,7 +1169,7 @@ function MovementForm({
             '#4B5563'
           )}
           <Text style={styles.selectorText}>
-            {selectedCategory || 'Selecciona una categor�a'}
+            {selectedCategory || 'Selecciona una categor�a'}
           </Text>
         </View>
 
@@ -1438,9 +1443,19 @@ function createStyles(
       alignItems: 'flex-end',
       justifyContent: 'space-between',
       minHeight: 64,
+      marginLeft: 8,
     },
-    moreButton: {
-      padding: 2,
+    cardActions: {
+      flexDirection: 'row',
+      gap: 4,
+    },
+    iconButton: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.mode === 'dark' ? '#0F172A' : '#F8FAFC',
     },
     movementAmount: {
       fontSize: 12,

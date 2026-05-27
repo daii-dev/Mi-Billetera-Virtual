@@ -10,7 +10,7 @@ import {
   ChevronDown,
   LogOut,
   Menu,
-  MoreVertical,
+  Pencil,
   SlidersHorizontal,
   Trash2,
   TrendingDown,
@@ -592,14 +592,27 @@ export default function HomeScreen() {
                   </View>
 
                   <View style={styles.movementRightBox}>
-                    {movement.source === 'manual' && (
-                      <Pressable
-                        onPress={() => openMovementEditModal(movement)}
-                        hitSlop={10}
-                        style={styles.movementMenuButton}
-                      >
-                        <MoreVertical size={22} color={theme.colors.textSecondary} />
-                      </Pressable>
+                    {movement.source === 'manual' && isManualMovementType(movement.type) && (
+                      <View style={styles.cardActions}>
+                        <Pressable
+                          onPress={() => openMovementEditModal(movement)}
+                          hitSlop={10}
+                          style={styles.iconButton}
+                        >
+                          <Pencil size={18} color={theme.colors.primary} />
+                        </Pressable>
+
+                        <Pressable
+                          onPress={() => {
+                            setSelectedMovement(movement);
+                            setMovementModalMode('delete');
+                          }}
+                          hitSlop={10}
+                          style={styles.iconButton}
+                        >
+                          <Trash2 size={18} color={colors.expense} />
+                        </Pressable>
+                      </View>
                     )}
 
                     <Text
@@ -774,12 +787,6 @@ export default function HomeScreen() {
               <Text style={styles.modalTitle}>
                 {isEdit ? editTitle : isDelete ? deleteTitle : successTitle}
               </Text>
-
-              {isEdit && (
-                <Pressable onPress={onGoDelete} hitSlop={10}>
-                  <Trash2 size={27} color="#FFFFFF" />
-                </Pressable>
-              )}
             </View>
 
             {isEdit && (
@@ -1322,9 +1329,19 @@ export default function HomeScreen() {
         alignItems: 'flex-end',
         justifyContent: 'space-between',
         minHeight: 64,
+        marginLeft: 8,
       },
-      movementMenuButton: {
-        padding: 2,
+      cardActions: {
+        flexDirection: 'row',
+        gap: 4,
+      },
+      iconButton: {
+        width: 34,
+        height: 34,
+        borderRadius: 17,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.mode === 'dark' ? '#0F172A' : '#F8FAFC',
       },
       movementCategoryRow: {
         flexDirection: 'row',
