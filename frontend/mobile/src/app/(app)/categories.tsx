@@ -236,6 +236,12 @@ export default function CategoriesScreen() {
       router.push('/budgets');
       return;
     }
+
+    if (item.key === 'reports') {
+      setSidebarVisible(false);
+      router.push('/reports');
+      return;
+    }
   }
 
   async function handleConfirmDelete() {

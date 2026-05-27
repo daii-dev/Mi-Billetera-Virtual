@@ -423,6 +423,11 @@ export default function HomeScreen() {
       router.push('/planned-payments');
       return;
     }
+
+    if (item.key === 'reports') {
+      router.push('/reports');
+      return;
+    }
   }
 
   if (loading && !account) {

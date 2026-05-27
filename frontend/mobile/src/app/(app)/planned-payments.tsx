@@ -223,6 +223,7 @@ export default function PlannedPaymentsScreen() {
     if (item.key === 'budgets') router.push('/budgets');
     if (item.key === 'goals') router.push('/goals');
     if (item.key === 'planned-payments') router.push('/planned-payments');
+    if (item.key === 'reports') router.push('/reports');
   }
 
   function getTodayDate() {

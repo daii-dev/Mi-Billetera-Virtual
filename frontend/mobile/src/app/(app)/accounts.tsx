@@ -344,6 +344,12 @@ export default function AccountsScreen() {
       router.push('/goals');
       return;
     }
+
+    if (item.key === 'reports') {
+      setSidebarVisible(false);
+      router.push('/reports');
+      return;
+    }
   }
 
   const balanceTotal = getAccountsTotal(accounts);

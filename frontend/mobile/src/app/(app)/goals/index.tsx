@@ -168,6 +168,8 @@ export default function GoalsScreen() {
       router.push('/budgets');
     } else if (item.key === 'goals') {
       router.push('/goals');
+    } else if (item.key === 'reports') {
+      router.push('/reports');
     }
   }
 
