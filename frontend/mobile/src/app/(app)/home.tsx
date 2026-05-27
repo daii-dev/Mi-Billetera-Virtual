@@ -561,6 +561,20 @@ export default function HomeScreen() {
                 || 'Cuenta';
               const sign = isIncome ? '+' : '-';
 
+              const isPlannedPaymentMovement = Boolean(movement.planned_payment_id);
+
+              const canEdit =
+                movement.source === 'manual' &&
+                isManualMovementType(movement.type) &&
+                !isPlannedPaymentMovement;
+
+              const canDelete =
+                isManualMovementType(movement.type) &&
+                (
+                  movement.source === 'manual' ||
+                  isPlannedPaymentMovement
+                );
+
               // Obtener el icono y color de la categoría con valores por defecto
               const categoryIcon = movement.category_icon || 'Wallet';
               const categoryColor = movement.category_color || '#D9D9D9';
@@ -592,26 +606,30 @@ export default function HomeScreen() {
                   </View>
 
                   <View style={styles.movementRightBox}>
-                    {movement.source === 'manual' && isManualMovementType(movement.type) && (
+                    {(canEdit || canDelete) && (
                       <View style={styles.cardActions}>
-                        <Pressable
-                          onPress={() => openMovementEditModal(movement)}
-                          hitSlop={10}
-                          style={styles.iconButton}
-                        >
-                          <Pencil size={18} color={theme.colors.primary} />
-                        </Pressable>
+                        {canEdit && (
+                          <Pressable
+                            onPress={() => openMovementEditModal(movement)}
+                            hitSlop={10}
+                            style={styles.iconButton}
+                          >
+                            <Pencil size={18} color={theme.colors.primary} />
+                          </Pressable>
+                        )}
 
-                        <Pressable
-                          onPress={() => {
-                            setSelectedMovement(movement);
-                            setMovementModalMode('delete');
-                          }}
-                          hitSlop={10}
-                          style={styles.iconButton}
-                        >
-                          <Trash2 size={18} color={colors.expense} />
-                        </Pressable>
+                        {canDelete && (
+                          <Pressable
+                            onPress={() => {
+                              setSelectedMovement(movement);
+                              setMovementModalMode('delete');
+                            }}
+                            hitSlop={10}
+                            style={styles.iconButton}
+                          >
+                            <Trash2 size={18} color={colors.expense} />
+                          </Pressable>
+                        )}
                       </View>
                     )}
 
