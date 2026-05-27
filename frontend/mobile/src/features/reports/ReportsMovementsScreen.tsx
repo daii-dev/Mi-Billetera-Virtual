@@ -49,13 +49,16 @@ import {
   getReportAccounts,
   getReportMovements,
 } from '@/features/reports/reports.service';
+import { generateReportFile } from '@/features/reports/reportExport';
 import type {
   ReportAccount,
   ReportDateRange,
+  ReportFileType,
   ReportFilters,
   ReportMovement,
   ReportMovementTypeFilter,
   ReportPeriodKey,
+  ReportSectionKey,
 } from '@/features/reports/report.types';
 import { getUserProfile } from '@/features/wallet/wallet.service';
 import { useSupabase } from '@/lib/useSupabase';
@@ -90,6 +93,25 @@ const TYPE_OPTIONS: Array<{
   { key: 'expense', label: 'Gastos' },
 ];
 
+const FILE_TYPE_OPTIONS: Array<{
+  key: ReportFileType;
+  label: string;
+}> = [
+  { key: 'pdf', label: 'PDF' },
+  { key: 'xlsx', label: 'Excel' },
+  { key: 'csv', label: 'CSV' },
+];
+
+const SECTION_OPTIONS: Array<{
+  key: ReportSectionKey;
+  label: string;
+}> = [
+  { key: 'summary', label: 'Resumen general' },
+  { key: 'movements', label: 'Lista de movimientos' },
+  { key: 'statistics', label: 'Estadisticas' },
+  { key: 'charts', label: 'Graficos y categorias' },
+];
+
 export function ReportsMovementsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
@@ -111,6 +133,15 @@ export function ReportsMovementsScreen() {
   const [typeMenuVisible, setTypeMenuVisible] = useState(false);
   const [customPeriodVisible, setCustomPeriodVisible] = useState(false);
   const [downloadModalVisible, setDownloadModalVisible] = useState(false);
+  const [generatingReport, setGeneratingReport] = useState(false);
+  const [selectedFileType, setSelectedFileType] =
+    useState<ReportFileType | null>('pdf');
+  const [selectedSections, setSelectedSections] = useState<ReportSectionKey[]>([
+    'summary',
+    'movements',
+    'statistics',
+    'charts',
+  ]);
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [searchText, setSearchText] = useState('');
@@ -348,6 +379,91 @@ export function ReportsMovementsScreen() {
         {sign}{formatBobCurrency(movement.amount)}
       </Text>
     );
+  }
+
+  function toggleReportSection(section: ReportSectionKey) {
+    setSelectedSections((currentSections) => {
+      if (currentSections.includes(section)) {
+        return currentSections.filter((currentSection) => currentSection !== section);
+      }
+
+      return [...currentSections, section];
+    });
+  }
+
+  async function generateCurrentReport() {
+    if (!selectedFileType) {
+      Alert.alert('Formato requerido', 'Selecciona PDF, Excel o CSV.');
+      return;
+    }
+
+    if (selectedSections.length === 0) {
+      Alert.alert(
+        'Secciones requeridas',
+        'Selecciona al menos una seccion para el reporte.'
+      );
+      return;
+    }
+
+    if (filters.period === 'custom' && !isValidDateRange(filters.dateRange)) {
+      Alert.alert('Rango invalido', 'Revisa la fecha inicio y fecha fin.');
+      return;
+    }
+
+    if (filteredMovements.length === 0 && !selectedSections.includes('summary')) {
+      Alert.alert(
+        'Sin movimientos',
+        'No hay movimientos para exportar. Activa el resumen general para generar un reporte sin lista de movimientos.'
+      );
+      return;
+    }
+
+    try {
+      setGeneratingReport(true);
+
+      await generateReportFile({
+        movements: filteredMovements,
+        summary,
+        groups: movementGroups,
+        filters,
+        selectedFileType,
+        selectedSections,
+        periodLabel: selectedPeriodLabel,
+        startDate: filters.dateRange.startDate,
+        endDate: filters.dateRange.endDate,
+      });
+
+      setDownloadModalVisible(false);
+      Alert.alert('Reporte generado', 'El reporte se genero correctamente.');
+    } catch (error: any) {
+      Alert.alert(
+        'Error',
+        error?.message || 'No se pudo generar el reporte.'
+      );
+    } finally {
+      setGeneratingReport(false);
+    }
+  }
+
+  function handleGenerateReport() {
+    if (filteredMovements.length === 0 && selectedSections.includes('summary')) {
+      Alert.alert(
+        'Sin movimientos',
+        'No hay movimientos para los filtros actuales. Se generara un reporte con el resumen disponible.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Generar',
+            onPress: () => {
+              generateCurrentReport();
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    generateCurrentReport();
   }
 
   if (loading) {
@@ -612,9 +728,15 @@ export function ReportsMovementsScreen() {
         onApply={handleApplyCustomPeriod}
       />
 
-      <DownloadPendingModal
+      <ReportDownloadModal
         visible={downloadModalVisible}
         styles={styles}
+        selectedFileType={selectedFileType}
+        selectedSections={selectedSections}
+        generating={generatingReport}
+        onSelectFileType={setSelectedFileType}
+        onToggleSection={toggleReportSection}
+        onGenerate={handleGenerateReport}
         onClose={() => setDownloadModalVisible(false)}
       />
 
@@ -763,24 +885,36 @@ function CustomPeriodModal({
   );
 }
 
-type DownloadPendingModalProps = {
+type ReportDownloadModalProps = {
   visible: boolean;
   styles: ReturnType<typeof createStyles>;
+  selectedFileType: ReportFileType | null;
+  selectedSections: ReportSectionKey[];
+  generating: boolean;
+  onSelectFileType: (fileType: ReportFileType) => void;
+  onToggleSection: (section: ReportSectionKey) => void;
+  onGenerate: () => void;
   onClose: () => void;
 };
 
-function DownloadPendingModal({
+function ReportDownloadModal({
   visible,
   styles,
+  selectedFileType,
+  selectedSections,
+  generating,
+  onSelectFileType,
+  onToggleSection,
+  onGenerate,
   onClose,
-}: DownloadPendingModalProps) {
+}: ReportDownloadModalProps) {
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
       statusBarTranslucent
-      onRequestClose={onClose}
+      onRequestClose={generating ? undefined : onClose}
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalBox}>
@@ -790,16 +924,84 @@ function DownloadPendingModal({
           </View>
 
           <View style={styles.modalContent}>
-            <Text style={styles.pendingText}>
-              La descarga en PDF, Excel y CSV queda pendiente para la siguiente fase.
-            </Text>
-            <Text style={styles.pendingDetail}>
-              Esta pantalla ya usa los mismos filtros, totales y movimientos que se usaran para generar el archivo.
+            <Text style={styles.inputLabel}>Tipo de archivo</Text>
+            <View style={styles.segmentRow}>
+              {FILE_TYPE_OPTIONS.map((option) => {
+                const selected = selectedFileType === option.key;
+
+                return (
+                  <Pressable
+                    key={option.key}
+                    style={[
+                      styles.segmentButton,
+                      selected && styles.segmentButtonSelected,
+                    ]}
+                    onPress={() => onSelectFileType(option.key)}
+                    disabled={generating}
+                  >
+                    <Text
+                      style={[
+                        styles.segmentButtonText,
+                        selected && styles.segmentButtonTextSelected,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={[styles.inputLabel, styles.sectionLabel]}>
+              Incluir en el reporte
             </Text>
 
-            <Pressable style={[styles.modalButton, styles.saveButton]} onPress={onClose}>
-              <Text style={styles.modalButtonText}>Entendido</Text>
-            </Pressable>
+            <View style={styles.sectionOptionsBox}>
+              {SECTION_OPTIONS.map((option) => {
+                const selected = selectedSections.includes(option.key);
+
+                return (
+                  <Pressable
+                    key={option.key}
+                    style={styles.sectionOption}
+                    onPress={() => onToggleSection(option.key)}
+                    disabled={generating}
+                  >
+                    <View
+                      style={[
+                        styles.checkbox,
+                        selected && styles.checkboxSelected,
+                      ]}
+                    >
+                      {selected && <Text style={styles.checkboxMark}>✓</Text>}
+                    </View>
+                    <Text style={styles.sectionOptionText}>{option.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <View style={styles.modalButtonsRow}>
+              <Pressable
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={onClose}
+                disabled={generating}
+              >
+                <Text style={styles.modalButtonText}>Cancelar</Text>
+              </Pressable>
+
+              <Pressable
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={onGenerate}
+                disabled={generating}
+              >
+                {generating ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.modalButtonText}>Generar</Text>
+                )}
+              </Pressable>
+            </View>
           </View>
         </View>
       </View>
@@ -1149,6 +1351,76 @@ function createStyles(theme: AppTheme) {
       color: '#FFFFFF',
       fontWeight: '900',
       fontSize: 14,
+    },
+    segmentRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginBottom: 14,
+    },
+    segmentButton: {
+      flex: 1,
+      minHeight: 38,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.colors.surface,
+    },
+    segmentButtonSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    segmentButtonText: {
+      color: theme.colors.text,
+      fontSize: 13,
+      fontWeight: '900',
+    },
+    segmentButtonTextSelected: {
+      color: '#FFFFFF',
+    },
+    sectionLabel: {
+      marginTop: 4,
+    },
+    sectionOptionsBox: {
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: 10,
+      backgroundColor: theme.colors.surface,
+      overflow: 'hidden',
+    },
+    sectionOption: {
+      minHeight: 44,
+      paddingHorizontal: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    sectionOptionText: {
+      flex: 1,
+      color: theme.colors.text,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      borderWidth: 1.5,
+      borderColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkboxSelected: {
+      backgroundColor: colors.primary,
+    },
+    checkboxMark: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '900',
+      lineHeight: 18,
     },
     pendingText: {
       color: theme.colors.text,
