@@ -32,7 +32,6 @@ import {
   View,
 } from 'react-native';
 
-import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import type {
   ReportAccount,
   ReportDateRange,
@@ -62,6 +61,7 @@ import {
 } from '@/features/reports/reports.service';
 import { getUserProfile } from '@/features/wallet/wallet.service';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
+import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {

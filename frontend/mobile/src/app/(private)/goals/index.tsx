@@ -31,7 +31,6 @@ import { GoalCard } from '@/components/savings-goals/GoalCard';
 import {
   GoalContributionModal,
 } from '@/components/savings-goals/GoalContributionModal';
-import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { AppButton } from '@/components/ui/AppButton';
 import {
   deleteSavingsGoal,
@@ -51,6 +50,7 @@ import {
 } from '@/features/wallet/wallet.service';
 import { Account } from '@/features/wallet/wallet.types';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
+import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {

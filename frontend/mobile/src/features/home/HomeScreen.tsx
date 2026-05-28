@@ -34,7 +34,6 @@ import {
   View,
 } from 'react-native';
 
-import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import {
   processDuePlannedPayments,
 } from '@/features/planned-payments/planned-payments.service';
@@ -66,6 +65,7 @@ import {
   MovementType,
 } from '@/features/wallet/wallet.types';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
+import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
 import { SidebarRouteKey } from '@/lib/sidebarNavigation';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';

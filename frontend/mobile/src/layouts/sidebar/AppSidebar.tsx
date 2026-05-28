@@ -49,10 +49,9 @@ export function AppSidebar({
   onSelectItem,
 }: AppSidebarProps) {
   const [shouldRender, setShouldRender] = useState(visible);
-
+  const [pressedKey, setPressedKey] = useState<string | null>(null);
   const translateX = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
-
   const { theme } = useAppTheme();
   const styles = createStyles(theme);
 
@@ -148,6 +147,7 @@ export function AppSidebar({
   useEffect(() => {
     if (visible) {
       setShouldRender(true);
+      setPressedKey(null);
 
       requestAnimationFrame(() => {
         animateOpen();
@@ -157,6 +157,14 @@ export function AppSidebar({
 
   if (!shouldRender) {
     return null;
+  }
+
+  function handlePressItem(item: SidebarItem) {
+    setPressedKey(item.key);
+
+    setTimeout(() => {
+      onSelectItem(item);
+    }, 10);
   }
 
   return (
@@ -212,7 +220,7 @@ export function AppSidebar({
 
           <View style={styles.menuContainer}>
             {sidebarItems.map((item) => {
-              const isSelected = selectedKey === item.key;
+              const isSelected = (pressedKey ?? selectedKey) === item.key;
               const Icon = item.icon;
 
               const iconColor = isSelected
@@ -224,10 +232,11 @@ export function AppSidebar({
               return (
                 <Pressable
                   key={item.key}
-                  onPress={() => onSelectItem(item)}
-                  style={[
+                  onPress={() => handlePressItem(item)}
+                  style={({ pressed }) => [
                     styles.menuItem,
                     isSelected && styles.menuItemSelected,
+                    pressed && styles.menuItemPressed,
                   ]}
                 >
                   <View
@@ -347,6 +356,10 @@ function createStyles(theme: AppTheme) {
     },
     menuItemSelected: {
       backgroundColor: theme.colors.sidebarSelected,
+    },
+    menuItemPressed: {
+      backgroundColor: theme.colors.sidebarSelected,
+      opacity: 0.92,
     },
     menuIconBox: {
       width: 32,
