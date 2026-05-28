@@ -42,7 +42,7 @@ export const sidebarItems: SidebarItem[] = [
   { key: 'goals', label: 'Metas de Ahorro', icon: PiggyBank, path: '/goals' },
   { key: 'planned-payments', label: 'Pagos Planificados', icon: CalendarClock, path: '/planned-payments'},
   { key: 'reports', label: 'Reportes', icon: FileText, path: '/reports' },
-  { key: 'statistics', label: 'Estadísticas', icon: BarChart3, path: '/statistics' },
+  { key: 'statistics', label: 'Estadísticas', icon: BarChart3 },
 ];
 
 export function getSidebarItemByKey(key: SidebarRouteKey): SidebarItem | undefined {
