@@ -7,15 +7,18 @@ import {
 
 import { router } from 'expo-router';
 import {
+  CalendarDays,
   ChevronDown,
   LogOut,
   Menu,
   Pencil,
   SlidersHorizontal,
+  Tags,
   Trash2,
   TrendingDown,
   TrendingUp,
   Wallet,
+  WalletCards,
 } from 'lucide-react-native';
 import {
   ActivityIndicator,
@@ -587,22 +590,28 @@ export default function HomeScreen() {
 
                   <View style={styles.movementInfo}>
                     <Text style={styles.movementTitle}>{movement.title}</Text>
-                    <Text style={styles.movementSubtitle}>
-                      💼 {accountName}
-                    </Text>
+                    <View style={styles.movementDetailRow}>
+                      <WalletCards size={14} color={theme.colors.textSecondary} />
+                      <Text style={styles.movementSubtitle}>
+                        {accountName}
+                      </Text>
+                    </View>
 
                     {movement.category_name && (
-                      <View style={styles.movementCategoryRow}>
-                        {renderCategoryIcon(categoryIcon, 14, theme.colors.textSecondary)}
+                      <View style={styles.movementDetailRow}>
+                        <Tags size={14} color={theme.colors.textSecondary} />
                         <Text style={styles.movementSubtitle}>
                           {movement.category_name}
                         </Text>
                       </View>
                     )}
 
-                    <Text style={styles.movementDate}>
-                      📅 {movement.movement_date}
-                    </Text>
+                    <View style={styles.movementDetailRow}>
+                      <CalendarDays size={14} color={theme.colors.textSecondary} />
+                      <Text style={styles.movementDate}>
+                        {movement.movement_date}
+                      </Text>
+                    </View>
                   </View>
 
                   <View style={styles.movementRightBox}>
@@ -1139,9 +1148,15 @@ export default function HomeScreen() {
         fontSize: 16,
       },
       movementSubtitle: {
-        marginTop: 6,
+        marginTop: 4,
         color: theme.colors.textSecondary,
-        fontSize: 13,
+        fontSize: 12,
+      },
+      movementDetailRow: {
+        marginTop: 4,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
       },
       movementDate: {
         marginTop: 4,

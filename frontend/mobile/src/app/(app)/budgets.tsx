@@ -1,13 +1,51 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, Alert, Modal, TextInput } from 'react-native';
-import { useAppTheme } from '@/theme/ThemeContext';
-import { colors } from '@/theme/colors';
-import { useSupabase } from '@/lib/useSupabase';
-import { useAuth, useUser } from '@clerk/expo';
+import React, {
+  useEffect,
+  useState,
+} from 'react';
+
 import { useRouter } from 'expo-router';
-import { getBudgets, getBudgetAccountSpent, getUserAccounts, deleteBudget, getCategoriesByType } from '@/features/wallet/wallet.service'; 
-import { Plus, Menu, LogOut, X, ChevronDown, MoreVertical, Calendar, AlertTriangle, Edit2, Trash2 } from 'lucide-react-native';
+import {
+  AlertTriangle,
+  Calendar,
+  CalendarDays,
+  ChevronDown,
+  Edit2,
+  Hourglass,
+  LogOut,
+  Menu,
+  MoreVertical,
+  Plus,
+  Tags,
+  Trash2,
+  WalletCards,
+  X,
+} from 'lucide-react-native';
+import {
+  Alert,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
+import {
+  deleteBudget,
+  getBudgetAccountSpent,
+  getBudgets,
+  getCategoriesByType,
+  getUserAccounts,
+} from '@/features/wallet/wallet.service';
+import { useSupabase } from '@/lib/useSupabase';
+import { colors } from '@/theme/colors';
+import { useAppTheme } from '@/theme/ThemeContext';
+import {
+  useAuth,
+  useUser,
+} from '@clerk/expo';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function BudgetsScreen() {
@@ -78,10 +116,10 @@ const resetForm = () => {
           let statusText = 'Normal';
           if (progress >= 100) {
             barColor = colors.expense; 
-            statusText = 'Excedido ⚠️';
+            statusText = 'Excedido';
           } else if (progress >= 70) {
             barColor = '#FFC107'; 
-            statusText = 'Cerca del límite ⏳';
+            statusText = 'Cerca del límite';
           }
 
           const overspentAmount = spent > b.amount ? spent - b.amount : 0;
@@ -281,6 +319,9 @@ const resetForm = () => {
           const visualProgress = Math.min(item.progress, 100);
           const isMenuOpen = activeMenuId === item.id;
 
+          const isExceeded = item.progress >= 100;
+          const isNearLimit = item.progress >= 70 && item.progress < 100;
+
           return (
             <View key={item.id} style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
               {item.progress >= 70 && (
@@ -296,11 +337,26 @@ const resetForm = () => {
 
               <View style={styles.cardHeader}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.catTitle, { color: theme.colors.text }]}>🏷 Categoría: {item.category_name}</Text>
-                  <Text style={styles.accountSubLabel}>💼 Billetera: {item.account?.name || 'Personal'}</Text>
-                  <Text style={{ fontSize: 11, color: '#F39C12', fontWeight: '700', marginTop: 4 }}>
-                    🗓 Rango: {item.start_date} al {item.end_date}
-                  </Text>
+                  <View style={styles.budgetDetailRow}>
+                    <Tags size={15} color={theme.colors.textSecondary} />
+                    <Text style={[styles.budgetDetailText, { color: theme.colors.textSecondary }]}>
+                      Categoría: {item.category_name}
+                    </Text>
+                  </View>
+
+                  <View style={styles.budgetDetailRow}>
+                    <WalletCards size={15} color={theme.colors.textSecondary} />
+                    <Text style={[styles.budgetDetailText, { color: theme.colors.textSecondary }]}>
+                      Billetera: {item.account?.name || 'Personal'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.budgetDetailRow}>
+                    <CalendarDays size={15} color="#F39C12" />
+                    <Text style={styles.rangeText}>
+                      Rango: {item.start_date} al {item.end_date}
+                    </Text>
+                  </View>
                 </View>
                 
                 <View style={{ flexDirection: 'row', alignItems: 'center', position: 'relative' }}>
@@ -309,7 +365,7 @@ const resetForm = () => {
                   </Text>
                   
                   <Pressable onPress={() => setActiveMenuId(isMenuOpen ? null : item.id)} hitSlop={20}>
-                    <MoreVertical size={24} color="#6B7280" />
+                    <MoreVertical size={24} color={theme.colors.textSecondary} />
                   </Pressable>
 
                   {isMenuOpen && (
@@ -332,10 +388,32 @@ const resetForm = () => {
               </View>
 
               <View style={styles.cardFooter}>
-                <Text style={styles.footerText}>Límite: Bs. {item.amount}</Text>
-                <Text style={[styles.footerText, { color: item.barColor }]}>
-                  {item.statusText}
+                <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>
+                  Límite: Bs. {item.amount}
                 </Text>
+
+                <View style={styles.statusFooterBox}>
+                  {isExceeded && (
+                    <AlertTriangle size={14} color={item.barColor} />
+                  )}
+
+                  {isNearLimit && (
+                    <Hourglass size={14} color={item.barColor} />
+                  )}
+
+                  <Text
+                    style={[
+                      styles.footerText,
+                      {
+                        color: isExceeded || isNearLimit
+                          ? item.barColor
+                          : theme.colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    {item.statusText}
+                  </Text>
+                </View>
               </View>
 
               {item.overspentAmount > 0 && (
@@ -477,8 +555,38 @@ const styles = StyleSheet.create({
   notificationBanner: { flexDirection: 'row', alignItems: 'center', padding: 8, borderRadius: 6, marginBottom: 10, gap: 6 },
   notificationText: { fontSize: 11, fontWeight: 'bold', flex: 1 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
-  catTitle: { fontSize: 15, fontWeight: '900' },
-  accountSubLabel: { fontSize: 12, color: '#6B7280', fontWeight: '700', marginTop: 2 },
+  budgetDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  rangeText: {
+    fontSize: 11,
+    color: '#F39C12',
+    fontWeight: '700',
+  },
+  catTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  accountSubLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  budgetDetailText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  footerText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  statusFooterBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
   amountLabel: { fontSize: 15, fontWeight: 'bold' },
   contextMenu: { position: 'absolute', right: 0, top: 28, width: 110, borderRadius: 8, borderWidth: 1, elevation: 5, zIndex: 999, paddingVertical: 4 },
   menuOption: { flexDirection: 'row', alignItems: 'center', padding: 10, gap: 8, borderBottomWidth: 0.5 },
@@ -486,7 +594,6 @@ const styles = StyleSheet.create({
   progressContainer: { height: 12, backgroundColor: '#E0E0E0', borderRadius: 6, overflow: 'hidden', marginBottom: 8 },
   progressBar: { height: '100%', borderRadius: 6 },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between' },
-  footerText: { fontSize: 12, color: '#888', fontWeight: 'bold' },
   overspentBox: { marginTop: 8, paddingTop: 6, borderTopWidth: 1 },
   overspentText: { fontSize: 12, color: '#C0392B', fontWeight: '900' },
   fab: { position: 'absolute', bottom: 30, right: 30, backgroundColor: '#F39C12', width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', elevation: 5 },

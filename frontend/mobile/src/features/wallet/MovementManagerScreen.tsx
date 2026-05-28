@@ -9,12 +9,15 @@ import {
 } from 'expo-router';
 import {
   ArrowLeft,
+  CalendarDays,
   ChevronDown,
   Pencil,
   PiggyBank,
   SlidersHorizontal,
+  Tags,
   Trash2,
   Wallet,
+  WalletCards,
 } from 'lucide-react-native';
 import {
   ActivityIndicator,
@@ -595,13 +598,16 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
                     {movement.title}
                   </Text>
 
-                  <Text style={styles.movementSubtitle}>
-                    💼 {accountName}
-                  </Text>
+                  <View style={styles.movementDetailRow}>
+                    <WalletCards size={14} color={theme.colors.textSecondary} />
+                    <Text style={styles.movementSubtitle}>
+                      {accountName}
+                    </Text>
+                  </View>
 
                   {movement.category_name && (
-                    <View style={styles.movementCategoryRow}>
-                      {renderCategoryIcon(categoryIcon, 14, theme.colors.textSecondary)}
+                    <View style={styles.movementDetailRow}>
+                      <Tags size={14} color={theme.colors.textSecondary} />
                       <Text style={styles.movementSubtitle}>
                         {movement.category_name}
                       </Text>
@@ -614,9 +620,12 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
                     </Text>
                   )}
 
-                  <Text style={styles.movementDate}>
-                    📅 {movement.movement_date}
-                  </Text>
+                  <View style={styles.movementDetailRow}>
+                    <CalendarDays size={14} color={theme.colors.textSecondary} />
+                    <Text style={styles.movementDate}>
+                      {movement.movement_date}
+                    </Text>
+                  </View>
                 </View>
 
                 <View style={styles.amountBox}>
@@ -1445,8 +1454,14 @@ function createStyles(
       color: theme.colors.textSecondary,
       fontSize: 12,
     },
+    movementDetailRow: {
+      marginTop: 4,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
     movementDate: {
-      marginTop: 3,
+      marginTop: 4,
       color: theme.colors.textSecondary,
       fontSize: 12,
     },

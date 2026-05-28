@@ -16,6 +16,7 @@ import {
   Plus,
   Trash2,
   Wallet,
+  WalletCards,
 } from 'lucide-react-native';
 import {
   ActivityIndicator,
@@ -496,7 +497,7 @@ export default function PlannedPaymentsScreen() {
                   <Text style={styles.paymentTitle}>{payment.name}</Text>
 
                   <View style={styles.paymentDetailRow}>
-                    <Wallet size={15} color={theme.colors.textSecondary} />
+                    <WalletCards size={15} color={theme.colors.textSecondary} />
                     <Text style={styles.paymentSubtitle}>
                         Cuenta: {payment.account?.name ?? 'Cuenta'}
                     </Text>
@@ -513,7 +514,7 @@ export default function PlannedPaymentsScreen() {
                   </View>
 
                   <View style={styles.paymentDetailRow}>
-                    <CalendarDays size={15} color={theme.colors.textSecondary} />
+                    <CalendarClock size={15} color={theme.colors.textSecondary} />
                     <Text style={styles.paymentDate}>
                         Fecha de pago: {payment.next_payment_date}
                     </Text>
