@@ -4,7 +4,10 @@ import {
   useState,
 } from 'react';
 
-import { router } from 'expo-router';
+import {
+  router,
+  useLocalSearchParams,
+} from 'expo-router';
 import {
   LogOut,
   Menu,
@@ -78,11 +81,17 @@ export default function RecordsScreen() {
   const { user } = useUser();
   const { signOut } = useClerk();
   const supabase = useSupabase();
+  const params = useLocalSearchParams<{ type?: string }>();
 
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
   const styles = createStyles(theme);
 
   const [selectedType, setSelectedType] = useState<ManualMovementType>('income');
+  useEffect(() => {
+    if (params.type === 'income' || params.type === 'expense') {
+        setSelectedType(params.type);
+    }
+  }, [params.type]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [profileName, setProfileName] = useState('Usuario');
 
