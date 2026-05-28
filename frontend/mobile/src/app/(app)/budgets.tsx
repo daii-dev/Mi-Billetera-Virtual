@@ -9,11 +9,10 @@ import {
   Calendar,
   CalendarDays,
   ChevronDown,
-  Edit2,
   Hourglass,
   LogOut,
   Menu,
-  MoreVertical,
+  Pencil,
   Plus,
   Tags,
   Trash2,
@@ -59,8 +58,7 @@ export default function BudgetsScreen() {
   const [budgets, setBudgets] = useState<any[]>([]);
   const [myAccounts, setMyAccounts] = useState<any[]>([]);
   const [myCategories, setMyCategories] = useState<any[]>([]); 
-  const [loading, setLoading] = useState(false);
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);  
+  const [loading, setLoading] = useState(false);  
   const [modalVisible, setModalVisible] = useState(false);
   
   const [selectedCategory, setSelectedCategory] = useState(''); 
@@ -166,7 +164,6 @@ const resetForm = () => {
   };
 
   const handleEditPress = (item: any) => {
-    setActiveMenuId(null); 
     setEditingBudgetId(item.id);
     setSelectedCategory(item.category_name || '');
     setSelectedAccountId(item.account_id);
@@ -180,7 +177,6 @@ const resetForm = () => {
   };
 
   const handleDeletePress = (id: string) => {
-    setActiveMenuId(null);
     Alert.alert(
       "¿Eliminar Presupuesto?",
       "Esta acción no se puede deshacer. ¿Estás seguro?",
@@ -317,8 +313,6 @@ const resetForm = () => {
       <ScrollView contentContainerStyle={styles.content}>
         {budgets.map((item) => {
           const visualProgress = Math.min(item.progress, 100);
-          const isMenuOpen = activeMenuId === item.id;
-
           const isExceeded = item.progress >= 100;
           const isNearLimit = item.progress >= 70 && item.progress < 100;
 
@@ -359,27 +353,37 @@ const resetForm = () => {
                   </View>
                 </View>
                 
-                <View style={{ flexDirection: 'row', alignItems: 'center', position: 'relative' }}>
-                  <Text style={[styles.amountLabel, { color: item.barColor, marginRight: 10 }]}>
+                <View style={styles.budgetRightBox}>
+                  <View style={styles.cardActions}>
+                    <Pressable
+                      onPress={() => handleEditPress(item)}
+                      hitSlop={10}
+                      style={[
+                        styles.iconButton,
+                        {backgroundColor: isDarkMode ? '#0F172A' : '#F8FAFC',},
+                      ]}
+                    >
+                      <Pencil
+                        size={18}
+                        color={isDarkMode ? '#60A5FA' : colors.primary}
+                      />
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => handleDeletePress(item.id)}
+                      hitSlop={10}
+                      style={[
+                        styles.iconButton,
+                        {backgroundColor: isDarkMode ? '#0F172A' : '#F8FAFC',},
+                      ]}
+                    >
+                      <Trash2 size={18} color={colors.expense} />
+                    </Pressable>
+                  </View>
+
+                  <Text style={[styles.amountLabel, { color: item.barColor }]}>
                     -Bs. {item.spent.toFixed(2)}
                   </Text>
-                  
-                  <Pressable onPress={() => setActiveMenuId(isMenuOpen ? null : item.id)} hitSlop={20}>
-                    <MoreVertical size={24} color={theme.colors.textSecondary} />
-                  </Pressable>
-
-                  {isMenuOpen && (
-                    <View style={[styles.contextMenu, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-                      <Pressable style={[styles.menuOption, { borderBottomColor: theme.colors.border }]} onPress={() => handleEditPress(item)}>
-                        <Edit2 size={14} color="#082B8C" />
-                        <Text style={[styles.menuOptionText, { color: theme.colors.text }]}>Editar</Text>
-                      </Pressable>
-                      <Pressable style={[styles.menuOption, { borderBottomWidth: 0 }]} onPress={() => handleDeletePress(item.id)}>
-                        <Trash2 size={14} color={colors.expense} />
-                        <Text style={[styles.menuOptionText, { color: colors.expense }]}>Eliminar</Text>
-                      </Pressable>
-                    </View>
-                  )}
                 </View>
               </View>
 
@@ -588,9 +592,23 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   amountLabel: { fontSize: 15, fontWeight: 'bold' },
-  contextMenu: { position: 'absolute', right: 0, top: 28, width: 110, borderRadius: 8, borderWidth: 1, elevation: 5, zIndex: 999, paddingVertical: 4 },
-  menuOption: { flexDirection: 'row', alignItems: 'center', padding: 10, gap: 8, borderBottomWidth: 0.5 },
-  menuOptionText: { fontSize: 13, fontWeight: 'bold' },
+  budgetRightBox: {
+    minHeight: 68,
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginLeft: 10,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  iconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   progressContainer: { height: 12, backgroundColor: '#E0E0E0', borderRadius: 6, overflow: 'hidden', marginBottom: 8 },
   progressBar: { height: '100%', borderRadius: 6 },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between' },
