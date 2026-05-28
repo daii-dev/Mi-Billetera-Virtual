@@ -43,6 +43,8 @@ import {
   updateAccountName,
 } from '@/features/wallet/wallet.service';
 import { Account } from '@/features/wallet/wallet.types';
+import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
+import { SidebarRouteKey } from '@/lib/sidebarNavigation';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
@@ -72,7 +74,7 @@ export default function AccountsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const [sidebarVisible, setSidebarVisible] = useState(false);
-  const [selectedSidebarItem, setSelectedSidebarItem] = useState('accounts');
+  const [selectedSidebarItem, setSelectedSidebarItem] = useState<SidebarRouteKey>('accounts');
 
   const [modalMode, setModalMode] = useState<AccountModalMode>(null);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
@@ -80,6 +82,12 @@ export default function AccountsScreen() {
   const [accountName, setAccountName] = useState('');
   const [initialBalanceText, setInitialBalanceText] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const handleSelectSidebarItem = useSidebarNavigation({
+    currentKey: 'accounts',
+    onClose: () => setSidebarVisible(false),
+    onSelectedKeyChange: setSelectedSidebarItem,
+  });
 
   const openSidebarPanResponder = useRef(
     PanResponder.create({
@@ -310,51 +318,6 @@ export default function AccountsScreen() {
       );
     } finally {
       setSaving(false);
-    }
-  }
-
-  function handleSelectSidebarItem(item: { key: string; label: string }) {
-    setSelectedSidebarItem(item.key);
-
-    if (item.key === 'home') {
-      setSidebarVisible(false);
-      router.replace('/home');
-      return;
-    }
-
-    if (item.key === 'accounts') {
-      setSidebarVisible(false);
-      return;
-    }
-
-    if (item.key === 'categories') {
-      setSidebarVisible(false);
-      router.push('/categories');
-      return;
-    }
-
-    if (item.key === 'budgets') {
-      setSidebarVisible(false);
-      router.push('/budgets');
-      return;
-    }
-
-    if (item.key === 'goals') {
-      setSidebarVisible(false);
-      router.push('/goals');
-      return;
-    }
-
-    if (item.key === 'planned-payments') {
-      setSidebarVisible(false);
-      router.push('/planned-payments');
-      return;
-    }
-
-    if (item.key === 'reports') {
-      setSidebarVisible(false);
-      router.push('/reports');
-      return;
     }
   }
 

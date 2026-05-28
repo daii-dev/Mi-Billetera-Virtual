@@ -59,6 +59,7 @@ import {
   Account,
   Category,
 } from '@/features/wallet/wallet.types';
+import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
@@ -132,6 +133,11 @@ export default function PlannedPaymentsScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [saving, setSaving] = useState(false);
+
+  const handleSelectSidebarItem = useSidebarNavigation({
+    currentKey: 'planned-payments',
+    onClose: () => setSidebarVisible(false),
+  });
 
   const openSidebarPanResponder = useRef(
     PanResponder.create({
@@ -213,18 +219,6 @@ export default function PlannedPaymentsScreen() {
     } catch (error: any) {
       Alert.alert('Error', error?.message || 'No se pudo cerrar sesión');
     }
-  }
-
-  function handleSelectSidebarItem(item: { key: string; label: string }) {
-    setSidebarVisible(false);
-
-    if (item.key === 'home') router.push('/home');
-    if (item.key === 'accounts') router.push('/accounts');
-    if (item.key === 'categories') router.push('/categories');
-    if (item.key === 'budgets') router.push('/budgets');
-    if (item.key === 'goals') router.push('/goals');
-    if (item.key === 'planned-payments') router.push('/planned-payments');
-    if (item.key === 'reports') router.push('/reports');
   }
 
   function getTodayDate() {

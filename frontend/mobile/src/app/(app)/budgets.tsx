@@ -3,7 +3,6 @@ import React, {
   useState,
 } from 'react';
 
-import { useRouter } from 'expo-router';
 import {
   AlertTriangle,
   Calendar,
@@ -38,6 +37,7 @@ import {
   getCategoriesByType,
   getUserAccounts,
 } from '@/features/wallet/wallet.service';
+import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -52,7 +52,6 @@ export default function BudgetsScreen() {
   const supabase = useSupabase();
   const { userId } = useAuth();
   const { user } = useUser();
-  const router = useRouter();
   
   const [sidebarVisible, setSidebarVisible] = useState(false); 
   const [budgets, setBudgets] = useState<any[]>([]);
@@ -75,17 +74,23 @@ export default function BudgetsScreen() {
   const [showAccountOptions, setShowAccountOptions] = useState(false);
   const [showCategoryOptions, setShowCategoryOptions] = useState(false);
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
-const resetForm = () => {
-    setSelectedCategory('');
-    setSelectedAccountId('');
-    setSelectedAccountName('');
-    setAmount('');
-    setStartDate(new Date());
-    setEndDate(new Date(new Date().setDate(new Date().getDate() + 7)));
-    setShowAccountOptions(false);
-    setShowCategoryOptions(false);
-    setEditingBudgetId(null);
-  };
+  
+  const handleSelectSidebarItem = useSidebarNavigation({
+    currentKey: 'budgets',
+    onClose: () => setSidebarVisible(false),
+  });
+
+  const resetForm = () => {
+      setSelectedCategory('');
+      setSelectedAccountId('');
+      setSelectedAccountName('');
+      setAmount('');
+      setStartDate(new Date());
+      setEndDate(new Date(new Date().setDate(new Date().getDate() + 7)));
+      setShowAccountOptions(false);
+      setShowCategoryOptions(false);
+      setEditingBudgetId(null);
+    };
   const profileName = user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Usuario';
 
   const loadBudgetsData = async () => {
@@ -544,7 +549,15 @@ const resetForm = () => {
         </View>
       </Modal>
 
-      <AppSidebar visible={sidebarVisible} userName={profileName} selectedKey="budgets" visualMode={isDarkMode} onToggleVisualMode={setDarkMode} onClose={() => setSidebarVisible(false)} onSelectItem={(item) => { setSidebarVisible(false); router.replace(`/${item.key}`); }} />
+      <AppSidebar
+        visible={sidebarVisible}
+        userName={profileName}
+        selectedKey="budgets"
+        visualMode={isDarkMode}
+        onToggleVisualMode={setDarkMode}
+        onClose={() => setSidebarVisible(false)}
+        onSelectItem={handleSelectSidebarItem}
+      />
     </View>
   );
 }

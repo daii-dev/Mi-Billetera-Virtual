@@ -50,6 +50,7 @@ import {
   money,
 } from '@/features/wallet/wallet.service';
 import { Account } from '@/features/wallet/wallet.types';
+import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
@@ -80,6 +81,11 @@ export default function GoalsScreen() {
   const [selectedGoal, setSelectedGoal] = useState<SavingsGoal | null>(null);
   const [contributionModalVisible, setContributionModalVisible] = useState(false);
   const [savingContribution, setSavingContribution] = useState(false);
+
+  const handleSelectSidebarItem = useSidebarNavigation({
+    currentKey: 'goals',
+    onClose: () => setSidebarVisible(false),
+  });
 
   const openSidebarPanResponder = useRef(
     PanResponder.create({
@@ -154,26 +160,6 @@ export default function GoalsScreen() {
       router.replace('/sign-in');
     } catch (error: any) {
       Alert.alert('Error', error?.message || 'No se pudo cerrar sesion');
-    }
-  }
-
-  function handleSelectSidebarItem(item: { key: string }) {
-    setSidebarVisible(false);
-
-    if (item.key === 'home') {
-      router.push('/home');
-    } else if (item.key === 'accounts') {
-      router.push('/accounts');
-    } else if (item.key === 'categories') {
-      router.push('/categories');
-    } else if (item.key === 'budgets') {
-      router.push('/budgets');
-    } else if (item.key === 'goals') {
-      router.push('/goals');
-    } else if (item.key === 'planned-payments') {
-      router.push('/planned-payments');
-    } else if (item.key === 'reports') {
-      router.push('/reports');
     }
   }
 

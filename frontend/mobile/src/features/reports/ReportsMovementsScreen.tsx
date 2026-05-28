@@ -1,10 +1,10 @@
+import type { ReactNode } from 'react';
 import {
   useCallback,
   useMemo,
   useRef,
   useState,
 } from 'react';
-import type { ReactNode } from 'react';
 
 import {
   router,
@@ -33,11 +33,22 @@ import {
 } from 'react-native';
 
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
+import type {
+  ReportAccount,
+  ReportDateRange,
+  ReportFileType,
+  ReportFilters,
+  ReportMovement,
+  ReportMovementTypeFilter,
+  ReportPeriodKey,
+  ReportSectionKey,
+} from '@/features/reports/report.types';
 import {
   calculateReportSummary,
   formatBobCurrency,
   groupMovementsByDate,
 } from '@/features/reports/reportCalculations';
+import { generateReportFile } from '@/features/reports/reportExport';
 import {
   formatDateValue,
   getLast30DaysRange,
@@ -49,18 +60,8 @@ import {
   getReportAccounts,
   getReportMovements,
 } from '@/features/reports/reports.service';
-import { generateReportFile } from '@/features/reports/reportExport';
-import type {
-  ReportAccount,
-  ReportDateRange,
-  ReportFileType,
-  ReportFilters,
-  ReportMovement,
-  ReportMovementTypeFilter,
-  ReportPeriodKey,
-  ReportSectionKey,
-} from '@/features/reports/report.types';
 import { getUserProfile } from '@/features/wallet/wallet.service';
+import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
@@ -150,6 +151,11 @@ export function ReportsMovementsScreen() {
     dateRange: getLast30DaysRange(),
     accountId: null,
     type: 'all',
+  });
+
+  const handleSelectSidebarItem = useSidebarNavigation({
+    currentKey: 'reports',
+    onClose: () => setSidebarVisible(false),
   });
 
   const openSidebarPanResponder = useRef(
@@ -278,26 +284,6 @@ export function ReportsMovementsScreen() {
       router.replace('/sign-in');
     } catch (error: any) {
       Alert.alert('Error', error?.message || 'No se pudo cerrar sesion');
-    }
-  }
-
-  function handleSelectSidebarItem(item: { key: string }) {
-    setSidebarVisible(false);
-
-    if (item.key === 'home') {
-      router.push('/home');
-    } else if (item.key === 'accounts') {
-      router.push('/accounts');
-    } else if (item.key === 'categories') {
-      router.push('/categories');
-    } else if (item.key === 'budgets') {
-      router.push('/budgets');
-    } else if (item.key === 'goals') {
-      router.push('/goals');
-    } else if (item.key === 'planned-payments') {
-      router.push('/planned-payments');
-    } else if (item.key === 'reports') {
-      router.push('/reports');
     }
   }
 

@@ -65,6 +65,8 @@ import {
   Movement,
   MovementType,
 } from '@/features/wallet/wallet.types';
+import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
+import { SidebarRouteKey } from '@/lib/sidebarNavigation';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
@@ -100,7 +102,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const [sidebarVisible, setSidebarVisible] = useState(false);
-  const [selectedSidebarItem, setSelectedSidebarItem] = useState('home');
+  const [selectedSidebarItem, setSelectedSidebarItem] = useState<SidebarRouteKey>('home');
 
   const [movementModalMode, setMovementModalMode] =
     useState<HomeMovementModalMode>(null);
@@ -116,6 +118,12 @@ export default function HomeScreen() {
   const [showCategoryOptions, setShowCategoryOptions] = useState(false);
 
   const [savingMovement, setSavingMovement] = useState(false);
+
+  const handleSelectSidebarItem = useSidebarNavigation({
+    currentKey: 'home',
+    onClose: () => setSidebarVisible(false),
+    onSelectedKeyChange: setSelectedSidebarItem,
+  });
 
   const openSidebarPanResponder = useRef(
     PanResponder.create({
@@ -390,46 +398,6 @@ export default function HomeScreen() {
       );
     } finally {
       setSavingMovement(false);
-    }
-  }
-
-  function handleSelectSidebarItem(item: { key: string; label: string }) {
-    setSelectedSidebarItem(item.key);
-    setSidebarVisible(false);
-
-    if (item.key === 'home') {
-      router.push('/home');
-      return;
-    }
-
-    if (item.key === 'accounts') {
-      router.push('/accounts');
-      return;
-    }
-
-    if (item.key === 'categories') {
-      router.push('/categories');
-      return;
-    }
-
-    if (item.key === 'budgets') {
-      router.push('/budgets');
-      return;
-    }
-
-    if (item.key === 'goals') {
-      router.push('/goals');
-      return;
-    }
-
-    if (item.key === 'planned-payments') {
-      router.push('/planned-payments');
-      return;
-    }
-
-    if (item.key === 'reports') {
-      router.push('/reports');
-      return;
     }
   }
 

@@ -37,6 +37,8 @@ import {
   Category,
   ManualMovementType,
 } from '@/features/wallet/wallet.types';
+import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
+import { SidebarRouteKey } from '@/lib/sidebarNavigation';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
@@ -97,7 +99,13 @@ export default function CategoriesScreen() {
   const [selectedIcon, setSelectedIcon] = useState('Wallet');
 
   const [sidebarVisible, setSidebarVisible] = useState(false);
-  const [selectedSidebarItem, setSelectedSidebarItem] = useState('categories');
+  const [selectedSidebarItem, setSelectedSidebarItem] = useState<SidebarRouteKey>('categories');
+
+  const handleSelectSidebarItem = useSidebarNavigation({
+    currentKey: 'categories',
+    onClose: () => setSidebarVisible(false),
+    onSelectedKeyChange: setSelectedSidebarItem,
+  });
 
   async function handleLogout() {
     try {
@@ -213,51 +221,6 @@ export default function CategoriesScreen() {
   function handleDeletePress(category: Category) {
     setSelectedCategory(category);
     setDeleteModalVisible(true);
-  }
-
-  function handleSelectSidebarItem(item: { key: string; label: string }) {
-    setSelectedSidebarItem(item.key);
-
-    if (item.key === 'home') {
-      setSidebarVisible(false);
-      router.push('/home');
-      return;
-    }
-
-    if (item.key === 'accounts') {
-      setSidebarVisible(false);
-      router.push('/accounts');
-      return;
-    }
-
-    if (item.key === 'categories') {
-      setSidebarVisible(false);
-      return;
-    }
-
-    if (item.key === 'goals') {
-      setSidebarVisible(false);
-      router.push('/goals');
-      return;
-    }
-
-    if (item.key === 'budgets') {
-      setSidebarVisible(false);
-      router.push('/budgets');
-      return;
-    }
-
-    if (item.key === 'planned-payments') {
-      setSidebarVisible(false);
-      router.push('/planned-payments');
-      return;
-    }
-
-    if (item.key === 'reports') {
-      setSidebarVisible(false);
-      router.push('/reports');
-      return;
-    }
   }
 
   async function handleConfirmDelete() {

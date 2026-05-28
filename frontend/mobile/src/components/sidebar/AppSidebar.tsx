@@ -1,20 +1,9 @@
 import {
-  ComponentType,
   useEffect,
   useRef,
   useState,
 } from 'react';
 
-import {
-  BarChart3,
-  CalendarClock,
-  ChartPie,
-  FileText,
-  Home,
-  PiggyBank,
-  Tags,
-  WalletCards,
-} from 'lucide-react-native';
 import {
   Animated,
   Image,
@@ -27,6 +16,10 @@ import {
   View,
 } from 'react-native';
 
+import {
+  SidebarItem,
+  sidebarItems,
+} from '@/lib/sidebarNavigation';
 import { colors } from '@/theme/colors';
 import {
   AppTheme,
@@ -35,29 +28,6 @@ import {
 
 const SIDEBAR_WIDTH = 270;
 const appLogo = require('../../../assets/logo-app.png');
-
-type SidebarIcon = ComponentType<{
-  size?: number;
-  color?: string;
-  strokeWidth?: number;
-}>;
-
-type SidebarItem = {
-  key: string;
-  label: string;
-  icon: SidebarIcon;
-};
-
-const sidebarItems: SidebarItem[] = [
-  { key: 'home', label: 'Inicio', icon: Home },
-  { key: 'accounts', label: 'Cuentas', icon: WalletCards },
-  { key: 'categories', label: 'Categorías', icon: Tags },
-  { key: 'budgets', label: 'Presupuestos', icon: ChartPie },
-  { key: 'goals', label: 'Metas de Ahorro', icon: PiggyBank },
-  { key: 'planned-payments', label: 'Pagos Planificados', icon: CalendarClock },
-  { key: 'reports', label: 'Reportes', icon: FileText },
-  { key: 'statistics', label: 'Estadísticas', icon: BarChart3 },
-];
 
 type AppSidebarProps = {
   visible: boolean;
