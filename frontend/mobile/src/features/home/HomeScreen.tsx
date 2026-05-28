@@ -15,8 +15,6 @@ import {
   SlidersHorizontal,
   Tags,
   Trash2,
-  TrendingDown,
-  TrendingUp,
   Wallet,
   WalletCards,
 } from 'lucide-react-native';
@@ -471,24 +469,6 @@ export default function HomeScreen() {
                 <Text style={styles.expenseText}>{money(totalExpense)}</Text>
               </View>
             </View>
-          </View>
-
-          <View style={styles.actionsRow}>
-            <Pressable
-              style={styles.incomeButton}
-              onPress={() => router.push('/income')}
-            >
-              <TrendingUp size={25} color="#FFFFFF" />
-              <Text style={styles.actionText}>Ingreso</Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.expenseButton}
-              onPress={() => router.push('/expense')}
-            >
-              <TrendingDown size={25} color="#FFFFFF" />
-              <Text style={styles.actionText}>Gasto</Text>
-            </Pressable>
           </View>
 
           <View style={styles.sectionHeader}>
@@ -1006,36 +986,6 @@ export default function HomeScreen() {
         color: colors.expense,
         fontSize: 12,
         fontWeight: '900',
-      },
-      actionsRow: {
-        flexDirection: 'row',
-        gap: 14,
-        marginTop: 16,
-      },
-      incomeButton: {
-        flex: 1,
-        height: 48,
-        backgroundColor: colors.secondary,
-        borderRadius: 10,
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'row',
-        gap: 8,
-      },
-      expenseButton: {
-        flex: 1,
-        height: 48,
-        backgroundColor: colors.expense,
-        borderRadius: 10,
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'row',
-        gap: 8,
-      },
-      actionText: {
-        color: '#FFFFFF',
-        fontWeight: '900',
-        fontSize: 17,
       },
       sectionHeader: {
         marginTop: 24,

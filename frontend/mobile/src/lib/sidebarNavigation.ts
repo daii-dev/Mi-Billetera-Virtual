@@ -5,6 +5,7 @@ import {
   CalendarClock,
   ChartPie,
   FileText,
+  HandCoins,
   Home,
   PiggyBank,
   Tags,
@@ -13,6 +14,7 @@ import {
 
 export type SidebarRouteKey =
   | 'home'
+  | 'records'
   | 'accounts'
   | 'categories'
   | 'budgets'
@@ -36,6 +38,7 @@ export type SidebarItem = {
 
 export const sidebarItems: SidebarItem[] = [
   { key: 'home', label: 'Inicio', icon: Home, path: '/home' },
+  { key: 'records', label: 'Registros', icon: HandCoins, path: '/records' },
   { key: 'accounts', label: 'Cuentas', icon: WalletCards, path: '/accounts' },
   { key: 'categories', label: 'Categorías', icon: Tags, path: '/categories' },
   { key: 'budgets', label: 'Presupuestos', icon: ChartPie, path: '/budgets' },

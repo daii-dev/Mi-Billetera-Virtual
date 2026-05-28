@@ -1,4 +1,5 @@
 import {
+  type ReactNode,
   useEffect,
   useState,
 } from 'react';
@@ -13,6 +14,7 @@ import {
   ChevronDown,
   Pencil,
   PiggyBank,
+  Plus,
   SlidersHorizontal,
   Tags,
   Trash2,
@@ -90,6 +92,11 @@ type MovementManagerScreenProps = {
   buttonColor: string;
   placeholder: string;
   categories: Category[];
+
+  showHeader?: boolean;
+  showRegisterButton?: boolean;
+  showFloatingButton?: boolean;
+  contentHeader?: ReactNode;
 };
 
 export function MovementManagerScreen({
@@ -107,6 +114,10 @@ export function MovementManagerScreen({
   buttonColor,
   placeholder,
   categories,
+  showHeader = true,
+  showRegisterButton = true,
+  showFloatingButton = false,
+  contentHeader,
 }: MovementManagerScreenProps) {
   const { userId, isLoaded, isSignedIn } = useAuth();
   const { editId } = useLocalSearchParams<{ editId?: string }>();
@@ -515,13 +526,15 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
 
   return (
     <View style={styles.container}>
-      <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
-          <ArrowLeft size={31} color="#FFFFFF" />
-        </Pressable>
+      {showHeader && (
+        <View style={styles.topBar}>
+          <Pressable onPress={() => router.back()} hitSlop={10}>
+            <ArrowLeft size={31} color="#FFFFFF" />
+          </Pressable>
 
-        <Text style={styles.topTitle}>{title}</Text>
-      </View>
+          <Text style={styles.topTitle}>{title}</Text>
+        </View>
+      )}
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -529,12 +542,16 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
-        <Pressable
-          style={styles.registerButton}
-          onPress={openCreateModal}
-        >
-          <Text style={styles.registerButtonText}>{registerButtonText}</Text>
-        </Pressable>
+        {contentHeader}
+
+        {showRegisterButton && (
+          <Pressable
+            style={styles.registerButton}
+            onPress={openCreateModal}
+          >
+            <Text style={styles.registerButtonText}>{registerButtonText}</Text>
+          </Pressable>
+        )}
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{listTitle}</Text>
@@ -672,6 +689,15 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
           })
         )}
       </ScrollView>
+
+      {showFloatingButton && (
+        <Pressable
+          style={styles.fab}
+          onPress={openCreateModal}
+        >
+          <Plus size={31} color="#FFFFFF" strokeWidth={3} />
+        </Pressable>
+      )}
 
       <AccountFilterModal
         visible={filterVisible}
@@ -1349,7 +1375,23 @@ function createStyles(
     },
     content: {
       padding: 14,
-      paddingBottom: 80,
+      paddingBottom: 120,
+    },
+    fab: {
+      position: 'absolute',
+      right: 28,
+      bottom: 88,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: buttonColor,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOpacity: 0.28,
+      shadowOffset: { width: 0, height: 3 },
+      shadowRadius: 4,
+      elevation: 5,
     },
     registerButton: {
       alignSelf: 'center',
