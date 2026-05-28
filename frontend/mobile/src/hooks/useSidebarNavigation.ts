@@ -26,6 +26,9 @@ export function useSidebarNavigation({
         if (item.key === currentKey) {
             return;
         }
+        if (!item.path) {
+            return;
+        }
 
         router.push(item.path as any);
         },
