@@ -439,7 +439,7 @@ const resetForm = () => {
             </View>
             
             <View style={styles.modalContent}>
-               <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Categoría del Gasto</Text>
+               <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Seleccionar Categoria de Gasto</Text>
                <Pressable 
                  style={[
                    styles.selectorBox, 
@@ -464,7 +464,7 @@ const resetForm = () => {
                  </View>
                )}
 
-               <Text style={[styles.inputLabel, { color: theme.colors.text, marginTop: 12 }]}>Billetera / Cuenta de Origen</Text>
+               <Text style={[styles.inputLabel, { color: theme.colors.text, marginTop: 12 }]}>Seleccionar Cuenta</Text>
                <Pressable 
                  style={[
                    styles.selectorBox, 
