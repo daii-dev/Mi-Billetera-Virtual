@@ -28,7 +28,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoalCard } from '@/components/savings-goals/GoalCard';
-import { GoalContributionModal } from '@/components/savings-goals/GoalContributionModal';
+import {
+  GoalContributionModal,
+} from '@/components/savings-goals/GoalContributionModal';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { AppButton } from '@/components/ui/AppButton';
 import {
@@ -168,6 +170,8 @@ export default function GoalsScreen() {
       router.push('/budgets');
     } else if (item.key === 'goals') {
       router.push('/goals');
+    } else if (item.key === 'planned-payments') {
+      router.push('/planned-payments');
     } else if (item.key === 'reports') {
       router.push('/reports');
     }

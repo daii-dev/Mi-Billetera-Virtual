@@ -345,6 +345,12 @@ export default function AccountsScreen() {
       return;
     }
 
+    if (item.key === 'planned-payments') {
+      setSidebarVisible(false);
+      router.push('/planned-payments');
+      return;
+    }
+
     if (item.key === 'reports') {
       setSidebarVisible(false);
       router.push('/reports');

@@ -10,10 +10,8 @@ import {
   CalendarClock,
   ChartPie,
   FileText,
-  HandCoins,
   Home,
   PiggyBank,
-  ReceiptText,
   Tags,
   WalletCards,
 } from 'lucide-react-native';
@@ -58,8 +56,6 @@ const sidebarItems: SidebarItem[] = [
   { key: 'goals', label: 'Metas de Ahorro', icon: PiggyBank },
   { key: 'planned-payments', label: 'Pagos Planificados', icon: CalendarClock },
   { key: 'reports', label: 'Reportes', icon: FileText },
-  { key: 'debts', label: 'Deudas', icon: ReceiptText },
-  { key: 'collections', label: 'Cobros', icon: HandCoins },
   { key: 'statistics', label: 'Estadísticas', icon: BarChart3 },
 ];
 

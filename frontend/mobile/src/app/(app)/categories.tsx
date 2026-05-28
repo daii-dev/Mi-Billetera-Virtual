@@ -1,4 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+
+import { router } from 'expo-router';
+import {
+  LogOut,
+  Menu,
+  Plus,
+  Trash2,
+} from 'lucide-react-native';
 import {
   Alert,
   FlatList,
@@ -9,34 +22,31 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View,
   TouchableOpacity,
+  View,
 } from 'react-native';
-import { Trash2, Plus, MoreVertical, Menu, LogOut } from 'lucide-react-native';
 
-import { useAuth } from '@clerk/expo';
-import { useClerk } from '@clerk/expo';
-import { router } from 'expo-router';
-
-import {
-  Category,
-  ManualMovementType,
-} from '@/features/wallet/wallet.types';
-
+import { AppSidebar } from '@/components/sidebar/AppSidebar';
+import { renderCategoryIcon } from '@/features/wallet/category.utils';
 import {
   createCategory,
   deleteCategory,
   getCategoriesByType,
 } from '@/features/wallet/wallet.service';
-
+import {
+  Category,
+  ManualMovementType,
+} from '@/features/wallet/wallet.types';
 import { useSupabase } from '@/lib/useSupabase';
-import { renderCategoryIcon } from '@/features/wallet/category.utils';
 import { colors } from '@/theme/colors';
-import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import {
   AppTheme,
   useAppTheme,
 } from '@/theme/ThemeContext';
+import {
+  useAuth,
+  useClerk,
+} from '@clerk/expo';
 
 const COLORS = [
   '#10B981', // Verde
@@ -234,6 +244,12 @@ export default function CategoriesScreen() {
     if (item.key === 'budgets') {
       setSidebarVisible(false);
       router.push('/budgets');
+      return;
+    }
+
+    if (item.key === 'planned-payments') {
+      setSidebarVisible(false);
+      router.push('/planned-payments');
       return;
     }
 
