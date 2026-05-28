@@ -347,7 +347,7 @@ const resetForm = () => {
                   <View style={styles.budgetDetailRow}>
                     <WalletCards size={15} color={theme.colors.textSecondary} />
                     <Text style={[styles.budgetDetailText, { color: theme.colors.textSecondary }]}>
-                      Billetera: {item.account?.name || 'Personal'}
+                      Cuenta: {item.account?.name || 'Personal'}
                     </Text>
                   </View>
 
