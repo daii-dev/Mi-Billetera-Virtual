@@ -37,6 +37,7 @@ import {
   getUserAccounts,
 } from '@/features/wallet/wallet.service';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
+import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
 import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
@@ -78,6 +79,10 @@ export default function BudgetsScreen() {
   const handleSelectSidebarItem = useSidebarNavigation({
     currentKey: 'budgets',
     onClose: () => setSidebarVisible(false),
+  });
+
+  const sidebarSwipeHandlers = useSidebarSwipe({
+    onOpen: () => setSidebarVisible(true),
   });
 
   const resetForm = () => {
@@ -304,7 +309,10 @@ export default function BudgetsScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      {...sidebarSwipeHandlers}
+    >
       <View style={styles.topBar}>
         <Pressable onPress={() => setSidebarVisible(true)} hitSlop={15}>
           <Menu size={28} color="#FFFFFF" />

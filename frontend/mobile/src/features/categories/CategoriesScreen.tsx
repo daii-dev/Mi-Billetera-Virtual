@@ -36,6 +36,7 @@ import {
   ManualMovementType,
 } from '@/features/wallet/wallet.types';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
+import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
 import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
 import { SidebarRouteKey } from '@/lib/sidebarNavigation';
 import { useSupabase } from '@/lib/useSupabase';
@@ -104,6 +105,10 @@ export default function CategoriesScreen() {
     currentKey: 'categories',
     onClose: () => setSidebarVisible(false),
     onSelectedKeyChange: setSelectedSidebarItem,
+  });
+
+  const sidebarSwipeHandlers = useSidebarSwipe({
+    onOpen: () => setSidebarVisible(true),
   });
 
   async function handleLogout() {
@@ -265,7 +270,10 @@ export default function CategoriesScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      {...sidebarSwipeHandlers}
+    >
       <View style={styles.topBar}>
         <View style={styles.topTitleBox}>
           <Pressable onPress={() => setSidebarVisible(true)} hitSlop={10}>
@@ -280,7 +288,6 @@ export default function CategoriesScreen() {
         </Pressable>
       </View>
 
-      {/* Segmented Control Moderno */}
       <View style={styles.segmentedControl}>
         <TouchableOpacity
           style={[

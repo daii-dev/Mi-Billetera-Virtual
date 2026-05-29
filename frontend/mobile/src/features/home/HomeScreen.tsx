@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useRef,
   useState,
 } from 'react';
 
@@ -14,7 +13,6 @@ import {
 import {
   ActivityIndicator,
   Alert,
-  PanResponder,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -62,6 +60,7 @@ import {
   MovementType,
 } from '@/features/wallet/wallet.types';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
+import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
 import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
 import { SidebarRouteKey } from '@/lib/sidebarNavigation';
 import { useSupabase } from '@/lib/useSupabase';
@@ -121,27 +120,9 @@ export default function HomeScreen() {
     onSelectedKeyChange: setSelectedSidebarItem,
   });
 
-  const openSidebarPanResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        const isFromLeftEdge = gestureState.x0 <= 25;
-        const isSwipeToRight = gestureState.dx > 12;
-        const isHorizontalSwipe =
-          Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
-
-        return isFromLeftEdge && isSwipeToRight && isHorizontalSwipe;
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        const shouldOpen =
-          gestureState.dx > 60 ||
-          gestureState.vx > 0.5;
-
-        if (shouldOpen) {
-          setSidebarVisible(true);
-        }
-      },
-    })
-  ).current;
+  const sidebarSwipeHandlers = useSidebarSwipe({
+    onOpen: () => setSidebarVisible(true),
+  });
 
   async function loadAccount(showFullLoader = false) {
     if (!isLoaded) return;
@@ -456,7 +437,7 @@ export default function HomeScreen() {
     return (
       <View
         style={styles.container}
-        {...openSidebarPanResponder.panHandlers}
+        {...sidebarSwipeHandlers}
       >
         <View style={styles.topBar}>
           <View style={styles.topTitleBox}>
