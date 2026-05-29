@@ -16,7 +16,6 @@ import {
   FlatList,
   Modal,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -266,7 +265,7 @@ export default function CategoriesScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.topBar}>
         <View style={styles.topTitleBox}>
           <Pressable onPress={() => setSidebarVisible(true)} hitSlop={10}>
@@ -536,7 +535,7 @@ export default function CategoriesScreen() {
         onClose={() => setSidebarVisible(false)}
         onSelectItem={handleSelectSidebarItem}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
