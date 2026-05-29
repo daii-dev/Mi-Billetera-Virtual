@@ -10,15 +10,10 @@ import {
 } from 'expo-router';
 import {
   ArrowLeft,
-  CalendarDays,
   ChevronDown,
-  Pencil,
   PiggyBank,
   SlidersHorizontal,
-  Tags,
-  Trash2,
   Wallet,
-  WalletCards,
 } from 'lucide-react-native';
 import {
   ActivityIndicator,
@@ -35,7 +30,6 @@ import {
 } from 'react-native';
 
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
-import { IconActionButton } from '@/components/ui/IconActionButton';
 import {
   getCompletedSavingsGoals,
 } from '@/features/savings-goals/savings-goals.service';
@@ -47,6 +41,7 @@ import {
   sanitizeMoneyInput,
 } from '@/features/wallet/amount.utils';
 import { renderCategoryIcon } from '@/features/wallet/category.utils';
+import { MovementCard } from '@/features/wallet/components/MovementCard';
 import {
   buildCategoryFilterKey,
   getMovementFilterLabel,
@@ -617,100 +612,18 @@ export function MovementManagerScreen({
               : 'Todavía no tienes movimientos registrados.'}
           </Text>
         ) : (
-          filteredMovements.map((movement) => {
-
-            const accountName = movement.savings_goal_account_names
-              || movement.account?.name
-              || 'Cuenta';
-            const isPlannedPaymentMovement = Boolean(movement.planned_payment_id);
-
-            const canEdit = movement.source === 'manual' && !isPlannedPaymentMovement;
-
-            const canDelete =
-              movement.source === 'manual' ||
-              isPlannedPaymentMovement;
-            
-            // Obtener el icono y color de la categoría con valores por defecto
-            const categoryIcon = movement.category_icon || 'Wallet';
-            const categoryColor = movement.category_color || '#D9D9D9';
-
-            return (
-              <View key={movement.id} style={styles.movementCard}>
-                <View style={[styles.movementIcon, { backgroundColor: categoryColor }]}>
-                  {renderCategoryIcon(categoryIcon, 25, '#FFFFFF')}
-                </View>
-
-                <View style={styles.movementInfo}>
-                  <Text style={styles.movementTitle}>
-                    {movement.title}
-                  </Text>
-
-                  <View style={styles.movementDetailRow}>
-                    <WalletCards size={14} color={theme.colors.textSecondary} />
-                    <Text style={styles.movementSubtitle}>
-                      {accountName}
-                    </Text>
-                  </View>
-
-                  {movement.category_name && (
-                    <View style={styles.movementDetailRow}>
-                      <Tags size={14} color={theme.colors.textSecondary} />
-                      <Text style={styles.movementSubtitle}>
-                        {movement.category_name}
-                      </Text>
-                    </View>
-                  )}
-
-                  {movement.source === 'savings_goal' && movement.description && (
-                    <Text style={styles.movementSubtitle}>
-                      {movement.description}
-                    </Text>
-                  )}
-
-                  <View style={styles.movementDetailRow}>
-                    <CalendarDays size={14} color={theme.colors.textSecondary} />
-                    <Text style={styles.movementDate}>
-                      {movement.movement_date}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.amountBox}>
-                  {(canEdit || canDelete) && (
-                    <View style={styles.cardActions}>
-                      {canEdit && (
-                        <IconActionButton onPress={() => openEditModal(movement)}>
-                          <Pencil size={18} color={theme.colors.primary} />
-                        </IconActionButton>
-                      )}
-
-                      {canDelete && (
-                        <IconActionButton
-                          onPress={() => {
-                            setSelectedMovement(movement);
-                            setModalMode('delete');
-                          }}
-                        >
-                          <Trash2 size={18} color={colors.expense} />
-                        </IconActionButton>
-                      )}
-                    </View>
-                  )}
-
-                  <Text
-                    style={[
-                      styles.movementAmount,
-                      {
-                        color: isIncome ? colors.secondary : colors.expense,
-                      },
-                    ]}
-                  >
-                    {amountSign}{money(movement.amount)}
-                  </Text>
-                </View>
-              </View>
-            );
-          })
+          filteredMovements.map((movement) => (
+            <MovementCard
+              key={movement.id}
+              movement={movement}
+              type={type}
+              onEdit={openEditModal}
+              onDelete={(movementToDelete) => {
+                setSelectedMovement(movementToDelete);
+                setModalMode('delete');
+              }}
+            />
+          ))
         )}
       </ScrollView>
 
@@ -1470,68 +1383,6 @@ function createStyles(
       fontSize: 14,
       textAlign: 'center',
       marginTop: 16,
-    },
-    movementCard: {
-      minHeight: 88,
-      backgroundColor: theme.colors.card,
-      borderRadius: 12,
-      padding: 14,
-      marginBottom: 14,
-      flexDirection: 'row',
-      alignItems: 'center',
-      shadowColor: '#000',
-      shadowOpacity: 0.16,
-      shadowOffset: { width: 0, height: 2 },
-      shadowRadius: 3,
-      elevation: 3,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-    },
-    movementIcon: {
-      width: 46,
-      height: 46,
-      borderRadius: 23,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    movementInfo: {
-      flex: 1,
-      marginLeft: 14,
-    },
-    movementTitle: {
-      color: theme.colors.text,
-      fontSize: 15,
-      fontWeight: '900',
-    },
-    movementSubtitle: {
-      marginTop: 4,
-      color: theme.colors.textSecondary,
-      fontSize: 12,
-    },
-    movementDetailRow: {
-      marginTop: 4,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    movementDate: {
-      marginTop: 4,
-      color: theme.colors.textSecondary,
-      fontSize: 12,
-    },
-    amountBox: {
-      alignItems: 'flex-end',
-      justifyContent: 'space-between',
-      minHeight: 64,
-      marginLeft: 8,
-    },
-    cardActions: {
-      flexDirection: 'row',
-      gap: 4,
-    },
-    movementAmount: {
-      fontSize: 12,
-      fontWeight: '900',
     },
     fullFormPage: {
       flex: 1,
