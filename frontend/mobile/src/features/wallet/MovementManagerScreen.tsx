@@ -35,6 +35,7 @@ import {
 } from 'react-native';
 
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import {
   getCompletedSavingsGoals,
 } from '@/features/savings-goals/savings-goals.service';
@@ -46,7 +47,6 @@ import {
   parseMoneyInput,
   sanitizeMoneyInput,
 } from '@/features/wallet/amount.utils';
-// Importar la función para renderizar iconos
 import { renderCategoryIcon } from '@/features/wallet/category.utils';
 import {
   createManualMovement,
@@ -649,26 +649,20 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
                   {(canEdit || canDelete) && (
                     <View style={styles.cardActions}>
                       {canEdit && (
-                        <Pressable
-                          onPress={() => openEditModal(movement)}
-                          hitSlop={10}
-                          style={styles.iconButton}
-                        >
+                        <IconActionButton onPress={() => openEditModal(movement)}>
                           <Pencil size={18} color={theme.colors.primary} />
-                        </Pressable>
+                        </IconActionButton>
                       )}
 
                       {canDelete && (
-                        <Pressable
+                        <IconActionButton
                           onPress={() => {
                             setSelectedMovement(movement);
                             setModalMode('delete');
                           }}
-                          hitSlop={10}
-                          style={styles.iconButton}
                         >
                           <Trash2 size={18} color={colors.expense} />
-                        </Pressable>
+                        </IconActionButton>
                       )}
                     </View>
                   )}
@@ -1498,14 +1492,6 @@ function createStyles(
     cardActions: {
       flexDirection: 'row',
       gap: 4,
-    },
-    iconButton: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.mode === 'dark' ? '#0F172A' : '#F8FAFC',
     },
     movementAmount: {
       fontSize: 12,
