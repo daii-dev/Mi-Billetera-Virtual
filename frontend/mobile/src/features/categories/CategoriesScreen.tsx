@@ -6,11 +6,7 @@ import {
 } from 'react';
 
 import { router } from 'expo-router';
-import {
-  LogOut,
-  Menu,
-  Trash2,
-} from 'lucide-react-native';
+import { Trash2 } from 'lucide-react-native';
 import {
   Alert,
   FlatList,
@@ -38,6 +34,7 @@ import {
 import { useProfileName } from '@/hooks/useProfileName';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
+import { AppHeader } from '@/layouts/header/AppHeader';
 import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
 import { SidebarRouteKey } from '@/lib/sidebarNavigation';
 import { useSupabase } from '@/lib/useSupabase';
@@ -275,19 +272,11 @@ export default function CategoriesScreen() {
       style={styles.container}
       {...sidebarSwipeHandlers}
     >
-      <View style={styles.topBar}>
-        <View style={styles.topTitleBox}>
-          <Pressable onPress={() => setSidebarVisible(true)} hitSlop={10}>
-            <Menu size={28} color="#FFFFFF" />
-          </Pressable>
-
-          <Text style={styles.topTitle}>Categorías</Text>
-        </View>
-
-        <Pressable onPress={handleLogout} hitSlop={10}>
-          <LogOut size={26} color="#FFFFFF" />
-        </Pressable>
-      </View>
+      <AppHeader
+        title="Categorías"
+        onOpenSidebar={() => setSidebarVisible(true)}
+        onLogout={handleLogout}
+      />
 
       <View style={styles.segmentedControl}>
         <TouchableOpacity
@@ -553,29 +542,6 @@ function createStyles(theme: AppTheme) {
       flex: 1,
       backgroundColor: theme.colors.background,
     },
-
-    topBar: {
-      height: 92,
-      backgroundColor: theme.colors.sidebarHeader,
-      paddingHorizontal: 18,
-      paddingTop: 42,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-
-    topTitleBox: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-
-    topTitle: {
-      color: '#FFFFFF',
-      fontSize: 25,
-      fontWeight: '900',
-    },
-
     segmentedControl: {
       flexDirection: 'row',
       backgroundColor: theme.mode === 'dark' ? '#1E293B' : '#F3F4F6',
@@ -584,32 +550,26 @@ function createStyles(theme: AppTheme) {
       borderRadius: 12,
       padding: 4,
     },
-
     segmentButton: {
       flex: 1,
       paddingVertical: 10,
       borderRadius: 8,
       alignItems: 'center',
     },
-
     segmentButtonActiveExpense: {
       backgroundColor: '#EF4444',
     },
-
     segmentButtonActiveIncome: {
       backgroundColor: '#10B981',
     },
-
     segmentText: {
       fontSize: 15,
       fontWeight: '600',
       color: theme.mode === 'dark' ? '#CBD5E1' : '#6B7280',
     },
-
     segmentTextActive: {
       color: '#FFF',
     },
-
     categoriesList: {
       paddingHorizontal: 24,
       paddingBottom: 80,

@@ -5,8 +5,6 @@ import {
 
 import { router } from 'expo-router';
 import {
-  LogOut,
-  Menu,
   MoreVertical,
   Trash2,
   Wallet,
@@ -42,6 +40,7 @@ import { Account } from '@/features/wallet/wallet.types';
 import { useProfileName } from '@/hooks/useProfileName';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
+import { AppHeader } from '@/layouts/header/AppHeader';
 import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
 import { SidebarRouteKey } from '@/lib/sidebarNavigation';
 import { useSupabase } from '@/lib/useSupabase';
@@ -308,22 +307,11 @@ export default function AccountsScreen() {
       style={styles.container}
       {...sidebarSwipeHandlers}
     >
-      <View style={styles.topBar}>
-        <View style={styles.topTitleBox}>
-          <Pressable
-            onPress={() => setSidebarVisible(true)}
-            hitSlop={10}
-          >
-            <Menu size={28} color="#FFFFFF" />
-          </Pressable>
-
-          <Text style={styles.topTitle}>Cuentas</Text>
-        </View>
-
-        <Pressable onPress={handleLogout} hitSlop={10}>
-          <LogOut size={26} color="#FFFFFF" />
-        </Pressable>
-      </View>
+      <AppHeader
+        title="Cuentas"
+        onOpenSidebar={() => setSidebarVisible(true)}
+        onLogout={handleLogout}
+      />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -593,25 +581,6 @@ function createStyles(theme: AppTheme) {
     container: {
       flex: 1,
       backgroundColor: theme.colors.background,
-    },
-    topBar: {
-      height: 80,
-      backgroundColor: theme.colors.sidebarHeader,
-      paddingHorizontal: 18,
-      paddingTop: 32,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    topTitleBox: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-    topTitle: {
-      color: '#FFFFFF',
-      fontSize: 25,
-      fontWeight: '900',
     },
     content: {
       padding: 14,

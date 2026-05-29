@@ -7,15 +7,10 @@ import {
   router,
   useFocusEffect,
 } from 'expo-router';
-import {
-  LogOut,
-  Menu,
-  Target,
-} from 'lucide-react-native';
+import { Target } from 'lucide-react-native';
 import {
   ActivityIndicator,
   Alert,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -48,6 +43,7 @@ import { Account } from '@/features/wallet/wallet.types';
 import { useProfileName } from '@/hooks/useProfileName';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
+import { AppHeader } from '@/layouts/header/AppHeader';
 import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
@@ -247,18 +243,11 @@ export default function GoalsScreen() {
       style={styles.container}
       {...sidebarSwipeHandlers}
     >
-      <View style={styles.topBar}>
-        <View style={styles.topTitleBox}>
-          <Pressable onPress={() => setSidebarVisible(true)} hitSlop={10}>
-            <Menu size={28} color="#FFFFFF" />
-          </Pressable>
-          <Text style={styles.topTitle}>Metas de Ahorro</Text>
-        </View>
-
-        <Pressable onPress={handleLogout} hitSlop={10}>
-          <LogOut size={26} color="#FFFFFF" />
-        </Pressable>
-      </View>
+      <AppHeader
+        title="Metas de Ahorro"
+        onOpenSidebar={() => setSidebarVisible(true)}
+        onLogout={handleLogout}
+      />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -360,29 +349,6 @@ function createStyles(theme: AppTheme) {
     container: {
       flex: 1,
       backgroundColor: theme.colors.background,
-    },
-    topBar: {
-      minHeight: 80,
-      backgroundColor: theme.colors.sidebarHeader,
-      paddingHorizontal: 18,
-      paddingTop: 32,
-      paddingBottom: 10,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    topTitleBox: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      paddingRight: 10,
-    },
-    topTitle: {
-      color: '#FFFFFF',
-      fontSize: 23,
-      fontWeight: '900',
-      flexShrink: 1,
     },
     content: {
       padding: 16,

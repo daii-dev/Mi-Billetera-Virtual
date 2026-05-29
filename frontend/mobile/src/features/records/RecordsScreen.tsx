@@ -8,8 +8,6 @@ import {
   useLocalSearchParams,
 } from 'expo-router';
 import {
-  LogOut,
-  Menu,
   TrendingDown,
   TrendingUp,
 } from 'lucide-react-native';
@@ -30,6 +28,7 @@ import {
 import { useProfileName } from '@/hooks/useProfileName';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
+import { AppHeader } from '@/layouts/header/AppHeader';
 import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
 import { SidebarRouteKey } from '@/lib/sidebarNavigation';
 import { useSupabase } from '@/lib/useSupabase';
@@ -200,22 +199,11 @@ export default function RecordsScreen() {
       style={styles.container}
       {...sidebarSwipeHandlers}
     >
-      <View style={styles.topBar}>
-        <View style={styles.topTitleBox}>
-          <Pressable
-            onPress={() => setSidebarVisible(true)}
-            hitSlop={10}
-          >
-            <Menu size={28} color="#FFFFFF" />
-          </Pressable>
-
-          <Text style={styles.topTitle}>Registros</Text>
-        </View>
-
-        <Pressable onPress={handleLogout} hitSlop={10}>
-          <LogOut size={26} color="#FFFFFF" />
-        </Pressable>
-      </View>
+      <AppHeader
+        title="Registros"
+        onOpenSidebar={() => setSidebarVisible(true)}
+        onLogout={handleLogout}
+      />
 
       <MovementManagerScreen
         key={selectedType}
@@ -257,25 +245,6 @@ function createStyles(theme: AppTheme) {
     container: {
       flex: 1,
       backgroundColor: theme.colors.background,
-    },
-    topBar: {
-      height: 92,
-      backgroundColor: theme.colors.sidebarHeader,
-      paddingHorizontal: 18,
-      paddingTop: 42,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    topTitleBox: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-    topTitle: {
-      color: '#FFFFFF',
-      fontSize: 25,
-      fontWeight: '900',
     },
     tabsRow: {
       flexDirection: 'row',

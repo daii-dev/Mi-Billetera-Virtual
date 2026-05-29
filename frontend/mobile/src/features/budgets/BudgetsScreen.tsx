@@ -3,14 +3,13 @@ import React, {
   useState,
 } from 'react';
 
+import { router } from 'expo-router';
 import {
   AlertTriangle,
   Calendar,
   CalendarDays,
   ChevronDown,
   Hourglass,
-  LogOut,
-  Menu,
   Pencil,
   Tags,
   Trash2,
@@ -39,17 +38,22 @@ import {
 import { useProfileName } from '@/hooks/useProfileName';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
+import { AppHeader } from '@/layouts/header/AppHeader';
 import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import { useAppTheme } from '@/theme/ThemeContext';
-import { useAuth } from '@clerk/expo';
+import {
+  useAuth,
+  useClerk,
+} from '@clerk/expo';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function BudgetsScreen() {
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
   const supabase = useSupabase();
   const { userId } = useAuth();
+  const { signOut } = useClerk();
   const [sidebarVisible, setSidebarVisible] = useState(false); 
   const [budgets, setBudgets] = useState<any[]>([]);
   const [myAccounts, setMyAccounts] = useState<any[]>([]);
@@ -304,20 +308,25 @@ export default function BudgetsScreen() {
     }
   };
 
+  async function handleLogout() {
+    try {
+      await signOut();
+      router.replace('/sign-in');
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'No se pudo cerrar sesión');
+    }
+  }
+
   return (
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       {...sidebarSwipeHandlers}
     >
-      <View style={styles.topBar}>
-        <Pressable onPress={() => setSidebarVisible(true)} hitSlop={15}>
-          <Menu size={28} color="#FFFFFF" />
-        </Pressable>
-        <View style={styles.topTitleBox}>
-          <Text style={styles.topTitle}>Presupuestos</Text>
-        </View>
-        <LogOut size={26} color="#FFFFFF" />
-      </View>
+      <AppHeader
+        title="Presupuestos"
+        onOpenSidebar={() => setSidebarVisible(true)}
+        onLogout={handleLogout}
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
         {budgets.map((item) => {
@@ -572,9 +581,6 @@ export default function BudgetsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  topBar: { height: 92, backgroundColor: '#082B8C', paddingHorizontal: 18, paddingTop: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  topTitleBox: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingRight: 28 }, 
-  topTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '900' },
   content: { padding: 16 },
   card: { borderRadius: 12, padding: 16, marginBottom: 15, borderWidth: 1, elevation: 3, position: 'relative' },
   notificationBanner: { flexDirection: 'row', alignItems: 'center', padding: 8, borderRadius: 6, marginBottom: 10, gap: 6 },

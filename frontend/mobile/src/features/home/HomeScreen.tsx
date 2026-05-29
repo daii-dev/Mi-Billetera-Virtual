@@ -5,11 +5,7 @@ import {
 } from 'react';
 
 import { router } from 'expo-router';
-import {
-  LogOut,
-  Menu,
-  SlidersHorizontal,
-} from 'lucide-react-native';
+import { SlidersHorizontal } from 'lucide-react-native';
 import {
   ActivityIndicator,
   Alert,
@@ -61,6 +57,7 @@ import {
 import { useProfileName } from '@/hooks/useProfileName';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
+import { AppHeader } from '@/layouts/header/AppHeader';
 import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
 import { SidebarRouteKey } from '@/lib/sidebarNavigation';
 import { useSupabase } from '@/lib/useSupabase';
@@ -429,22 +426,11 @@ export default function HomeScreen() {
         style={styles.container}
         {...sidebarSwipeHandlers}
       >
-        <View style={styles.topBar}>
-          <View style={styles.topTitleBox}>
-            <Pressable
-              onPress={() => setSidebarVisible(true)}
-              hitSlop={10}
-            >
-              <Menu size={28} color="#FFFFFF" />
-            </Pressable>
-
-            <Text style={styles.topTitle}>Inicio</Text>
-          </View>
-
-          <Pressable onPress={handleLogout} hitSlop={10}>
-            <LogOut size={26} color="#FFFFFF" />
-          </Pressable>
-        </View>
+        <AppHeader
+          title="Inicio"
+          onOpenSidebar={() => setSidebarVisible(true)}
+          onLogout={handleLogout}
+        />
 
         <ScrollView
           contentContainerStyle={styles.content}
@@ -579,25 +565,6 @@ export default function HomeScreen() {
       container: {
         flex: 1,
         backgroundColor: theme.colors.background,
-      },
-      topBar: {
-        height: 92,
-        backgroundColor: theme.colors.sidebarHeader,
-        paddingHorizontal: 18,
-        paddingTop: 42,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      },
-      topTitleBox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-      },
-      topTitle: {
-        color: '#FFFFFF',
-        fontSize: 25,
-        fontWeight: '900',
       },
       content: {
         padding: 16,

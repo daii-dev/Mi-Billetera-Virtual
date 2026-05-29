@@ -9,8 +9,6 @@ import {
   CalendarClock,
   CalendarDays,
   ChevronDown,
-  LogOut,
-  Menu,
   Pencil,
   Trash2,
   Wallet,
@@ -59,6 +57,7 @@ import {
 import { useProfileName } from '@/hooks/useProfileName';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
+import { AppHeader } from '@/layouts/header/AppHeader';
 import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
@@ -412,22 +411,11 @@ export default function PlannedPaymentsScreen() {
       style={styles.container}
       {...sidebarSwipeHandlers}
     >
-      <View style={styles.topBar}>
-        <View style={styles.topTitleBox}>
-          <Pressable
-            onPress={() => setSidebarVisible(true)}
-            hitSlop={10}
-          >
-            <Menu size={28} color="#FFFFFF" />
-          </Pressable>
-
-          <Text style={styles.topTitle}>Pagos Planificados</Text>
-        </View>
-
-        <Pressable onPress={handleLogout} hitSlop={10}>
-          <LogOut size={26} color="#FFFFFF" />
-        </Pressable>
-      </View>
+      <AppHeader
+        title="Pagos Planificados"
+        onOpenSidebar={() => setSidebarVisible(true)}
+        onLogout={handleLogout}
+      />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -864,26 +852,6 @@ function createStyles(theme: AppTheme) {
     container: {
       flex: 1,
       backgroundColor: theme.colors.background,
-    },
-    topBar: {
-      height: 94,
-      backgroundColor: theme.colors.sidebarHeader,
-      paddingHorizontal: 14,
-      paddingTop: 44,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    topTitleBox: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      flex: 1,
-    },
-    topTitle: {
-      color: '#FFFFFF',
-      fontSize: 24,
-      fontWeight: '900',
     },
     content: {
       padding: 12,
