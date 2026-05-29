@@ -40,7 +40,6 @@ import {
   getCompletedSavingsGoals,
 } from '@/features/savings-goals/savings-goals.service';
 import { SavingsGoal } from '@/features/savings-goals/savings-goals.types';
-import { AccountFilterModal } from '@/features/wallet/AccountFilterModal';
 import {
   formatMoneyInput,
   isValidMoneyInput,
@@ -48,6 +47,12 @@ import {
   sanitizeMoneyInput,
 } from '@/features/wallet/amount.utils';
 import { renderCategoryIcon } from '@/features/wallet/category.utils';
+import {
+  buildCategoryFilterKey,
+  getMovementFilterLabel,
+  movementMatchesCategoryFilter,
+} from '@/features/wallet/movement-filter.utils';
+import { MovementFilterModal } from '@/features/wallet/MovementFilterModal';
 import {
   createManualMovement,
   deleteManualMovement,
@@ -131,7 +136,8 @@ export function MovementManagerScreen({
   const [completedGoals, setCompletedGoals] = useState<SavingsGoal[]>([]);
 
   const [filterVisible, setFilterVisible] = useState(false);
-const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
+  const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
+  const [selectedFilterCategoryKey, setSelectedFilterCategoryKey] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -511,9 +517,33 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
     (account) => account.id === selectedFilterAccountId
   );
 
-  const filteredMovements = selectedFilterAccountId
-    ? movements.filter((movement) => movement.account_id === selectedFilterAccountId)
-    : movements;
+  const selectedFilterCategory = categories.find(
+    (category) =>
+      buildCategoryFilterKey(category.type, category.name) === selectedFilterCategoryKey
+  );
+
+  const hasActiveFilters = Boolean(
+    selectedFilterAccountId ||
+    selectedFilterCategoryKey
+  );
+
+  const filterButtonLabel = getMovementFilterLabel(
+    selectedFilterAccount?.name,
+    selectedFilterCategory?.name
+  );
+
+  const filteredMovements = movements.filter((movement) => {
+    const matchesAccount =
+      !selectedFilterAccountId ||
+      movement.account_id === selectedFilterAccountId;
+
+    const matchesCategory = movementMatchesCategoryFilter(
+      movement,
+      selectedFilterCategoryKey
+    );
+
+    return matchesAccount && matchesCategory;
+  });
 
   if (loading) {
     return (
@@ -559,31 +589,31 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
           <Pressable
             style={[
               styles.filterButton,
-              selectedFilterAccountId && styles.filterButtonActive,
+              hasActiveFilters && styles.filterButtonActive,
             ]}
             onPress={() => setFilterVisible(true)}
           >
             <SlidersHorizontal
               size={16}
-              color={selectedFilterAccountId ? colors.primary : theme.colors.text}
+              color={hasActiveFilters ? colors.primary : theme.colors.text}
             />
 
             <Text
               style={[
                 styles.filterButtonText,
-                selectedFilterAccountId && styles.filterButtonTextActive,
+                hasActiveFilters && styles.filterButtonTextActive,
               ]}
               numberOfLines={1}
             >
-              {selectedFilterAccount?.name ?? 'Filtrar'}
+              {filterButtonLabel}
             </Text>
           </Pressable>
         </View>
 
         {filteredMovements.length === 0 ? (
           <Text style={styles.emptyText}>
-            {selectedFilterAccountId
-              ? 'No hay movimientos para esta cuenta.'
+            {hasActiveFilters
+              ? 'No hay movimientos con los filtros seleccionados.'
               : 'Todavía no tienes movimientos registrados.'}
           </Text>
         ) : (
@@ -691,13 +721,19 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
         />
       )}
 
-      <AccountFilterModal
+      <MovementFilterModal
         visible={filterVisible}
         accounts={accounts}
+        categories={categories}
         selectedAccountId={selectedFilterAccountId}
-        title="Filtrar por cuenta"
+        selectedCategoryKey={selectedFilterCategoryKey}
+        title="Filtrar movimientos"
         onSelectAccount={setSelectedFilterAccountId}
-        onClear={() => setSelectedFilterAccountId('')}
+        onSelectCategory={setSelectedFilterCategoryKey}
+        onClear={() => {
+          setSelectedFilterAccountId('');
+          setSelectedFilterCategoryKey('');
+        }}
         onClose={() => setFilterVisible(false)}
       />
 

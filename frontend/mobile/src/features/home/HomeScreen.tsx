@@ -36,7 +36,6 @@ import { HomeBalanceCard } from '@/features/home/components/HomeBalanceCard';
 import {
   processDuePlannedPayments,
 } from '@/features/planned-payments/planned-payments.service';
-import { AccountFilterModal } from '@/features/wallet/AccountFilterModal';
 import {
   formatMoneyInput,
   isValidMoneyInput,
@@ -44,6 +43,12 @@ import {
   sanitizeMoneyInput,
 } from '@/features/wallet/amount.utils';
 import { renderCategoryIcon } from '@/features/wallet/category.utils';
+import {
+  buildCategoryFilterKey,
+  getMovementFilterLabel,
+  movementMatchesCategoryFilter,
+} from '@/features/wallet/movement-filter.utils';
+import { MovementFilterModal } from '@/features/wallet/MovementFilterModal';
 import {
   deleteManualMovement,
   getAccountsTotal,
@@ -95,6 +100,7 @@ export default function HomeScreen() {
   const [expenseCategories, setExpenseCategories] = useState<Category[]>([]);
   const [homeFilterVisible, setHomeFilterVisible] = useState(false);
   const [selectedHomeFilterAccountId, setSelectedHomeFilterAccountId] = useState('');
+  const [selectedHomeFilterCategoryKey, setSelectedHomeFilterCategoryKey] = useState('');
   const [profileName, setProfileName] = useState('Usuario');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -422,9 +428,38 @@ export default function HomeScreen() {
       (account) => account.id === selectedHomeFilterAccountId
     );
 
-    const filteredHomeMovements = selectedHomeFilterAccountId
-      ? movements.filter((movement) => movement.account_id === selectedHomeFilterAccountId)
-      : movements;
+    const homeFilterCategories = [
+      ...incomeCategories,
+      ...expenseCategories,
+    ];
+
+    const selectedHomeFilterCategory = homeFilterCategories.find(
+      (category) =>
+        buildCategoryFilterKey(category.type, category.name) === selectedHomeFilterCategoryKey
+    );
+
+    const hasHomeFilters = Boolean(
+      selectedHomeFilterAccountId ||
+      selectedHomeFilterCategoryKey
+    );
+
+    const homeFilterButtonLabel = getMovementFilterLabel(
+      selectedHomeFilterAccount?.name,
+      selectedHomeFilterCategory?.name
+    );
+
+    const filteredHomeMovements = movements.filter((movement) => {
+      const matchesAccount =
+        !selectedHomeFilterAccountId ||
+        movement.account_id === selectedHomeFilterAccountId;
+
+      const matchesCategory = movementMatchesCategoryFilter(
+        movement,
+        selectedHomeFilterCategoryKey
+      );
+
+      return matchesAccount && matchesCategory;
+    });
 
     return (
       <View
@@ -466,30 +501,30 @@ export default function HomeScreen() {
             <Pressable
               style={[
                 styles.filterButton,
-                selectedHomeFilterAccountId && styles.filterButtonActive,
+                hasHomeFilters && styles.filterButtonActive,
               ]}
               onPress={() => setHomeFilterVisible(true)}
             >
               <SlidersHorizontal
                 size={16}
-                color={selectedHomeFilterAccountId ? colors.primary : theme.colors.text}
+                color={hasHomeFilters ? colors.primary : theme.colors.text}
               />
 
               <Text
                 style={[
                   styles.filterButtonText,
-                  selectedHomeFilterAccountId && styles.filterButtonTextActive,
+                  hasHomeFilters && styles.filterButtonTextActive,
                 ]}
                 numberOfLines={1}
               >
-                {selectedHomeFilterAccount?.name ?? 'Filtrar'}
+                {homeFilterButtonLabel}
               </Text>
             </Pressable>
           </View>
 
           {filteredHomeMovements.length === 0 ? (
             <Text style={styles.emptyText}>
-              {selectedHomeFilterAccountId
+              {hasHomeFilters
                 ? 'No hay movimientos para esta cuenta.'
                 : 'Todavía no tienes movimientos registrados.'}
             </Text>
@@ -596,13 +631,19 @@ export default function HomeScreen() {
           )}
         </ScrollView>
 
-        <AccountFilterModal
+        <MovementFilterModal
           visible={homeFilterVisible}
           accounts={accounts}
+          categories={homeFilterCategories}
           selectedAccountId={selectedHomeFilterAccountId}
+          selectedCategoryKey={selectedHomeFilterCategoryKey}
           title="Filtrar movimientos"
           onSelectAccount={setSelectedHomeFilterAccountId}
-          onClear={() => setSelectedHomeFilterAccountId('')}
+          onSelectCategory={setSelectedHomeFilterCategoryKey}
+          onClear={() => {
+            setSelectedHomeFilterAccountId('');
+            setSelectedHomeFilterCategoryKey('');
+          }}
           onClose={() => setHomeFilterVisible(false)}
         />
 

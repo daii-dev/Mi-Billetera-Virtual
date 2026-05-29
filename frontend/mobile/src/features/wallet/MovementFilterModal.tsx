@@ -1,37 +1,54 @@
 import {
+  Tags,
+  WalletCards,
+} from 'lucide-react-native';
+import {
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 
-import { Account } from '@/features/wallet/wallet.types';
+import {
+  buildCategoryFilterKey,
+} from '@/features/wallet/movement-filter.utils';
+import {
+  Account,
+  Category,
+} from '@/features/wallet/wallet.types';
 import { colors } from '@/theme/colors';
 import {
   AppTheme,
   useAppTheme,
 } from '@/theme/ThemeContext';
 
-type AccountFilterModalProps = {
+type MovementFilterModalProps = {
   visible: boolean;
   accounts: Account[];
+  categories: Category[];
   selectedAccountId: string;
+  selectedCategoryKey: string;
   title?: string;
   onSelectAccount: (accountId: string) => void;
+  onSelectCategory: (categoryKey: string) => void;
   onClear: () => void;
   onClose: () => void;
 };
 
-export function AccountFilterModal({
+export function MovementFilterModal({
   visible,
   accounts,
+  categories,
   selectedAccountId,
-  title = 'Filtrar por cuenta',
+  selectedCategoryKey,
+  title = 'Filtrar movimientos',
   onSelectAccount,
+  onSelectCategory,
   onClear,
   onClose,
-}: AccountFilterModalProps) {
+}: MovementFilterModalProps) {
   const { theme } = useAppTheme();
   const styles = createStyles(theme);
 
@@ -53,7 +70,12 @@ export function AccountFilterModal({
             <Text style={styles.modalTitle}>{title}</Text>
           </View>
 
-          <View style={styles.content}>
+          <ScrollView contentContainerStyle={styles.content}>
+            <View style={styles.sectionTitleRow}>
+              <WalletCards size={17} color={theme.colors.text} />
+              <Text style={styles.sectionTitle}>Cuentas</Text>
+            </View>
+
             {accounts.length === 0 ? (
               <Text style={styles.emptyText}>
                 No tienes cuentas disponibles para filtrar.
@@ -70,32 +92,87 @@ export function AccountFilterModal({
                       isSelected && styles.optionSelected,
                     ]}
                     onPress={() => {
-                      onSelectAccount(account.id);
-                      onClose();
+                      onSelectAccount(isSelected ? '' : account.id);
                     }}
                   >
-                    <View>
-                      <Text
-                        style={[
-                          styles.optionTitle,
-                          isSelected && styles.optionTitleSelected,
-                        ]}
-                      >
-                        {account.name}
-                      </Text>
+                    <Text
+                      style={[
+                        styles.optionTitle,
+                        isSelected && styles.optionTitleSelected,
+                      ]}
+                    >
+                      {account.name}
+                    </Text>
 
-                      <Text
-                        style={[
-                          styles.optionSubtitle,
-                          isSelected && styles.optionSubtitleSelected,
-                        ]}
-                      >
-                        Bs. {Number(account.current_balance ?? 0).toLocaleString('es-BO', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </Text>
-                    </View>
+                    <Text
+                      style={[
+                        styles.optionSubtitle,
+                        isSelected && styles.optionSubtitleSelected,
+                      ]}
+                    >
+                      Bs. {Number(account.current_balance ?? 0).toLocaleString('es-BO', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </Text>
+                  </Pressable>
+                );
+              })
+            )}
+
+            <View style={styles.separator} />
+
+            <View style={styles.sectionTitleRow}>
+              <Tags size={17} color={theme.colors.text} />
+              <Text style={styles.sectionTitle}>Categorías</Text>
+            </View>
+
+            {categories.length === 0 ? (
+              <Text style={styles.emptyText}>
+                No tienes categorías disponibles para filtrar.
+              </Text>
+            ) : (
+              categories.map((category) => {
+                const categoryKey = buildCategoryFilterKey(
+                  category.type,
+                  category.name
+                );
+
+                const isSelected = selectedCategoryKey === categoryKey;
+
+                const typeLabel =
+                  category.type === 'income'
+                    ? 'Ingreso'
+                    : 'Gasto';
+
+                return (
+                  <Pressable
+                    key={categoryKey}
+                    style={[
+                      styles.option,
+                      isSelected && styles.optionSelected,
+                    ]}
+                    onPress={() => {
+                      onSelectCategory(isSelected ? '' : categoryKey);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.optionTitle,
+                        isSelected && styles.optionTitleSelected,
+                      ]}
+                    >
+                      {category.name}
+                    </Text>
+
+                    <Text
+                      style={[
+                        styles.optionSubtitle,
+                        isSelected && styles.optionSubtitleSelected,
+                      ]}
+                    >
+                      Categoría de {typeLabel}
+                    </Text>
                   </Pressable>
                 );
               })
@@ -113,13 +190,13 @@ export function AccountFilterModal({
               </Pressable>
 
               <Pressable
-                style={[styles.actionButton, styles.closeButton]}
+                style={[styles.actionButton, styles.applyButton]}
                 onPress={onClose}
               >
-                <Text style={styles.actionButtonText}>Cerrar</Text>
+                <Text style={styles.actionButtonText}>Aplicar</Text>
               </Pressable>
             </View>
-          </View>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -137,7 +214,8 @@ function createStyles(theme: AppTheme) {
     },
     modalBox: {
       width: '100%',
-      maxWidth: 340,
+      maxWidth: 350,
+      maxHeight: '82%',
       backgroundColor: theme.colors.card,
       borderRadius: 14,
       overflow: 'hidden',
@@ -157,8 +235,24 @@ function createStyles(theme: AppTheme) {
       padding: 18,
       gap: 10,
     },
+    sectionTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+      marginTop: 2,
+    },
+    sectionTitle: {
+      color: theme.colors.text,
+      fontSize: 16,
+      fontWeight: '900',
+    },
+    separator: {
+      height: 1,
+      backgroundColor: theme.colors.border,
+      marginVertical: 8,
+    },
     option: {
-      minHeight: 58,
+      minHeight: 56,
       borderRadius: 12,
       borderWidth: 1,
       borderColor: theme.colors.border,
@@ -196,7 +290,7 @@ function createStyles(theme: AppTheme) {
       paddingVertical: 14,
     },
     actionsRow: {
-      marginTop: 8,
+      marginTop: 10,
       flexDirection: 'row',
       justifyContent: 'center',
       gap: 14,
@@ -216,7 +310,7 @@ function createStyles(theme: AppTheme) {
     clearButton: {
       backgroundColor: colors.expense,
     },
-    closeButton: {
+    applyButton: {
       backgroundColor: colors.secondary,
     },
     actionButtonText: {
