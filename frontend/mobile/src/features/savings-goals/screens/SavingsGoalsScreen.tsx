@@ -1,6 +1,5 @@
 import {
   useCallback,
-  useRef,
   useState,
 } from 'react';
 
@@ -8,16 +7,10 @@ import {
   router,
   useFocusEffect,
 } from 'expo-router';
-import {
-  LogOut,
-  Menu,
-  Target,
-} from 'lucide-react-native';
+import { Target } from 'lucide-react-native';
 import {
   ActivityIndicator,
   Alert,
-  PanResponder,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -44,65 +37,32 @@ import {
 } from '@/features/savings-goals/savings-goals.types';
 import {
   getUserAccounts,
-  getUserProfile,
   money,
 } from '@/features/wallet/wallet.service';
 import { Account } from '@/features/wallet/wallet.types';
-import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
-import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
+import {
+  PrivateScreenLayout,
+} from '@/layouts/private-screen/PrivateScreenLayout';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
   AppTheme,
   useAppTheme,
 } from '@/theme/ThemeContext';
-import {
-  useAuth,
-  useClerk,
-  useUser,
-} from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 
 export default function GoalsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
-  const { user } = useUser();
-  const { signOut } = useClerk();
   const supabase = useSupabase();
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
   const styles = createStyles(theme);
-
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
-  const [profileName, setProfileName] = useState('Usuario');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [sidebarVisible, setSidebarVisible] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedGoal, setSelectedGoal] = useState<SavingsGoal | null>(null);
   const [contributionModalVisible, setContributionModalVisible] = useState(false);
   const [savingContribution, setSavingContribution] = useState(false);
-
-  const handleSelectSidebarItem = useSidebarNavigation({
-    currentKey: 'goals',
-    onClose: () => setSidebarVisible(false),
-  });
-
-  const openSidebarPanResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        const isFromLeftEdge = gestureState.x0 <= 25;
-        const isSwipeToRight = gestureState.dx > 12;
-        const isHorizontalSwipe = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
-
-        return isFromLeftEdge && isSwipeToRight && isHorizontalSwipe;
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        const shouldOpen = gestureState.dx > 60 || gestureState.vx > 0.5;
-
-        if (shouldOpen) {
-          setSidebarVisible(true);
-        }
-      },
-    })
-  ).current;
 
   const loadGoals = useCallback(async (showFullLoader = false) => {
     if (!isLoaded) return;
@@ -119,18 +79,11 @@ export default function GoalsScreen() {
 
       await updateExpiredGoalsIfNeeded(supabase, userId);
 
-      const [goalsData, profile, userAccounts] = await Promise.all([
+      const [goalsData, userAccounts] = await Promise.all([
         getSavingsGoals(supabase, userId),
-        getUserProfile(supabase, userId),
         getUserAccounts(supabase, userId),
       ]);
 
-      const fallbackName =
-        user?.fullName ||
-        user?.primaryEmailAddress?.emailAddress ||
-        'Usuario';
-
-      setProfileName(profile?.full_name || fallbackName);
       setAccounts(userAccounts);
       setGoals(goalsData);
     } catch (error: any) {
@@ -139,7 +92,7 @@ export default function GoalsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [isLoaded, isSignedIn, userId, supabase, user]);
+  }, [isLoaded, isSignedIn, userId, supabase]);
 
   useFocusEffect(
     useCallback(() => {
@@ -150,15 +103,6 @@ export default function GoalsScreen() {
   async function handleRefresh() {
     setRefreshing(true);
     await loadGoals(false);
-  }
-
-  async function handleLogout() {
-    try {
-      await signOut();
-      router.replace('/sign-in');
-    } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo cerrar sesion');
-    }
   }
 
   async function handleDelete(goal: SavingsGoal) {
@@ -268,23 +212,10 @@ export default function GoalsScreen() {
   }
 
   return (
-    <View
-      style={styles.container}
-      {...openSidebarPanResponder.panHandlers}
+    <PrivateScreenLayout
+      title="Metas de Ahorro"
+      currentKey="goals"
     >
-      <View style={styles.topBar}>
-        <View style={styles.topTitleBox}>
-          <Pressable onPress={() => setSidebarVisible(true)} hitSlop={10}>
-            <Menu size={28} color="#FFFFFF" />
-          </Pressable>
-          <Text style={styles.topTitle}>Metas de Ahorro</Text>
-        </View>
-
-        <Pressable onPress={handleLogout} hitSlop={10}>
-          <LogOut size={26} color="#FFFFFF" />
-        </Pressable>
-      </View>
-
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
@@ -336,17 +267,6 @@ export default function GoalsScreen() {
         color={colors.secondary}
         onPress={() => router.push('/goals/create')}
       />
-
-      <AppSidebar
-        visible={sidebarVisible}
-        userName={profileName}
-        selectedKey="goals"
-        visualMode={isDarkMode}
-        onToggleVisualMode={setDarkMode}
-        onClose={() => setSidebarVisible(false)}
-        onSelectItem={handleSelectSidebarItem}
-      />
-
       <GoalContributionModal
         visible={contributionModalVisible}
         goal={selectedGoal}
@@ -355,7 +275,7 @@ export default function GoalsScreen() {
         onClose={closeContributionModal}
         onConfirm={handleRegisterContribution}
       />
-    </View>
+    </PrivateScreenLayout>
   );
 }
 
@@ -382,33 +302,6 @@ function buildDeleteConfirmationMessage(
 
 function createStyles(theme: AppTheme) {
   return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.colors.background,
-    },
-    topBar: {
-      minHeight: 80,
-      backgroundColor: theme.colors.sidebarHeader,
-      paddingHorizontal: 18,
-      paddingTop: 32,
-      paddingBottom: 10,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    topTitleBox: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      paddingRight: 10,
-    },
-    topTitle: {
-      color: '#FFFFFF',
-      fontSize: 23,
-      fontWeight: '900',
-      flexShrink: 1,
-    },
     content: {
       padding: 16,
       paddingBottom: 120,

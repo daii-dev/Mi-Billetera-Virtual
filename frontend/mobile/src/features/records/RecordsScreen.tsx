@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useRef,
   useState,
 } from 'react';
 
@@ -9,14 +8,10 @@ import {
   useLocalSearchParams,
 } from 'expo-router';
 import {
-  LogOut,
-  Menu,
   TrendingDown,
   TrendingUp,
 } from 'lucide-react-native';
 import {
-  Alert,
-  PanResponder,
   Pressable,
   StyleSheet,
   Text,
@@ -24,28 +19,21 @@ import {
 } from 'react-native';
 
 import { MovementManagerScreen } from '@/features/wallet/MovementManagerScreen';
-import {
-  getCategoriesByType,
-  getUserProfile,
-} from '@/features/wallet/wallet.service';
+import { getCategoriesByType } from '@/features/wallet/wallet.service';
 import {
   Category,
   ManualMovementType,
 } from '@/features/wallet/wallet.types';
-import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
-import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
-import { SidebarRouteKey } from '@/lib/sidebarNavigation';
+import {
+  PrivateScreenLayout,
+} from '@/layouts/private-screen/PrivateScreenLayout';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
   AppTheme,
   useAppTheme,
 } from '@/theme/ThemeContext';
-import {
-  useAuth,
-  useClerk,
-  useUser,
-} from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 
 const recordsConfig = {
   income: {
@@ -78,8 +66,6 @@ const recordsConfig = {
 
 export default function RecordsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
-  const { user } = useUser();
-  const { signOut } = useClerk();
   const supabase = useSupabase();
   const params = useLocalSearchParams<{ type?: string }>();
 
@@ -93,65 +79,14 @@ export default function RecordsScreen() {
     }
   }, [params.type]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [profileName, setProfileName] = useState('Usuario');
-
-  const [sidebarVisible, setSidebarVisible] = useState(false);
-  const [selectedSidebarItem, setSelectedSidebarItem] =
-    useState<SidebarRouteKey>('records');
-
-  const handleSelectSidebarItem = useSidebarNavigation({
-    currentKey: 'records',
-    onClose: () => setSidebarVisible(false),
-    onSelectedKeyChange: setSelectedSidebarItem,
-  });
-
-  const openSidebarPanResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        const isFromLeftEdge = gestureState.x0 <= 25;
-        const isSwipeToRight = gestureState.dx > 12;
-        const isHorizontalSwipe =
-          Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
-
-        return isFromLeftEdge && isSwipeToRight && isHorizontalSwipe;
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        const shouldOpen =
-          gestureState.dx > 60 ||
-          gestureState.vx > 0.5;
-
-        if (shouldOpen) {
-          setSidebarVisible(true);
-        }
-      },
-    })
-  ).current;
 
   useEffect(() => {
-    async function loadProfile() {
-      if (!isLoaded) return;
+    if (!isLoaded) return;
 
-      if (!isSignedIn || !userId) {
-        router.replace('/sign-in');
-        return;
-      }
-
-      try {
-        const profile = await getUserProfile(supabase, userId);
-
-        const fallbackName =
-          user?.fullName ||
-          user?.primaryEmailAddress?.emailAddress ||
-          'Usuario';
-
-        setProfileName(profile?.full_name || fallbackName);
-      } catch (error) {
-        console.log('ERROR RECORDS PROFILE:', error);
-      }
+    if (!isSignedIn || !userId) {
+      router.replace('/sign-in');
     }
-
-    loadProfile();
-  }, [isLoaded, isSignedIn, userId, user, supabase]);
+  }, [isLoaded, isSignedIn, userId]);
 
   useEffect(() => {
     async function loadCategories() {
@@ -173,15 +108,6 @@ export default function RecordsScreen() {
 
     loadCategories();
   }, [supabase, userId, selectedType]);
-
-  async function handleLogout() {
-    try {
-      await signOut();
-      router.replace('/sign-in');
-    } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo cerrar sesión');
-    }
-  }
 
   function renderTabs() {
     const isIncomeSelected = selectedType === 'income';
@@ -237,27 +163,10 @@ export default function RecordsScreen() {
   const currentConfig = recordsConfig[selectedType];
 
   return (
-    <View
-      style={styles.container}
-      {...openSidebarPanResponder.panHandlers}
+    <PrivateScreenLayout
+      title="Registros"
+      currentKey="records"
     >
-      <View style={styles.topBar}>
-        <View style={styles.topTitleBox}>
-          <Pressable
-            onPress={() => setSidebarVisible(true)}
-            hitSlop={10}
-          >
-            <Menu size={28} color="#FFFFFF" />
-          </Pressable>
-
-          <Text style={styles.topTitle}>Registros</Text>
-        </View>
-
-        <Pressable onPress={handleLogout} hitSlop={10}>
-          <LogOut size={26} color="#FFFFFF" />
-        </Pressable>
-      </View>
-
       <MovementManagerScreen
         key={selectedType}
         type={selectedType}
@@ -279,45 +188,12 @@ export default function RecordsScreen() {
         showFloatingButton
         contentHeader={renderTabs()}
       />
-
-      <AppSidebar
-        visible={sidebarVisible}
-        userName={profileName}
-        selectedKey={selectedSidebarItem}
-        visualMode={isDarkMode}
-        onToggleVisualMode={setDarkMode}
-        onClose={() => setSidebarVisible(false)}
-        onSelectItem={handleSelectSidebarItem}
-      />
-    </View>
+    </PrivateScreenLayout>
   );
 }
 
 function createStyles(theme: AppTheme) {
   return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.colors.background,
-    },
-    topBar: {
-      height: 92,
-      backgroundColor: theme.colors.sidebarHeader,
-      paddingHorizontal: 18,
-      paddingTop: 42,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    topTitleBox: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-    topTitle: {
-      color: '#FFFFFF',
-      fontSize: 25,
-      fontWeight: '900',
-    },
     tabsRow: {
       flexDirection: 'row',
       gap: 14,

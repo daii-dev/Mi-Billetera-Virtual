@@ -1,38 +1,28 @@
 import {
   useCallback,
   useEffect,
-  useRef,
   useState,
 } from 'react';
 
 import { router } from 'expo-router';
-import {
-  CalendarDays,
-  ChevronDown,
-  LogOut,
-  Menu,
-  Pencil,
-  SlidersHorizontal,
-  Tags,
-  Trash2,
-  Wallet,
-  WalletCards,
-} from 'lucide-react-native';
+import { SlidersHorizontal } from 'lucide-react-native';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
-  PanResponder,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
 import { HomeBalanceCard } from '@/features/home/components/HomeBalanceCard';
+import { HomeMovementCard } from '@/features/home/components/HomeMovementCard';
+import {
+  HomeMovementModal,
+  HomeMovementModalMode,
+} from '@/features/home/components/HomeMovementModal';
 import {
   processDuePlannedPayments,
 } from '@/features/planned-payments/planned-payments.service';
@@ -42,7 +32,6 @@ import {
   parseMoneyInput,
   sanitizeMoneyInput,
 } from '@/features/wallet/amount.utils';
-import { renderCategoryIcon } from '@/features/wallet/category.utils';
 import {
   buildCategoryFilterKey,
   getMovementFilterLabel,
@@ -56,8 +45,6 @@ import {
   getPersonalAccount,
   getRecentMovements,
   getUserAccounts,
-  getUserProfile,
-  money,
   updateManualMovement,
 } from '@/features/wallet/wallet.service';
 import {
@@ -67,27 +54,19 @@ import {
   Movement,
   MovementType,
 } from '@/features/wallet/wallet.types';
-import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
-import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
-import { SidebarRouteKey } from '@/lib/sidebarNavigation';
+import {
+  PrivateScreenLayout,
+} from '@/layouts/private-screen/PrivateScreenLayout';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
   AppTheme,
   useAppTheme,
 } from '@/theme/ThemeContext';
-import {
-  useAuth,
-  useClerk,
-  useUser,
-} from '@clerk/expo';
-
-type HomeMovementModalMode = 'edit' | 'delete' | 'success' | null;
+import { useAuth } from '@clerk/expo';
 
 export default function HomeScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
-  const { user } = useUser();
-  const { signOut } = useClerk();
   const supabase = useSupabase();
 
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
@@ -101,15 +80,9 @@ export default function HomeScreen() {
   const [homeFilterVisible, setHomeFilterVisible] = useState(false);
   const [selectedHomeFilterAccountId, setSelectedHomeFilterAccountId] = useState('');
   const [selectedHomeFilterCategoryKey, setSelectedHomeFilterCategoryKey] = useState('');
-  const [profileName, setProfileName] = useState('Usuario');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  const [sidebarVisible, setSidebarVisible] = useState(false);
-  const [selectedSidebarItem, setSelectedSidebarItem] = useState<SidebarRouteKey>('home');
-
-  const [movementModalMode, setMovementModalMode] =
-    useState<HomeMovementModalMode>(null);
+  const [movementModalMode, setMovementModalMode] = useState<HomeMovementModalMode>(null);
 
   const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null);
 
@@ -122,34 +95,6 @@ export default function HomeScreen() {
   const [showCategoryOptions, setShowCategoryOptions] = useState(false);
 
   const [savingMovement, setSavingMovement] = useState(false);
-
-  const handleSelectSidebarItem = useSidebarNavigation({
-    currentKey: 'home',
-    onClose: () => setSidebarVisible(false),
-    onSelectedKeyChange: setSelectedSidebarItem,
-  });
-
-  const openSidebarPanResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        const isFromLeftEdge = gestureState.x0 <= 25;
-        const isSwipeToRight = gestureState.dx > 12;
-        const isHorizontalSwipe =
-          Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
-
-        return isFromLeftEdge && isSwipeToRight && isHorizontalSwipe;
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        const shouldOpen =
-          gestureState.dx > 60 ||
-          gestureState.vx > 0.5;
-
-        if (shouldOpen) {
-          setSidebarVisible(true);
-        }
-      },
-    })
-  ).current;
 
   async function loadAccount(showFullLoader = false) {
     if (!isLoaded) return;
@@ -181,14 +126,6 @@ export default function HomeScreen() {
         return;
       }
 
-      const profile = await getUserProfile(supabase, userId);
-
-      const fallbackName =
-        user?.fullName ||
-        user?.primaryEmailAddress?.emailAddress ||
-        'Usuario';
-
-      setProfileName(profile?.full_name || fallbackName);
       setAccount(data);
       setAccounts(userAccounts);
       setMovements(recentMovements);
@@ -248,15 +185,6 @@ export default function HomeScreen() {
   async function handleRefresh() {
     setRefreshing(true);
     await loadAccount(false);
-  }
-
-  async function handleLogout() {
-    try {
-      await signOut();
-      router.replace('/sign-in');
-    } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo cerrar sesión');
-    }
   }
 
   function isManualMovementType(type: MovementType): type is ManualMovementType {
@@ -462,27 +390,10 @@ export default function HomeScreen() {
     });
 
     return (
-      <View
-        style={styles.container}
-        {...openSidebarPanResponder.panHandlers}
+      <PrivateScreenLayout
+        title="Inicio"
+        currentKey="home"
       >
-        <View style={styles.topBar}>
-          <View style={styles.topTitleBox}>
-            <Pressable
-              onPress={() => setSidebarVisible(true)}
-              hitSlop={10}
-            >
-              <Menu size={28} color="#FFFFFF" />
-            </Pressable>
-
-            <Text style={styles.topTitle}>Inicio</Text>
-          </View>
-
-          <Pressable onPress={handleLogout} hitSlop={10}>
-            <LogOut size={26} color="#FFFFFF" />
-          </Pressable>
-        </View>
-
         <ScrollView
           contentContainerStyle={styles.content}
           refreshControl={
@@ -525,109 +436,21 @@ export default function HomeScreen() {
           {filteredHomeMovements.length === 0 ? (
             <Text style={styles.emptyText}>
               {hasHomeFilters
-                ? 'No hay movimientos para esta cuenta.'
+                ? 'No hay movimientos con los filtros seleccionados.'
                 : 'Todavía no tienes movimientos registrados.'}
             </Text>
           ) : (
-            filteredHomeMovements.map((movement) => {
-              const isIncome = movement.type === 'income';
-              const accountName = movement.savings_goal_account_names
-                || movement.account?.name
-                || 'Cuenta';
-              const sign = isIncome ? '+' : '-';
-
-              const isPlannedPaymentMovement = Boolean(movement.planned_payment_id);
-
-              const canEdit =
-                movement.source === 'manual' &&
-                isManualMovementType(movement.type) &&
-                !isPlannedPaymentMovement;
-
-              const canDelete =
-                isManualMovementType(movement.type) &&
-                (
-                  movement.source === 'manual' ||
-                  isPlannedPaymentMovement
-                );
-
-              // Obtener el icono y color de la categoría con valores por defecto
-              const categoryIcon = movement.category_icon || 'Wallet';
-              const categoryColor = movement.category_color || '#D9D9D9';
-
-              return (
-                <View key={movement.id} style={styles.movementCard}>
-                  <View style={[styles.movementIcon, { backgroundColor: categoryColor }]}>
-                    {renderCategoryIcon(categoryIcon, 26, '#FFFFFF')}
-                  </View>
-
-                  <View style={styles.movementInfo}>
-                    <Text style={styles.movementTitle}>{movement.title}</Text>
-                    <View style={styles.movementDetailRow}>
-                      <WalletCards size={14} color={theme.colors.textSecondary} />
-                      <Text style={styles.movementSubtitle}>
-                        {accountName}
-                      </Text>
-                    </View>
-
-                    {movement.category_name && (
-                      <View style={styles.movementDetailRow}>
-                        <Tags size={14} color={theme.colors.textSecondary} />
-                        <Text style={styles.movementSubtitle}>
-                          {movement.category_name}
-                        </Text>
-                      </View>
-                    )}
-
-                    <View style={styles.movementDetailRow}>
-                      <CalendarDays size={14} color={theme.colors.textSecondary} />
-                      <Text style={styles.movementDate}>
-                        {movement.movement_date}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.movementRightBox}>
-                    {(canEdit || canDelete) && (
-                      <View style={styles.cardActions}>
-                        {canEdit && (
-                          <Pressable
-                            onPress={() => openMovementEditModal(movement)}
-                            hitSlop={10}
-                            style={styles.iconButton}
-                          >
-                            <Pencil size={18} color={theme.colors.primary} />
-                          </Pressable>
-                        )}
-
-                        {canDelete && (
-                          <Pressable
-                            onPress={() => {
-                              setSelectedMovement(movement);
-                              setMovementModalMode('delete');
-                            }}
-                            hitSlop={10}
-                            style={styles.iconButton}
-                          >
-                            <Trash2 size={18} color={colors.expense} />
-                          </Pressable>
-                        )}
-                      </View>
-                    )}
-
-                    <Text
-                      style={[
-                        styles.movementAmount,
-                        {
-                          color: isIncome ? colors.secondary : colors.expense,
-                        },
-                      ]}
-                    >
-                      {sign}{money(movement.amount)}
-                    </Text>
-                  </View>
-                </View>
-              );
-            })
+            filteredHomeMovements.map((movement) => (
+              <HomeMovementCard
+                key={movement.id}
+                movement={movement}
+                onEdit={openMovementEditModal}
+                onDelete={(movementToDelete) => {
+                  setSelectedMovement(movementToDelete);
+                  setMovementModalMode('delete');
+                }}
+              />
+            ))
           )}
         </ScrollView>
 
@@ -649,7 +472,6 @@ export default function HomeScreen() {
 
         <HomeMovementModal
           mode={movementModalMode}
-          styles={styles}
           selectedMovement={selectedMovement}
           accounts={accounts}
           description={movementDescription}
@@ -686,284 +508,12 @@ export default function HomeScreen() {
           onCancelDelete={closeMovementModal}
           onDelete={handleDeleteMovementFromHome}
         />
-
-        <AppSidebar
-          visible={sidebarVisible}
-          userName={profileName}
-          selectedKey={selectedSidebarItem}
-          visualMode={isDarkMode}
-          onToggleVisualMode={setDarkMode}
-          onClose={() => setSidebarVisible(false)}
-          onSelectItem={handleSelectSidebarItem}
-        />
-      </View>
-    );
-  }
-
-  type HomeMovementModalProps = {
-    mode: HomeMovementModalMode;
-    styles: ReturnType<typeof createStyles>;
-    selectedMovement: Movement | null;
-    accounts: Account[];
-    description: string;
-    amountText: string;
-    selectedAccountId: string;
-    selectedCategory: string;
-    availableCategories: Category[];
-    showAccountOptions: boolean;
-    showCategoryOptions: boolean;
-    saving: boolean;
-    onChangeDescription: (value: string) => void;
-    onChangeAmount: (value: string) => void;
-    onSelectAccount: (accountId: string) => void;
-    onSelectCategory: (category: string) => void;
-    onToggleAccountOptions: () => void;
-    onToggleCategoryOptions: () => void;
-    onClose: () => void;
-    onUpdate: () => void;
-    onGoDelete: () => void;
-    onCancelDelete: () => void;
-    onDelete: () => void;
-  };
-
-  function HomeMovementModal({
-    mode,
-    styles,
-    selectedMovement,
-    accounts,
-    description,
-    amountText,
-    selectedAccountId,
-    selectedCategory,
-    availableCategories,
-    showAccountOptions,
-    showCategoryOptions,
-    saving,
-    onChangeDescription,
-    onChangeAmount,
-    onSelectAccount,
-    onSelectCategory,
-    onToggleAccountOptions,
-    onToggleCategoryOptions,
-    onClose,
-    onUpdate,
-    onGoDelete,
-    onCancelDelete,
-    onDelete,
-  }: HomeMovementModalProps) {
-    if (!mode || !selectedMovement) {
-      return null;
-    }
-
-    const isIncome = selectedMovement.type === 'income';
-    const isEdit = mode === 'edit';
-    const isDelete = mode === 'delete';
-    const isSuccess = mode === 'success';
-
-    const categories = availableCategories;
-
-    const selectedAccount = accounts.find(
-      (account) => account.id === selectedAccountId
-    );
-
-    const editTitle = isIncome ? 'Editar Ingreso' : 'Editar Gasto';
-    const deleteTitle = isIncome ? 'Eliminar Ingreso' : 'Eliminar gasto';
-    const successTitle = isIncome ? 'Editar Ingreso' : 'Editar Gasto';
-
-    const successMessage = isIncome
-      ? 'Ingreso editado correctamente'
-      : 'Gasto editado correctamente';
-
-    const deleteMessage = isIncome
-      ? '¿Estas seguro que quieres eliminar este ingreso?'
-      : '¿Estas seguro que quieres eliminar este gasto?';
-
-    return (
-      <Modal
-        visible
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={onClose}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {isEdit ? editTitle : isDelete ? deleteTitle : successTitle}
-              </Text>
-            </View>
-
-            {isEdit && (
-              <View style={styles.modalContent}>
-                <Text style={styles.inputLabel}>Descripcion</Text>
-                <TextInput
-                  value={description}
-                  onChangeText={onChangeDescription}
-                  placeholder={isIncome ? 'Ej. Sueldo' : 'Ej. Compra de viveres'}
-                  placeholderTextColor="#A8A8A8"
-                  style={styles.input}
-                />
-
-                <Text style={styles.inputLabel}>Ingresar Monto</Text>
-                <View style={styles.amountInputBox}>
-                  <Text style={styles.amountPrefix}>Bs.</Text>
-                  <TextInput
-                    value={amountText}
-                    onChangeText={onChangeAmount}
-                    placeholder="0,00"
-                    placeholderTextColor="#A8A8A8"
-                    keyboardType="decimal-pad"
-                    style={styles.amountInput}
-                  />
-                </View>
-
-                <Text style={styles.inputLabel}>Seleccionar Cuenta</Text>
-                <Pressable
-                  style={styles.selectorBox}
-                  onPress={onToggleAccountOptions}
-                >
-                  <View style={styles.selectorLeft}>
-                    <Wallet size={22} color="#4B5563" />
-                    <Text style={styles.selectorText}>
-                      {selectedAccount?.name || 'Selecciona una cuenta'}
-                    </Text>
-                  </View>
-
-                  <ChevronDown size={20} color="#6B7280" />
-                </Pressable>
-
-                {showAccountOptions && (
-                  <View style={styles.optionsBox}>
-                    {accounts.map((account) => (
-                      <Pressable
-                        key={account.id}
-                        style={styles.optionItem}
-                        onPress={() => onSelectAccount(account.id)}
-                      >
-                        <Text style={styles.optionText}>{account.name}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                )}
-
-                <Text style={styles.inputLabel}>Categoria</Text>
-                <Pressable
-                  style={styles.selectorBox}
-                  onPress={onToggleCategoryOptions}
-                >
-                  <View style={styles.selectorLeft}>
-                    <Text style={styles.categoryIcon}>♟</Text>
-                    <Text style={styles.selectorText}>
-                      {selectedCategory || 'Selecciona una categoría'}
-                    </Text>
-                  </View>
-
-                  <ChevronDown size={20} color="#6B7280" />
-                </Pressable>
-
-                {showCategoryOptions && (
-                  <View style={styles.optionsBox}>
-                    {categories.map((category) => (
-                      <Pressable
-                        key={category.id}
-                        style={styles.optionItem}
-                        onPress={() => onSelectCategory(category.name)}
-                      >
-                        <Text style={styles.optionText}>{category.name}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                )}
-
-                <View style={styles.modalButtonsRow}>
-                  <Pressable
-                    style={[styles.modalButton, styles.cancelButton]}
-                    onPress={onClose}
-                    disabled={saving}
-                  >
-                    <Text style={styles.modalButtonText}>Cancelar</Text>
-                  </Pressable>
-
-                  <Pressable
-                    style={[styles.modalButton, styles.saveButton]}
-                    onPress={onUpdate}
-                    disabled={saving}
-                  >
-                    <Text style={styles.modalButtonText}>
-                      {saving ? 'Guardando...' : 'Guardar'}
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-            )}
-
-            {isSuccess && (
-              <View style={styles.successContent}>
-                <Text style={styles.successText}>
-                  ♡ {successMessage}
-                </Text>
-              </View>
-            )}
-
-            {isDelete && (
-              <View style={styles.deleteContent}>
-                <Text style={styles.deleteText}>
-                  {deleteMessage}
-                </Text>
-
-                <View style={styles.deleteActions}>
-                  <Pressable
-                    onPress={onCancelDelete}
-                    disabled={saving}
-                    style={styles.deleteTextButton}
-                  >
-                    <Text style={styles.deleteOptionText}>No</Text>
-                  </Pressable>
-
-                  <Pressable
-                    onPress={onDelete}
-                    disabled={saving}
-                    style={styles.deleteTextButton}
-                  >
-                    <Text style={styles.deleteOptionText}>
-                      {saving ? 'Eliminando...' : 'Si'}
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-            )}
-          </View>
-        </View>
-      </Modal>
+      </PrivateScreenLayout>
     );
   }
 
   function createStyles(theme: AppTheme) {
     return StyleSheet.create({
-      container: {
-        flex: 1,
-        backgroundColor: theme.colors.background,
-      },
-      topBar: {
-        height: 92,
-        backgroundColor: theme.colors.sidebarHeader,
-        paddingHorizontal: 18,
-        paddingTop: 42,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      },
-      topTitleBox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-      },
-      topTitle: {
-        color: '#FFFFFF',
-        fontSize: 25,
-        fontWeight: '900',
-      },
       content: {
         padding: 16,
         paddingBottom: 40,
@@ -1014,238 +564,6 @@ export default function HomeScreen() {
         textAlign: 'center',
         marginTop: 16,
       },
-      movementCard: {
-        minHeight: 88,
-        backgroundColor: theme.colors.card,
-        borderRadius: 12,
-        padding: 14,
-        marginBottom: 14,
-        flexDirection: 'row',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOpacity: 0.18,
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 3,
-        elevation: 3,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-      },
-      movementIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        alignItems: 'center',
-        justifyContent: 'center',
-      },
-      movementInfo: {
-        flex: 1,
-        marginLeft: 12,
-      },
-      movementTitle: {
-        color: theme.colors.text,
-        fontWeight: '900',
-        fontSize: 16,
-      },
-      movementSubtitle: {
-        marginTop: 4,
-        color: theme.colors.textSecondary,
-        fontSize: 12,
-      },
-      movementDetailRow: {
-        marginTop: 4,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-      },
-      movementDate: {
-        marginTop: 4,
-        color: theme.colors.textSecondary,
-        fontSize: 12,
-      },
-      movementAmount: {
-        color: colors.secondary,
-        fontSize: 13,
-        fontWeight: '900',
-      },
-      modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.62)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 18,
-      },
-      modalBox: {
-        width: '100%',
-        maxWidth: 340,
-        backgroundColor: theme.colors.card,
-        borderRadius: 14,
-        overflow: 'hidden',
-      },
-      modalHeader: {
-        height: 54,
-        backgroundColor: '#082B8C',
-        paddingHorizontal: 22,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      },
-      modalTitle: {
-        color: '#FFFFFF',
-        fontSize: 24,
-        fontWeight: '900',
-      },
-      modalContent: {
-        paddingHorizontal: 22,
-        paddingTop: 18,
-        paddingBottom: 18,
-      },
-      inputLabel: {
-        color: theme.colors.text,
-        fontSize: 15,
-        fontWeight: '900',
-        marginBottom: 6,
-      },
-      input: {
-        height: 40,
-        borderWidth: 1.5,
-        borderColor: colors.primary,
-        borderRadius: 7,
-        paddingHorizontal: 12,
-        color: theme.colors.text,
-        backgroundColor: theme.colors.surface,
-        fontSize: 15,
-        marginBottom: 10,
-      },
-      amountInputBox: {
-        height: 40,
-        borderWidth: 1.5,
-        borderColor: colors.primary,
-        borderRadius: 7,
-        paddingHorizontal: 12,
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: theme.colors.surface,
-        marginBottom: 10,
-      },
-      amountPrefix: {
-        color: theme.colors.textSecondary,
-        fontSize: 15,
-        fontWeight: '900',
-        marginRight: 12,
-      },
-      amountInput: {
-        flex: 1,
-        color: theme.colors.text,
-        fontSize: 15,
-      },
-      selectorBox: {
-        height: 40,
-        borderWidth: 1.5,
-        borderColor: colors.primary,
-        borderRadius: 7,
-        paddingHorizontal: 12,
-        backgroundColor: theme.colors.surface,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 8,
-      },
-      selectorLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        flex: 1,
-      },
-      selectorText: {
-        color: theme.colors.textSecondary,
-        fontSize: 15,
-      },
-      categoryIcon: {
-        fontSize: 21,
-        color: '#4B5563',
-      },
-      optionsBox: {
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        borderRadius: 8,
-        backgroundColor: theme.colors.surface,
-        marginBottom: 8,
-        overflow: 'hidden',
-      },
-      optionItem: {
-        paddingVertical: 9,
-        paddingHorizontal: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
-      },
-      optionText: {
-        color: theme.colors.text,
-        fontSize: 14,
-        fontWeight: '700',
-      },
-      modalButtonsRow: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 18,
-        marginTop: 18,
-      },
-      modalButton: {
-        width: 108,
-        height: 38,
-        borderRadius: 22,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOpacity: 0.22,
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 3,
-        elevation: 3,
-      },
-      cancelButton: {
-        backgroundColor: colors.expense,
-      },
-      saveButton: {
-        backgroundColor: colors.secondary,
-      },
-      modalButtonText: {
-        color: '#FFFFFF',
-        fontWeight: '900',
-        fontSize: 14,
-      },
-      successContent: {
-        paddingHorizontal: 22,
-        paddingVertical: 24,
-      },
-      successText: {
-        color: colors.secondary,
-        fontSize: 16,
-        fontWeight: '700',
-      },
-      deleteContent: {
-        paddingHorizontal: 24,
-        paddingTop: 22,
-        paddingBottom: 18,
-      },
-      deleteText: {
-        color: theme.colors.textSecondary,
-        fontSize: 16,
-        lineHeight: 22,
-      },
-      deleteActions: {
-        marginTop: 20,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 44,
-      },
-      deleteTextButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-      },
-      deleteOptionText: {
-        color: theme.mode === 'dark' ? '#FFFFFF' : colors.primary,
-        fontSize: 14,
-        fontWeight: '900',
-      },
       loadingContainer: {
         flex: 1,
         backgroundColor: theme.colors.background,
@@ -1256,30 +574,6 @@ export default function HomeScreen() {
         marginTop: 14,
         color: theme.colors.text,
         fontWeight: '800',
-      },
-      movementRightBox: {
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        minHeight: 64,
-        marginLeft: 8,
-      },
-      cardActions: {
-        flexDirection: 'row',
-        gap: 4,
-      },
-      iconButton: {
-        width: 34,
-        height: 34,
-        borderRadius: 17,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: theme.mode === 'dark' ? '#0F172A' : '#F8FAFC',
-      },
-      movementCategoryRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        marginTop: 4,
       },
     });
   }

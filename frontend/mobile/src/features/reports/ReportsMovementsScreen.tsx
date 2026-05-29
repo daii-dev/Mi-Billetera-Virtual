@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import {
   useCallback,
   useMemo,
-  useRef,
   useState,
 } from 'react';
 
@@ -14,15 +13,12 @@ import {
   CalendarDays,
   ChevronDown,
   Download,
-  LogOut,
-  Menu,
   Search,
 } from 'lucide-react-native';
 import {
   ActivityIndicator,
   Alert,
   Modal,
-  PanResponder,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -59,20 +55,16 @@ import {
   getReportAccounts,
   getReportMovements,
 } from '@/features/reports/reports.service';
-import { getUserProfile } from '@/features/wallet/wallet.service';
-import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
-import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
+import {
+  PrivateScreenLayout,
+} from '@/layouts/private-screen/PrivateScreenLayout';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
   AppTheme,
   useAppTheme,
 } from '@/theme/ThemeContext';
-import {
-  useAuth,
-  useClerk,
-  useUser,
-} from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 
 const PERIOD_OPTIONS: Array<{
   key: ReportPeriodKey;
@@ -115,20 +107,15 @@ const SECTION_OPTIONS: Array<{
 
 export function ReportsMovementsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
-  const { user } = useUser();
-  const { signOut } = useClerk();
   const supabase = useSupabase();
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
   const styles = createStyles(theme);
-
-  const [profileName, setProfileName] = useState('Usuario');
   const [accounts, setAccounts] = useState<ReportAccount[]>([]);
   const [movements, setMovements] = useState<ReportMovement[]>([]);
   const [previousMovements, setPreviousMovements] = useState<ReportMovement[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [sidebarVisible, setSidebarVisible] = useState(false);
   const [periodMenuVisible, setPeriodMenuVisible] = useState(false);
   const [accountMenuVisible, setAccountMenuVisible] = useState(false);
   const [typeMenuVisible, setTypeMenuVisible] = useState(false);
@@ -153,31 +140,6 @@ export function ReportsMovementsScreen() {
     type: 'all',
   });
 
-  const handleSelectSidebarItem = useSidebarNavigation({
-    currentKey: 'reports',
-    onClose: () => setSidebarVisible(false),
-  });
-
-  const openSidebarPanResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        const isFromLeftEdge = gestureState.x0 <= 25;
-        const isSwipeToRight = gestureState.dx > 12;
-        const isHorizontalSwipe =
-          Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
-
-        return isFromLeftEdge && isSwipeToRight && isHorizontalSwipe;
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        const shouldOpen = gestureState.dx > 60 || gestureState.vx > 0.5;
-
-        if (shouldOpen) {
-          setSidebarVisible(true);
-        }
-      },
-    })
-  ).current;
-
   const loadReports = useCallback(async (showFullLoader = false) => {
     if (!isLoaded) return;
 
@@ -193,20 +155,13 @@ export function ReportsMovementsScreen() {
 
       setErrorMessage('');
 
-      const [reportAccounts, reportMovements, previousData, profile] =
+      const [reportAccounts, reportMovements, previousData] =
         await Promise.all([
           getReportAccounts(supabase, userId),
           getReportMovements(supabase, userId, filters),
           getPreviousPeriodMovements(supabase, userId, filters),
-          getUserProfile(supabase, userId),
         ]);
 
-      const fallbackName =
-        user?.fullName ||
-        user?.primaryEmailAddress?.emailAddress ||
-        'Usuario';
-
-      setProfileName(profile?.full_name || fallbackName);
       setAccounts(reportAccounts);
       setMovements(reportMovements);
       setPreviousMovements(previousData);
@@ -218,7 +173,7 @@ export function ReportsMovementsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters, isLoaded, isSignedIn, supabase, user, userId]);
+  }, [filters, isLoaded, isSignedIn, supabase, userId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -276,15 +231,6 @@ export function ReportsMovementsScreen() {
   async function handleRefresh() {
     setRefreshing(true);
     await loadReports(false);
-  }
-
-  async function handleLogout() {
-    try {
-      await signOut();
-      router.replace('/sign-in');
-    } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo cerrar sesion');
-    }
   }
 
   function handleSelectPeriod(period: ReportPeriodKey) {
@@ -462,24 +408,10 @@ export function ReportsMovementsScreen() {
   }
 
   return (
-    <View
-      style={styles.container}
-      {...openSidebarPanResponder.panHandlers}
+    <PrivateScreenLayout
+      title="Reportes"
+      currentKey="reports"
     >
-      <View style={styles.topBar}>
-        <View style={styles.topTitleBox}>
-          <Pressable onPress={() => setSidebarVisible(true)} hitSlop={10}>
-            <Menu size={28} color="#FFFFFF" />
-          </Pressable>
-
-          <Text style={styles.topTitle}>Reportes</Text>
-        </View>
-
-        <Pressable onPress={handleLogout} hitSlop={10}>
-          <LogOut size={26} color="#FFFFFF" />
-        </Pressable>
-      </View>
-
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -725,17 +657,7 @@ export function ReportsMovementsScreen() {
         onGenerate={handleGenerateReport}
         onClose={() => setDownloadModalVisible(false)}
       />
-
-      <AppSidebar
-        visible={sidebarVisible}
-        userName={profileName}
-        selectedKey="reports"
-        visualMode={isDarkMode}
-        onToggleVisualMode={setDarkMode}
-        onClose={() => setSidebarVisible(false)}
-        onSelectItem={handleSelectSidebarItem}
-      />
-    </View>
+    </PrivateScreenLayout>
   );
 }
 
@@ -997,29 +919,6 @@ function ReportDownloadModal({
 
 function createStyles(theme: AppTheme) {
   return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.colors.background,
-    },
-    topBar: {
-      height: 92,
-      backgroundColor: theme.colors.sidebarHeader,
-      paddingHorizontal: 18,
-      paddingTop: 42,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    topTitleBox: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-    topTitle: {
-      color: '#FFFFFF',
-      fontSize: 25,
-      fontWeight: '900',
-    },
     content: {
       padding: 16,
       paddingBottom: 44,

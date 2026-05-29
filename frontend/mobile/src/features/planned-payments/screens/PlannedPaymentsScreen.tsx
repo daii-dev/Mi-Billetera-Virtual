@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useRef,
   useState,
 } from 'react';
 
@@ -10,8 +9,6 @@ import {
   CalendarClock,
   CalendarDays,
   ChevronDown,
-  LogOut,
-  Menu,
   Pencil,
   Trash2,
   Wallet,
@@ -21,7 +18,6 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  PanResponder,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -58,19 +54,16 @@ import {
   Account,
   Category,
 } from '@/features/wallet/wallet.types';
-import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
-import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
+import {
+  PrivateScreenLayout,
+} from '@/layouts/private-screen/PrivateScreenLayout';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
   AppTheme,
   useAppTheme,
 } from '@/theme/ThemeContext';
-import {
-  useAuth,
-  useClerk,
-  useUser,
-} from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
@@ -98,68 +91,26 @@ function getDateFromInput(dateString: string): Date {
 
 export default function PlannedPaymentsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
-  const { signOut } = useClerk();
-  const { user } = useUser();
   const supabase = useSupabase();
-
-  const { theme, isDarkMode, setDarkMode } = useAppTheme();
+  const { theme } = useAppTheme();
   const styles = createStyles(theme);
-
   const [payments, setPayments] = useState<PlannedPayment[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-
-  const [profileName, setProfileName] = useState(
-    user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Usuario'
-  );
-
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  const [sidebarVisible, setSidebarVisible] = useState(false);
-
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [successAction, setSuccessAction] = useState<SuccessAction>('create');
   const [selectedPayment, setSelectedPayment] = useState<PlannedPayment | null>(null);
-
   const [paymentName, setPaymentName] = useState('');
   const [amountText, setAmountText] = useState('');
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [paymentDate, setPaymentDate] = useState('');
-
   const [showAccountOptions, setShowAccountOptions] = useState(false);
   const [showCategoryOptions, setShowCategoryOptions] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-
   const [saving, setSaving] = useState(false);
-
-  const handleSelectSidebarItem = useSidebarNavigation({
-    currentKey: 'planned-payments',
-    onClose: () => setSidebarVisible(false),
-  });
-
-  const openSidebarPanResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        const isFromLeftEdge = gestureState.x0 <= 25;
-        const isSwipeToRight = gestureState.dx > 12;
-        const isHorizontalSwipe =
-          Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
-
-        return isFromLeftEdge && isSwipeToRight && isHorizontalSwipe;
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        const shouldOpen =
-          gestureState.dx > 60 ||
-          gestureState.vx > 0.5;
-
-        if (shouldOpen) {
-          setSidebarVisible(true);
-        }
-      },
-    })
-  ).current;
 
   const loadData = useCallback(async (showFullLoader = false) => {
     if (!isLoaded) return;
@@ -186,12 +137,6 @@ export default function PlannedPaymentsScreen() {
       setAccounts(userAccounts);
       setCategories(expenseCategories);
       setPayments(plannedPayments);
-
-      setProfileName(
-        user?.fullName ||
-        user?.primaryEmailAddress?.emailAddress ||
-        'Usuario'
-      );
     } catch (error: any) {
       Alert.alert(
         'Error',
@@ -201,7 +146,7 @@ export default function PlannedPaymentsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [isLoaded, isSignedIn, userId, supabase, user]);
+  }, [isLoaded, isSignedIn, userId, supabase]);
 
   useEffect(() => {
     loadData(true);
@@ -210,15 +155,6 @@ export default function PlannedPaymentsScreen() {
   async function handleRefresh() {
     setRefreshing(true);
     await loadData(false);
-  }
-
-  async function handleLogout() {
-    try {
-      await signOut();
-      router.replace('/sign-in');
-    } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo cerrar sesión');
-    }
   }
 
   function getTodayDate() {
@@ -438,27 +374,10 @@ export default function PlannedPaymentsScreen() {
   }
 
   return (
-    <View
-      style={styles.container}
-      {...openSidebarPanResponder.panHandlers}
+    <PrivateScreenLayout
+      title="Pagos Planificados"
+      currentKey="planned-payments"
     >
-      <View style={styles.topBar}>
-        <View style={styles.topTitleBox}>
-          <Pressable
-            onPress={() => setSidebarVisible(true)}
-            hitSlop={10}
-          >
-            <Menu size={28} color="#FFFFFF" />
-          </Pressable>
-
-          <Text style={styles.topTitle}>Pagos Planificados</Text>
-        </View>
-
-        <Pressable onPress={handleLogout} hitSlop={10}>
-          <LogOut size={26} color="#FFFFFF" />
-        </Pressable>
-      </View>
-
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -589,17 +508,7 @@ export default function PlannedPaymentsScreen() {
         onCancelDelete={closeModal}
         onDelete={handleDeletePayment}
       />
-
-      <AppSidebar
-        visible={sidebarVisible}
-        userName={profileName}
-        selectedKey="planned-payments"
-        visualMode={isDarkMode}
-        onToggleVisualMode={setDarkMode}
-        onClose={() => setSidebarVisible(false)}
-        onSelectItem={handleSelectSidebarItem}
-      />
-    </View>
+    </PrivateScreenLayout>
   );
 }
 
@@ -891,30 +800,6 @@ function PlannedPaymentModal({
 
 function createStyles(theme: AppTheme) {
   return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.colors.background,
-    },
-    topBar: {
-      height: 94,
-      backgroundColor: theme.colors.sidebarHeader,
-      paddingHorizontal: 14,
-      paddingTop: 44,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    topTitleBox: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      flex: 1,
-    },
-    topTitle: {
-      color: '#FFFFFF',
-      fontSize: 24,
-      fontWeight: '900',
-    },
     content: {
       padding: 12,
       paddingBottom: 110,

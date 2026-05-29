@@ -1,13 +1,10 @@
 import {
   useEffect,
-  useRef,
   useState,
 } from 'react';
 
 import { router } from 'expo-router';
 import {
-  LogOut,
-  Menu,
   MoreVertical,
   Trash2,
   Wallet,
@@ -16,7 +13,6 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  PanResponder,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -37,79 +33,36 @@ import {
   deleteAccount,
   getAccountsTotal,
   getUserAccounts,
-  getUserProfile,
   money,
   updateAccountName,
 } from '@/features/wallet/wallet.service';
 import { Account } from '@/features/wallet/wallet.types';
-import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
-import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
-import { SidebarRouteKey } from '@/lib/sidebarNavigation';
+import {
+  PrivateScreenLayout,
+} from '@/layouts/private-screen/PrivateScreenLayout';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
   AppTheme,
   useAppTheme,
 } from '@/theme/ThemeContext';
-import {
-  useAuth,
-  useClerk,
-  useUser,
-} from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 
 type AccountModalMode = 'create' | 'success' | 'edit' | 'delete' | null;
 
 export default function AccountsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
-  const { user } = useUser();
-  const { signOut } = useClerk();
   const supabase = useSupabase();
-
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
   const styles = createStyles(theme);
-
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [profileName, setProfileName] = useState('Usuario');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  const [sidebarVisible, setSidebarVisible] = useState(false);
-  const [selectedSidebarItem, setSelectedSidebarItem] = useState<SidebarRouteKey>('accounts');
-
   const [modalMode, setModalMode] = useState<AccountModalMode>(null);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
-
   const [accountName, setAccountName] = useState('');
   const [initialBalanceText, setInitialBalanceText] = useState('');
   const [saving, setSaving] = useState(false);
-
-  const handleSelectSidebarItem = useSidebarNavigation({
-    currentKey: 'accounts',
-    onClose: () => setSidebarVisible(false),
-    onSelectedKeyChange: setSelectedSidebarItem,
-  });
-
-  const openSidebarPanResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        const isFromLeftEdge = gestureState.x0 <= 25;
-        const isSwipeToRight = gestureState.dx > 12;
-        const isHorizontalSwipe =
-          Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
-
-        return isFromLeftEdge && isSwipeToRight && isHorizontalSwipe;
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        const shouldOpen =
-          gestureState.dx > 60 ||
-          gestureState.vx > 0.5;
-
-        if (shouldOpen) {
-          setSidebarVisible(true);
-        }
-      },
-    })
-  ).current;
 
   async function loadAccounts(showFullLoader = false) {
     if (!isLoaded) return;
@@ -125,14 +78,6 @@ export default function AccountsScreen() {
       }
 
       const userAccounts = await getUserAccounts(supabase, userId);
-      const profile = await getUserProfile(supabase, userId);
-
-      const fallbackName =
-        user?.fullName ||
-        user?.primaryEmailAddress?.emailAddress ||
-        'Usuario';
-
-      setProfileName(profile?.full_name || fallbackName);
       setAccounts(userAccounts);
     } catch (error: any) {
       Alert.alert(
@@ -154,15 +99,6 @@ export default function AccountsScreen() {
   async function handleRefresh() {
     setRefreshing(true);
     await loadAccounts(false);
-  }
-
-  async function handleLogout() {
-    try {
-      await signOut();
-      router.replace('/sign-in');
-    } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo cerrar sesión');
-    }
   }
 
   function openCreateModal() {
@@ -333,27 +269,10 @@ export default function AccountsScreen() {
   }
 
   return (
-    <View
-      style={styles.container}
-      {...openSidebarPanResponder.panHandlers}
+    <PrivateScreenLayout
+      title="Cuentas"
+      currentKey="accounts"
     >
-      <View style={styles.topBar}>
-        <View style={styles.topTitleBox}>
-          <Pressable
-            onPress={() => setSidebarVisible(true)}
-            hitSlop={10}
-          >
-            <Menu size={28} color="#FFFFFF" />
-          </Pressable>
-
-          <Text style={styles.topTitle}>Cuentas</Text>
-        </View>
-
-        <Pressable onPress={handleLogout} hitSlop={10}>
-          <LogOut size={26} color="#FFFFFF" />
-        </Pressable>
-      </View>
-
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -417,17 +336,7 @@ export default function AccountsScreen() {
         onCancelDelete={closeModal}
         onDelete={handleDeleteAccount}
       />
-
-      <AppSidebar
-        visible={sidebarVisible}
-        userName={profileName}
-        selectedKey={selectedSidebarItem}
-        visualMode={isDarkMode}
-        onToggleVisualMode={setDarkMode}
-        onClose={() => setSidebarVisible(false)}
-        onSelectItem={handleSelectSidebarItem}
-      />
-    </View>
+    </PrivateScreenLayout>
   );
 }
 
@@ -619,29 +528,6 @@ function AccountModal({
 
 function createStyles(theme: AppTheme) {
   return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.colors.background,
-    },
-    topBar: {
-      height: 80,
-      backgroundColor: theme.colors.sidebarHeader,
-      paddingHorizontal: 18,
-      paddingTop: 32,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    topTitleBox: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-    topTitle: {
-      color: '#FFFFFF',
-      fontSize: 25,
-      fontWeight: '900',
-    },
     content: {
       padding: 14,
       paddingBottom: 120,

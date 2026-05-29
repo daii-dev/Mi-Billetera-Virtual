@@ -9,8 +9,6 @@ import {
   CalendarDays,
   ChevronDown,
   Hourglass,
-  LogOut,
-  Menu,
   Pencil,
   Tags,
   Trash2,
@@ -36,24 +34,19 @@ import {
   getCategoriesByType,
   getUserAccounts,
 } from '@/features/wallet/wallet.service';
-import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
-import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
+import {
+  PrivateScreenLayout,
+} from '@/layouts/private-screen/PrivateScreenLayout';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import { useAppTheme } from '@/theme/ThemeContext';
-import {
-  useAuth,
-  useUser,
-} from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function BudgetsScreen() {
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
   const supabase = useSupabase();
   const { userId } = useAuth();
-  const { user } = useUser();
-  
-  const [sidebarVisible, setSidebarVisible] = useState(false); 
   const [budgets, setBudgets] = useState<any[]>([]);
   const [myAccounts, setMyAccounts] = useState<any[]>([]);
   const [myCategories, setMyCategories] = useState<any[]>([]); 
@@ -74,11 +67,6 @@ export default function BudgetsScreen() {
   const [showAccountOptions, setShowAccountOptions] = useState(false);
   const [showCategoryOptions, setShowCategoryOptions] = useState(false);
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
-  
-  const handleSelectSidebarItem = useSidebarNavigation({
-    currentKey: 'budgets',
-    onClose: () => setSidebarVisible(false),
-  });
 
   const resetForm = () => {
       setSelectedCategory('');
@@ -91,8 +79,6 @@ export default function BudgetsScreen() {
       setShowCategoryOptions(false);
       setEditingBudgetId(null);
     };
-  const profileName = user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Usuario';
-
   const loadBudgetsData = async () => {
     if (!userId) return;
     try {
@@ -302,19 +288,11 @@ export default function BudgetsScreen() {
       setLoading(false);
     }
   };
-
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={styles.topBar}>
-        <Pressable onPress={() => setSidebarVisible(true)} hitSlop={15}>
-          <Menu size={28} color="#FFFFFF" />
-        </Pressable>
-        <View style={styles.topTitleBox}>
-          <Text style={styles.topTitle}>Presupuestos</Text>
-        </View>
-        <LogOut size={26} color="#FFFFFF" />
-      </View>
-
+    <PrivateScreenLayout
+      title="Presupuestos"
+      currentKey="budgets"
+    >
       <ScrollView contentContainerStyle={styles.content}>
         {budgets.map((item) => {
           const visualProgress = Math.min(item.progress, 100);
@@ -552,25 +530,11 @@ export default function BudgetsScreen() {
           </View>
         </View>
       </Modal>
-
-      <AppSidebar
-        visible={sidebarVisible}
-        userName={profileName}
-        selectedKey="budgets"
-        visualMode={isDarkMode}
-        onToggleVisualMode={setDarkMode}
-        onClose={() => setSidebarVisible(false)}
-        onSelectItem={handleSelectSidebarItem}
-      />
-    </View>
+    </PrivateScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  topBar: { height: 92, backgroundColor: '#082B8C', paddingHorizontal: 18, paddingTop: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  topTitleBox: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingRight: 28 }, 
-  topTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '900' },
   content: { padding: 16 },
   card: { borderRadius: 12, padding: 16, marginBottom: 15, borderWidth: 1, elevation: 3, position: 'relative' },
   notificationBanner: { flexDirection: 'row', alignItems: 'center', padding: 8, borderRadius: 6, marginBottom: 10, gap: 6 },
