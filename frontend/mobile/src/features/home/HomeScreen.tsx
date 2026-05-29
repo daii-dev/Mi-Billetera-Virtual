@@ -32,6 +32,7 @@ import {
   View,
 } from 'react-native';
 
+import { HomeBalanceCard } from '@/features/home/components/HomeBalanceCard';
 import {
   processDuePlannedPayments,
 } from '@/features/planned-payments/planned-payments.service';
@@ -42,7 +43,6 @@ import {
   parseMoneyInput,
   sanitizeMoneyInput,
 } from '@/features/wallet/amount.utils';
-// Importar la función para renderizar iconos
 import { renderCategoryIcon } from '@/features/wallet/category.utils';
 import {
   deleteManualMovement,
@@ -454,22 +454,11 @@ export default function HomeScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
           }
         >
-          <View style={styles.balanceCard}>
-            <Text style={styles.balanceLabel}>Saldo Total</Text>
-            <Text style={styles.balanceAmount}>{money(currentBalance)}</Text>
-
-            <View style={styles.summaryRow}>
-              <View style={styles.summaryCard}>
-                <Text style={styles.summaryLabel}>Ingresos:</Text>
-                <Text style={styles.incomeText}>{money(totalIncome)}</Text>
-              </View>
-
-              <View style={styles.summaryCard}>
-                <Text style={styles.summaryLabel}>Gastos:</Text>
-                <Text style={styles.expenseText}>{money(totalExpense)}</Text>
-              </View>
-            </View>
-          </View>
+          <HomeBalanceCard
+            currentBalance={currentBalance}
+            totalIncome={totalIncome}
+            totalExpense={totalExpense}
+          />
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Movimientos recientes</Text>
@@ -937,55 +926,6 @@ export default function HomeScreen() {
       content: {
         padding: 16,
         paddingBottom: 40,
-      },
-      balanceCard: {
-        backgroundColor: theme.mode === 'dark' ? '#172554' : '#082B8C',
-        borderRadius: 16,
-        padding: 18,
-        shadowColor: '#000',
-        shadowOpacity: 0.22,
-        shadowOffset: { width: 0, height: 4 },
-        shadowRadius: 5,
-        elevation: 6,
-      },
-      balanceLabel: {
-        color: '#AFC2FF',
-        fontSize: 14,
-        fontWeight: '800',
-      },
-      balanceAmount: {
-        color: '#FFFFFF',
-        fontSize: 32,
-        fontWeight: '900',
-        marginTop: 6,
-      },
-      summaryRow: {
-        flexDirection: 'row',
-        gap: 12,
-        marginTop: 12,
-      },
-      summaryCard: {
-        flex: 1,
-        backgroundColor: theme.colors.summaryCard,
-        borderRadius: 8,
-        padding: 12,
-      },
-      summaryLabel: {
-        color: '#C7C7C7',
-        fontSize: 11,
-        fontWeight: '800',
-      },
-      incomeText: {
-        marginTop: 8,
-        color: colors.secondary,
-        fontSize: 12,
-        fontWeight: '900',
-      },
-      expenseText: {
-        marginTop: 8,
-        color: colors.expense,
-        fontSize: 12,
-        fontWeight: '900',
       },
       sectionHeader: {
         marginTop: 24,
