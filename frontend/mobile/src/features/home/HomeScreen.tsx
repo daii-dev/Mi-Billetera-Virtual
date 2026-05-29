@@ -7,16 +7,11 @@ import {
 
 import { router } from 'expo-router';
 import {
-  CalendarDays,
   ChevronDown,
   LogOut,
   Menu,
-  Pencil,
   SlidersHorizontal,
-  Tags,
-  Trash2,
   Wallet,
-  WalletCards,
 } from 'lucide-react-native';
 import {
   ActivityIndicator,
@@ -33,6 +28,7 @@ import {
 } from 'react-native';
 
 import { HomeBalanceCard } from '@/features/home/components/HomeBalanceCard';
+import { HomeMovementCard } from '@/features/home/components/HomeMovementCard';
 import {
   processDuePlannedPayments,
 } from '@/features/planned-payments/planned-payments.service';
@@ -42,7 +38,6 @@ import {
   parseMoneyInput,
   sanitizeMoneyInput,
 } from '@/features/wallet/amount.utils';
-import { renderCategoryIcon } from '@/features/wallet/category.utils';
 import {
   buildCategoryFilterKey,
   getMovementFilterLabel,
@@ -57,7 +52,6 @@ import {
   getRecentMovements,
   getUserAccounts,
   getUserProfile,
-  money,
   updateManualMovement,
 } from '@/features/wallet/wallet.service';
 import {
@@ -525,109 +519,21 @@ export default function HomeScreen() {
           {filteredHomeMovements.length === 0 ? (
             <Text style={styles.emptyText}>
               {hasHomeFilters
-                ? 'No hay movimientos para esta cuenta.'
+                ? 'No hay movimientos con los filtros seleccionados.'
                 : 'Todavía no tienes movimientos registrados.'}
             </Text>
           ) : (
-            filteredHomeMovements.map((movement) => {
-              const isIncome = movement.type === 'income';
-              const accountName = movement.savings_goal_account_names
-                || movement.account?.name
-                || 'Cuenta';
-              const sign = isIncome ? '+' : '-';
-
-              const isPlannedPaymentMovement = Boolean(movement.planned_payment_id);
-
-              const canEdit =
-                movement.source === 'manual' &&
-                isManualMovementType(movement.type) &&
-                !isPlannedPaymentMovement;
-
-              const canDelete =
-                isManualMovementType(movement.type) &&
-                (
-                  movement.source === 'manual' ||
-                  isPlannedPaymentMovement
-                );
-
-              // Obtener el icono y color de la categoría con valores por defecto
-              const categoryIcon = movement.category_icon || 'Wallet';
-              const categoryColor = movement.category_color || '#D9D9D9';
-
-              return (
-                <View key={movement.id} style={styles.movementCard}>
-                  <View style={[styles.movementIcon, { backgroundColor: categoryColor }]}>
-                    {renderCategoryIcon(categoryIcon, 26, '#FFFFFF')}
-                  </View>
-
-                  <View style={styles.movementInfo}>
-                    <Text style={styles.movementTitle}>{movement.title}</Text>
-                    <View style={styles.movementDetailRow}>
-                      <WalletCards size={14} color={theme.colors.textSecondary} />
-                      <Text style={styles.movementSubtitle}>
-                        {accountName}
-                      </Text>
-                    </View>
-
-                    {movement.category_name && (
-                      <View style={styles.movementDetailRow}>
-                        <Tags size={14} color={theme.colors.textSecondary} />
-                        <Text style={styles.movementSubtitle}>
-                          {movement.category_name}
-                        </Text>
-                      </View>
-                    )}
-
-                    <View style={styles.movementDetailRow}>
-                      <CalendarDays size={14} color={theme.colors.textSecondary} />
-                      <Text style={styles.movementDate}>
-                        {movement.movement_date}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.movementRightBox}>
-                    {(canEdit || canDelete) && (
-                      <View style={styles.cardActions}>
-                        {canEdit && (
-                          <Pressable
-                            onPress={() => openMovementEditModal(movement)}
-                            hitSlop={10}
-                            style={styles.iconButton}
-                          >
-                            <Pencil size={18} color={theme.colors.primary} />
-                          </Pressable>
-                        )}
-
-                        {canDelete && (
-                          <Pressable
-                            onPress={() => {
-                              setSelectedMovement(movement);
-                              setMovementModalMode('delete');
-                            }}
-                            hitSlop={10}
-                            style={styles.iconButton}
-                          >
-                            <Trash2 size={18} color={colors.expense} />
-                          </Pressable>
-                        )}
-                      </View>
-                    )}
-
-                    <Text
-                      style={[
-                        styles.movementAmount,
-                        {
-                          color: isIncome ? colors.secondary : colors.expense,
-                        },
-                      ]}
-                    >
-                      {sign}{money(movement.amount)}
-                    </Text>
-                  </View>
-                </View>
-              );
-            })
+            filteredHomeMovements.map((movement) => (
+              <HomeMovementCard
+                key={movement.id}
+                movement={movement}
+                onEdit={openMovementEditModal}
+                onDelete={(movementToDelete) => {
+                  setSelectedMovement(movementToDelete);
+                  setMovementModalMode('delete');
+                }}
+              />
+            ))
           )}
         </ScrollView>
 
@@ -1014,59 +920,6 @@ export default function HomeScreen() {
         textAlign: 'center',
         marginTop: 16,
       },
-      movementCard: {
-        minHeight: 88,
-        backgroundColor: theme.colors.card,
-        borderRadius: 12,
-        padding: 14,
-        marginBottom: 14,
-        flexDirection: 'row',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOpacity: 0.18,
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 3,
-        elevation: 3,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-      },
-      movementIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        alignItems: 'center',
-        justifyContent: 'center',
-      },
-      movementInfo: {
-        flex: 1,
-        marginLeft: 12,
-      },
-      movementTitle: {
-        color: theme.colors.text,
-        fontWeight: '900',
-        fontSize: 16,
-      },
-      movementSubtitle: {
-        marginTop: 4,
-        color: theme.colors.textSecondary,
-        fontSize: 12,
-      },
-      movementDetailRow: {
-        marginTop: 4,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-      },
-      movementDate: {
-        marginTop: 4,
-        color: theme.colors.textSecondary,
-        fontSize: 12,
-      },
-      movementAmount: {
-        color: colors.secondary,
-        fontSize: 13,
-        fontWeight: '900',
-      },
       modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.62)',
@@ -1256,30 +1109,6 @@ export default function HomeScreen() {
         marginTop: 14,
         color: theme.colors.text,
         fontWeight: '800',
-      },
-      movementRightBox: {
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        minHeight: 64,
-        marginLeft: 8,
-      },
-      cardActions: {
-        flexDirection: 'row',
-        gap: 4,
-      },
-      iconButton: {
-        width: 34,
-        height: 34,
-        borderRadius: 17,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: theme.mode === 'dark' ? '#0F172A' : '#F8FAFC',
-      },
-      movementCategoryRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        marginTop: 4,
       },
     });
   }
