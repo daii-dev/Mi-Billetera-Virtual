@@ -42,10 +42,10 @@ import {
 } from '@/features/savings-goals/savings-goals.types';
 import {
   getUserAccounts,
-  getUserProfile,
   money,
 } from '@/features/wallet/wallet.service';
 import { Account } from '@/features/wallet/wallet.types';
+import { useProfileName } from '@/hooks/useProfileName';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
 import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
@@ -58,19 +58,17 @@ import {
 import {
   useAuth,
   useClerk,
-  useUser,
 } from '@clerk/expo';
 
 export default function GoalsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
-  const { user } = useUser();
   const { signOut } = useClerk();
   const supabase = useSupabase();
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
   const styles = createStyles(theme);
 
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
-  const [profileName, setProfileName] = useState('Usuario');
+  const { profileName } = useProfileName();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(false);
@@ -103,18 +101,11 @@ export default function GoalsScreen() {
 
       await updateExpiredGoalsIfNeeded(supabase, userId);
 
-      const [goalsData, profile, userAccounts] = await Promise.all([
+      const [goalsData, userAccounts] = await Promise.all([
         getSavingsGoals(supabase, userId),
-        getUserProfile(supabase, userId),
         getUserAccounts(supabase, userId),
       ]);
 
-      const fallbackName =
-        user?.fullName ||
-        user?.primaryEmailAddress?.emailAddress ||
-        'Usuario';
-
-      setProfileName(profile?.full_name || fallbackName);
       setAccounts(userAccounts);
       setGoals(goalsData);
     } catch (error: any) {
@@ -123,7 +114,7 @@ export default function GoalsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [isLoaded, isSignedIn, userId, supabase, user]);
+  }, [isLoaded, isSignedIn, userId, supabase]);
 
   useFocusEffect(
     useCallback(() => {

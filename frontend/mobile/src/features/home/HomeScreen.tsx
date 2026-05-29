@@ -49,7 +49,6 @@ import {
   getPersonalAccount,
   getRecentMovements,
   getUserAccounts,
-  getUserProfile,
   updateManualMovement,
 } from '@/features/wallet/wallet.service';
 import {
@@ -59,6 +58,7 @@ import {
   Movement,
   MovementType,
 } from '@/features/wallet/wallet.types';
+import { useProfileName } from '@/hooks/useProfileName';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
 import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
@@ -72,12 +72,10 @@ import {
 import {
   useAuth,
   useClerk,
-  useUser,
 } from '@clerk/expo';
 
 export default function HomeScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
-  const { user } = useUser();
   const { signOut } = useClerk();
   const supabase = useSupabase();
 
@@ -92,7 +90,7 @@ export default function HomeScreen() {
   const [homeFilterVisible, setHomeFilterVisible] = useState(false);
   const [selectedHomeFilterAccountId, setSelectedHomeFilterAccountId] = useState('');
   const [selectedHomeFilterCategoryKey, setSelectedHomeFilterCategoryKey] = useState('');
-  const [profileName, setProfileName] = useState('Usuario');
+  const { profileName } = useProfileName();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -154,14 +152,6 @@ export default function HomeScreen() {
         return;
       }
 
-      const profile = await getUserProfile(supabase, userId);
-
-      const fallbackName =
-        user?.fullName ||
-        user?.primaryEmailAddress?.emailAddress ||
-        'Usuario';
-
-      setProfileName(profile?.full_name || fallbackName);
       setAccount(data);
       setAccounts(userAccounts);
       setMovements(recentMovements);

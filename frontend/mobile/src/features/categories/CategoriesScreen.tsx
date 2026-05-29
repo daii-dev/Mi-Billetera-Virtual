@@ -35,6 +35,7 @@ import {
   Category,
   ManualMovementType,
 } from '@/features/wallet/wallet.types';
+import { useProfileName } from '@/hooks/useProfileName';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
 import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
@@ -78,6 +79,7 @@ export default function CategoriesScreen() {
 
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
   const styles = createStyles(theme);
+  const { profileName } = useProfileName();
 
   const [type, setType] = useState<ManualMovementType>('income');
   const [categories, setCategories] = useState<Category[]>([]);
@@ -85,7 +87,6 @@ export default function CategoriesScreen() {
   const [creating, setCreating] = useState(false);
 
   const [modalVisible, setModalVisible] = useState(false);
-  // modalMode removed — only creation modal is supported now
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [successModalVisible, setSuccessModalVisible] = useState(false);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
@@ -535,7 +536,7 @@ export default function CategoriesScreen() {
 
       <AppSidebar
         visible={sidebarVisible}
-        userName={''}
+        userName={profileName}
         selectedKey={selectedSidebarItem}
         visualMode={isDarkMode}
         onToggleVisualMode={setDarkMode}

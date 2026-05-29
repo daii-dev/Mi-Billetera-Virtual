@@ -35,11 +35,11 @@ import {
   deleteAccount,
   getAccountsTotal,
   getUserAccounts,
-  getUserProfile,
   money,
   updateAccountName,
 } from '@/features/wallet/wallet.service';
 import { Account } from '@/features/wallet/wallet.types';
+import { useProfileName } from '@/hooks/useProfileName';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
 import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
@@ -53,14 +53,12 @@ import {
 import {
   useAuth,
   useClerk,
-  useUser,
 } from '@clerk/expo';
 
 type AccountModalMode = 'create' | 'success' | 'edit' | 'delete' | null;
 
 export default function AccountsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
-  const { user } = useUser();
   const { signOut } = useClerk();
   const supabase = useSupabase();
 
@@ -68,7 +66,7 @@ export default function AccountsScreen() {
   const styles = createStyles(theme);
 
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [profileName, setProfileName] = useState('Usuario');
+  const { profileName } = useProfileName();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -106,14 +104,6 @@ export default function AccountsScreen() {
       }
 
       const userAccounts = await getUserAccounts(supabase, userId);
-      const profile = await getUserProfile(supabase, userId);
-
-      const fallbackName =
-        user?.fullName ||
-        user?.primaryEmailAddress?.emailAddress ||
-        'Usuario';
-
-      setProfileName(profile?.full_name || fallbackName);
       setAccounts(userAccounts);
     } catch (error: any) {
       Alert.alert(

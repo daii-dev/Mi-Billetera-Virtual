@@ -36,24 +36,20 @@ import {
   getCategoriesByType,
   getUserAccounts,
 } from '@/features/wallet/wallet.service';
+import { useProfileName } from '@/hooks/useProfileName';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
 import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import { useAppTheme } from '@/theme/ThemeContext';
-import {
-  useAuth,
-  useUser,
-} from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function BudgetsScreen() {
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
   const supabase = useSupabase();
   const { userId } = useAuth();
-  const { user } = useUser();
-  
   const [sidebarVisible, setSidebarVisible] = useState(false); 
   const [budgets, setBudgets] = useState<any[]>([]);
   const [myAccounts, setMyAccounts] = useState<any[]>([]);
@@ -96,7 +92,7 @@ export default function BudgetsScreen() {
       setShowCategoryOptions(false);
       setEditingBudgetId(null);
     };
-  const profileName = user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Usuario';
+  const { profileName } = useProfileName();
 
   const loadBudgetsData = async () => {
     if (!userId) return;

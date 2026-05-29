@@ -22,14 +22,12 @@ import {
 } from 'react-native';
 
 import { MovementManagerScreen } from '@/features/wallet/MovementManagerScreen';
-import {
-  getCategoriesByType,
-  getUserProfile,
-} from '@/features/wallet/wallet.service';
+import { getCategoriesByType } from '@/features/wallet/wallet.service';
 import {
   Category,
   ManualMovementType,
 } from '@/features/wallet/wallet.types';
+import { useProfileName } from '@/hooks/useProfileName';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
 import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
@@ -43,7 +41,6 @@ import {
 import {
   useAuth,
   useClerk,
-  useUser,
 } from '@clerk/expo';
 
 const recordsConfig = {
@@ -77,7 +74,6 @@ const recordsConfig = {
 
 export default function RecordsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
-  const { user } = useUser();
   const { signOut } = useClerk();
   const supabase = useSupabase();
   const params = useLocalSearchParams<{ type?: string }>();
@@ -92,7 +88,7 @@ export default function RecordsScreen() {
     }
   }, [params.type]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [profileName, setProfileName] = useState('Usuario');
+  const { profileName } = useProfileName();
 
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [selectedSidebarItem, setSelectedSidebarItem] =
@@ -109,30 +105,12 @@ export default function RecordsScreen() {
   });
 
   useEffect(() => {
-    async function loadProfile() {
-      if (!isLoaded) return;
+    if (!isLoaded) return;
 
-      if (!isSignedIn || !userId) {
-        router.replace('/sign-in');
-        return;
-      }
-
-      try {
-        const profile = await getUserProfile(supabase, userId);
-
-        const fallbackName =
-          user?.fullName ||
-          user?.primaryEmailAddress?.emailAddress ||
-          'Usuario';
-
-        setProfileName(profile?.full_name || fallbackName);
-      } catch (error) {
-        console.log('ERROR RECORDS PROFILE:', error);
-      }
+    if (!isSignedIn || !userId) {
+      router.replace('/sign-in');
     }
-
-    loadProfile();
-  }, [isLoaded, isSignedIn, userId, user, supabase]);
+  }, [isLoaded, isSignedIn, userId]);
 
   useEffect(() => {
     async function loadCategories() {

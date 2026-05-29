@@ -56,6 +56,7 @@ import {
   Account,
   Category,
 } from '@/features/wallet/wallet.types';
+import { useProfileName } from '@/hooks/useProfileName';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
 import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
@@ -68,7 +69,6 @@ import {
 import {
   useAuth,
   useClerk,
-  useUser,
 } from '@clerk/expo';
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -98,7 +98,6 @@ function getDateFromInput(dateString: string): Date {
 export default function PlannedPaymentsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
   const { signOut } = useClerk();
-  const { user } = useUser();
   const supabase = useSupabase();
 
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
@@ -107,11 +106,7 @@ export default function PlannedPaymentsScreen() {
   const [payments, setPayments] = useState<PlannedPayment[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-
-  const [profileName, setProfileName] = useState(
-    user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Usuario'
-  );
-
+  const { profileName } = useProfileName();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -167,12 +162,6 @@ export default function PlannedPaymentsScreen() {
       setAccounts(userAccounts);
       setCategories(expenseCategories);
       setPayments(plannedPayments);
-
-      setProfileName(
-        user?.fullName ||
-        user?.primaryEmailAddress?.emailAddress ||
-        'Usuario'
-      );
     } catch (error: any) {
       Alert.alert(
         'Error',
@@ -182,7 +171,7 @@ export default function PlannedPaymentsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [isLoaded, isSignedIn, userId, supabase, user]);
+  }, [isLoaded, isSignedIn, userId, supabase]);
 
   useEffect(() => {
     loadData(true);

@@ -57,7 +57,7 @@ import {
   getReportAccounts,
   getReportMovements,
 } from '@/features/reports/reports.service';
-import { getUserProfile } from '@/features/wallet/wallet.service';
+import { useProfileName } from '@/hooks/useProfileName';
 import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
 import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
 import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
@@ -70,7 +70,6 @@ import {
 import {
   useAuth,
   useClerk,
-  useUser,
 } from '@clerk/expo';
 
 const PERIOD_OPTIONS: Array<{
@@ -114,13 +113,12 @@ const SECTION_OPTIONS: Array<{
 
 export function ReportsMovementsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
-  const { user } = useUser();
   const { signOut } = useClerk();
   const supabase = useSupabase();
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
   const styles = createStyles(theme);
 
-  const [profileName, setProfileName] = useState('Usuario');
+  const { profileName } = useProfileName();
   const [accounts, setAccounts] = useState<ReportAccount[]>([]);
   const [movements, setMovements] = useState<ReportMovement[]>([]);
   const [previousMovements, setPreviousMovements] = useState<ReportMovement[]>([]);
@@ -176,20 +174,13 @@ export function ReportsMovementsScreen() {
 
       setErrorMessage('');
 
-      const [reportAccounts, reportMovements, previousData, profile] =
+      const [reportAccounts, reportMovements, previousData] =
         await Promise.all([
           getReportAccounts(supabase, userId),
           getReportMovements(supabase, userId, filters),
           getPreviousPeriodMovements(supabase, userId, filters),
-          getUserProfile(supabase, userId),
         ]);
 
-      const fallbackName =
-        user?.fullName ||
-        user?.primaryEmailAddress?.emailAddress ||
-        'Usuario';
-
-      setProfileName(profile?.full_name || fallbackName);
       setAccounts(reportAccounts);
       setMovements(reportMovements);
       setPreviousMovements(previousData);
@@ -201,7 +192,7 @@ export function ReportsMovementsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters, isLoaded, isSignedIn, supabase, user, userId]);
+  }, [filters, isLoaded, isSignedIn, supabase, userId]);
 
   useFocusEffect(
     useCallback(() => {
