@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, FlatList } from 'react-native';
+import { useState } from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable } from 'react-native';
 import type { StatisticsData } from '../statistics.types';
 import { AppTheme } from '@/theme/ThemeContext';
 
@@ -16,16 +17,16 @@ function getColorForCategory(
   }
 
   const colors = [
-    '#FF6B6B',
-    '#4ECDC4',
-    '#45B7D1',
-    '#FFA07A',
-    '#98D8C8',
-    '#F7DC6F',
-    '#BB8FCE',
-    '#85C1E2',
-    '#F8B88B',
-    '#80D8FF',
+    '#FF6B6B', // Red
+    '#4ECDC4', // Teal
+    '#45B7D1', // Blue
+    '#FFA07A', // Peach
+    '#98D8C8', // Sage green
+    '#F7DC6F', // Yellow
+    '#BB8FCE', // Purple
+    '#85C1E2', // Sky blue
+    '#F8B88B', // Orange
+    '#80D8FF', // Light blue
   ];
 
   const charSum = (categoryName || '').split('').reduce((a, b) => a + b.charCodeAt(0), 0);
@@ -33,6 +34,8 @@ function getColorForCategory(
 }
 
 export function TopCategories({ data, theme }: TopCategoriesProps) {
+  const [showAll, setShowAll] = useState(false);
+
   const formatCurrency = (value: number): string => {
     return `Bs. ${value.toLocaleString('es-BO', {
       minimumFractionDigits: 2,
@@ -53,13 +56,24 @@ export function TopCategories({ data, theme }: TopCategoriesProps) {
     }
   };
 
-  return (
-    <View style={[styles.container, { backgroundColor: theme.colors.cardBackground }]}>
-      <Text style={[styles.title, { color: theme.colors.text }]}>
-        Top 5 Categorías
-      </Text>
+  const displayedCategories = showAll ? data.categories : data.topCategories;
 
-      {data.topCategories.length === 0 ? (
+  return (
+    <View style={[styles.container, { backgroundColor: theme.colors.card }]}>
+      <View style={styles.headerRow}>
+        <Text style={[styles.title, { color: theme.colors.text }]}>
+          {showAll ? 'Todas las Categorías' : 'Top 5 Categorías'}
+        </Text>
+        {data.categories.length > 5 && (
+          <Pressable onPress={() => setShowAll(!showAll)} hitSlop={8}>
+            <Text style={[styles.seeAllButton, { color: theme.colors.primary }]}>
+              {showAll ? 'Ver menos' : 'Ver todo'}
+            </Text>
+          </Pressable>
+        )}
+      </View>
+
+      {displayedCategories.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
             Sin datos disponibles
@@ -67,12 +81,13 @@ export function TopCategories({ data, theme }: TopCategoriesProps) {
         </View>
       ) : (
         <FlatList
-          data={data.topCategories}
-          keyExtractor={(item) => `${item.rank}-${item.categoryName}`}
+          data={displayedCategories}
+          keyExtractor={(item, index) => `${index}-${item.categoryName}`}
           scrollEnabled={false}
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
+            const rank = index + 1;
             const maxAmount = Math.max(
-              ...data.topCategories.map((c) => c.amount),
+              ...displayedCategories.map((c) => c.amount),
               1
             );
             const barWidth = (item.amount / maxAmount) * 100;
@@ -81,7 +96,7 @@ export function TopCategories({ data, theme }: TopCategoriesProps) {
               <View style={styles.categoryItem}>
                 <View style={styles.rankSection}>
                   <Text style={[styles.rank, { color: theme.colors.primary }]}>
-                    {getRankMedal(item.rank)}
+                    {getRankMedal(rank)}
                   </Text>
                 </View>
 
@@ -121,8 +136,7 @@ export function TopCategories({ data, theme }: TopCategoriesProps) {
                         { color: theme.colors.textSecondary },
                       ]}
                     >
-                      {item.movementCount} movimiento
-                      {item.movementCount !== 1 ? 's' : ''}
+                      {item.movementCount} {item.movementCount === 1 ? 'movimiento' : 'movimientos'}
                     </Text>
                   </View>
                 </View>
@@ -147,10 +161,19 @@ const styles = StyleSheet.create({
     padding: 16,
     marginVertical: 12,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   title: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 16,
+  },
+  seeAllButton: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   emptyState: {
     paddingVertical: 24,

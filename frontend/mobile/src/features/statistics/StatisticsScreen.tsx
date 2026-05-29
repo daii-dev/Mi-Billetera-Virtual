@@ -1,24 +1,9 @@
-import {
-  useCallback,
-  useRef,
-  useState,
-} from 'react';
-
-import {
-  router,
-  useFocusEffect,
-} from 'expo-router';
-import {
-  LogOut,
-  Menu,
-  TrendingDown,
-  TrendingUp,
-} from 'lucide-react-native';
+import { useCallback, useState } from 'react';
+import { useFocusEffect, router } from 'expo-router';
+import { TrendingDown, TrendingUp } from 'lucide-react-native';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
-  PanResponder,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -26,36 +11,24 @@ import {
   Text,
   View,
 } from 'react-native';
-
 import type {
   StatisticsData,
   StatisticsFilters,
   StatisticsPeriodKey,
   StatisticsMovementType,
 } from '@/features/statistics/statistics.types';
-import {
-  getStatisticsData,
-} from '@/features/statistics/statistics.service';
+import { getStatisticsData } from '@/features/statistics/statistics.service';
 import { getStatisticsDateRange as getDateRange } from '@/features/statistics/statisticsPeriods';
 import { DonutChart } from '@/features/statistics/components/DonutChart';
 import { TrendChart } from '@/features/statistics/components/TrendChart';
 import { TopCategories } from '@/features/statistics/components/TopCategories';
 import { getReportAccounts } from '@/features/reports/reports.service';
 import type { ReportAccount } from '@/features/reports/report.types';
-import { getUserProfile } from '@/features/wallet/wallet.service';
-import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
-import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
+import { PrivateScreenLayout } from '@/layouts/private-screen/PrivateScreenLayout';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
-import {
-  AppTheme,
-  useAppTheme,
-} from '@/theme/ThemeContext';
-import {
-  useAuth,
-  useClerk,
-  useUser,
-} from '@clerk/expo';
+import { AppTheme, useAppTheme } from '@/theme/ThemeContext';
+import { useAuth } from '@clerk/expo';
 import { AppButton } from '@/components/ui/AppButton';
 
 const PERIOD_OPTIONS: Array<{
@@ -67,23 +40,12 @@ const PERIOD_OPTIONS: Array<{
   { key: 'yearly', label: 'Anual' },
 ];
 
-const TYPE_OPTIONS: Array<{
-  key: StatisticsMovementType;
-  label: string;
-}> = [
-  { key: 'income', label: 'Ingresos' },
-  { key: 'expense', label: 'Gastos' },
-];
-
 export function StatisticsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
-  const { user } = useUser();
-  const { signOut } = useClerk();
   const supabase = useSupabase();
-  const { theme, isDarkMode, setDarkMode } = useAppTheme();
+  const { theme } = useAppTheme();
   const styles = createStyles(theme);
 
-  const [profileName, setProfileName] = useState('Usuario');
   const [accounts, setAccounts] = useState<ReportAccount[]>([]);
   const [statisticsData, setStatisticsData] = useState<StatisticsData | null>(
     null
@@ -91,7 +53,6 @@ export function StatisticsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   const [filters, setFilters] = useState<StatisticsFilters>({
     period: 'monthly',
@@ -99,31 +60,6 @@ export function StatisticsScreen() {
     accountId: null,
     dateRange: getDateRange('monthly'),
   });
-
-  const handleSelectSidebarItem = useSidebarNavigation({
-    currentKey: 'statistics',
-    onClose: () => setSidebarVisible(false),
-  });
-
-  const openSidebarPanResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        const isFromLeftEdge = gestureState.x0 <= 25;
-        const isSwipeToRight = gestureState.dx > 12;
-        const isHorizontalSwipe =
-          Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
-
-        return isFromLeftEdge && isSwipeToRight && isHorizontalSwipe;
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        const shouldOpen = gestureState.dx > 60 || gestureState.vx > 0.5;
-
-        if (shouldOpen) {
-          setSidebarVisible(true);
-        }
-      },
-    })
-  ).current;
 
   const loadStatistics = useCallback(async (showFullLoader = false) => {
     if (!isLoaded) return;
@@ -140,18 +76,11 @@ export function StatisticsScreen() {
 
       setErrorMessage('');
 
-      const [reportAccounts, stats, profile] = await Promise.all([
+      const [reportAccounts, stats] = await Promise.all([
         getReportAccounts(supabase, userId),
         getStatisticsData(supabase, userId, filters),
-        getUserProfile(supabase, userId),
       ]);
 
-      const fallbackName =
-        user?.fullName ||
-        user?.primaryEmailAddress?.emailAddress ||
-        'Usuario';
-
-      setProfileName(profile?.full_name || fallbackName);
       setAccounts(reportAccounts);
       setStatisticsData(stats);
     } catch (error: any) {
@@ -162,7 +91,7 @@ export function StatisticsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters, isLoaded, isSignedIn, supabase, user, userId]);
+  }, [filters, isLoaded, isSignedIn, supabase, userId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -170,30 +99,9 @@ export function StatisticsScreen() {
     }, [loadStatistics])
   );
 
-  const selectedPeriodLabel =
-    PERIOD_OPTIONS.find((option) => option.key === filters.period)?.label ??
-    'Período';
-
-  const selectedTypeLabel =
-    TYPE_OPTIONS.find((option) => option.key === filters.type)?.label ??
-    'Tipo';
-
-  const selectedAccountLabel =
-    accounts.find((account) => account.id === filters.accountId)?.name ??
-    'Todas las cuentas';
-
   async function handleRefresh() {
     setRefreshing(true);
     await loadStatistics(false);
-  }
-
-  async function handleLogout() {
-    try {
-      await signOut();
-      router.replace('/sign-in');
-    } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo cerrar sesión');
-    }
   }
 
   function handleSelectType(type: StatisticsMovementType) {
@@ -288,13 +196,6 @@ export function StatisticsScreen() {
     );
   }
 
-  function handleSelectAccount(accountId: string | null) {
-    setFilters((currentFilters) => ({
-      ...currentFilters,
-      accountId,
-    }));
-  }
-
   if (!isLoaded) {
     return (
       <View style={[styles.container, styles.centerContent]}>
@@ -308,40 +209,7 @@ export function StatisticsScreen() {
   }
 
   return (
-    <View style={styles.container} {...openSidebarPanResponder.panHandlers}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => setSidebarVisible(true)}
-          hitSlop={8}
-        >
-          <Menu size={28} color="#FFFFFF" />
-        </Pressable>
-
-        <Text style={styles.headerTitle}>Estadísticas</Text>
-
-        <Pressable
-          onPress={handleLogout}
-          hitSlop={8}
-        >
-          <LogOut size={26} color="#FFFFFF" />
-        </Pressable>
-      </View>
-
-      {/* Sidebar */}
-      <Modal visible={sidebarVisible} transparent animationType="fade">
-        <Pressable
-          onPress={() => setSidebarVisible(false)}
-          style={styles.sidebarOverlay}
-        />
-        <AppSidebar
-          onSelectItem={handleSelectSidebarItem}
-          onLogout={handleLogout}
-          profileName={profileName}
-        />
-      </Modal>
-
-      {/* Main Content */}
+    <PrivateScreenLayout title="Estadísticas" currentKey="statistics">
       <ScrollView
         style={styles.content}
         refreshControl={
@@ -392,7 +260,7 @@ export function StatisticsScreen() {
           </>
         ) : null}
       </ScrollView>
-    </View>
+    </PrivateScreenLayout>
   );
 }
 
@@ -405,20 +273,6 @@ function createStyles(theme: AppTheme) {
     centerContent: {
       justifyContent: 'center',
       alignItems: 'center',
-    },
-    header: {
-      height: 92,
-      backgroundColor: theme.colors.sidebarHeader,
-      paddingHorizontal: 18,
-      paddingTop: 42,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    headerTitle: {
-      color: '#FFFFFF',
-      fontSize: 25,
-      fontWeight: '900',
     },
     content: {
       flex: 1,
@@ -488,10 +342,6 @@ function createStyles(theme: AppTheme) {
     divider: {
       height: 1,
       marginVertical: 12,
-    },
-    sidebarOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.4)',
     },
     errorContainer: {
       padding: 16,
