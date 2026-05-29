@@ -3,7 +3,6 @@ import React, {
   useState,
 } from 'react';
 
-import { router } from 'expo-router';
 import {
   AlertTriangle,
   Calendar,
@@ -35,26 +34,19 @@ import {
   getCategoriesByType,
   getUserAccounts,
 } from '@/features/wallet/wallet.service';
-import { useProfileName } from '@/hooks/useProfileName';
-import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
-import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
-import { AppHeader } from '@/layouts/header/AppHeader';
-import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
+import {
+  PrivateScreenLayout,
+} from '@/layouts/private-screen/PrivateScreenLayout';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import { useAppTheme } from '@/theme/ThemeContext';
-import {
-  useAuth,
-  useClerk,
-} from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function BudgetsScreen() {
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
   const supabase = useSupabase();
   const { userId } = useAuth();
-  const { signOut } = useClerk();
-  const [sidebarVisible, setSidebarVisible] = useState(false); 
   const [budgets, setBudgets] = useState<any[]>([]);
   const [myAccounts, setMyAccounts] = useState<any[]>([]);
   const [myCategories, setMyCategories] = useState<any[]>([]); 
@@ -75,15 +67,6 @@ export default function BudgetsScreen() {
   const [showAccountOptions, setShowAccountOptions] = useState(false);
   const [showCategoryOptions, setShowCategoryOptions] = useState(false);
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
-  
-  const handleSelectSidebarItem = useSidebarNavigation({
-    currentKey: 'budgets',
-    onClose: () => setSidebarVisible(false),
-  });
-
-  const sidebarSwipeHandlers = useSidebarSwipe({
-    onOpen: () => setSidebarVisible(true),
-  });
 
   const resetForm = () => {
       setSelectedCategory('');
@@ -96,8 +79,6 @@ export default function BudgetsScreen() {
       setShowCategoryOptions(false);
       setEditingBudgetId(null);
     };
-  const { profileName } = useProfileName();
-
   const loadBudgetsData = async () => {
     if (!userId) return;
     try {
@@ -307,27 +288,11 @@ export default function BudgetsScreen() {
       setLoading(false);
     }
   };
-
-  async function handleLogout() {
-    try {
-      await signOut();
-      router.replace('/sign-in');
-    } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo cerrar sesión');
-    }
-  }
-
   return (
-    <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      {...sidebarSwipeHandlers}
+    <PrivateScreenLayout
+      title="Presupuestos"
+      currentKey="budgets"
     >
-      <AppHeader
-        title="Presupuestos"
-        onOpenSidebar={() => setSidebarVisible(true)}
-        onLogout={handleLogout}
-      />
-
       <ScrollView contentContainerStyle={styles.content}>
         {budgets.map((item) => {
           const visualProgress = Math.min(item.progress, 100);
@@ -565,22 +530,11 @@ export default function BudgetsScreen() {
           </View>
         </View>
       </Modal>
-
-      <AppSidebar
-        visible={sidebarVisible}
-        userName={profileName}
-        selectedKey="budgets"
-        visualMode={isDarkMode}
-        onToggleVisualMode={setDarkMode}
-        onClose={() => setSidebarVisible(false)}
-        onSelectItem={handleSelectSidebarItem}
-      />
-    </View>
+    </PrivateScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   content: { padding: 16 },
   card: { borderRadius: 12, padding: 16, marginBottom: 15, borderWidth: 1, elevation: 3, position: 'relative' },
   notificationBanner: { flexDirection: 'row', alignItems: 'center', padding: 8, borderRadius: 6, marginBottom: 10, gap: 6 },

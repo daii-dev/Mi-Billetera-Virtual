@@ -37,57 +37,32 @@ import {
   updateAccountName,
 } from '@/features/wallet/wallet.service';
 import { Account } from '@/features/wallet/wallet.types';
-import { useProfileName } from '@/hooks/useProfileName';
-import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
-import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
-import { AppHeader } from '@/layouts/header/AppHeader';
-import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
-import { SidebarRouteKey } from '@/lib/sidebarNavigation';
+import {
+  PrivateScreenLayout,
+} from '@/layouts/private-screen/PrivateScreenLayout';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
   AppTheme,
   useAppTheme,
 } from '@/theme/ThemeContext';
-import {
-  useAuth,
-  useClerk,
-} from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 
 type AccountModalMode = 'create' | 'success' | 'edit' | 'delete' | null;
 
 export default function AccountsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
-  const { signOut } = useClerk();
   const supabase = useSupabase();
-
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
   const styles = createStyles(theme);
-
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const { profileName } = useProfileName();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  const [sidebarVisible, setSidebarVisible] = useState(false);
-  const [selectedSidebarItem, setSelectedSidebarItem] = useState<SidebarRouteKey>('accounts');
-
   const [modalMode, setModalMode] = useState<AccountModalMode>(null);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
-
   const [accountName, setAccountName] = useState('');
   const [initialBalanceText, setInitialBalanceText] = useState('');
   const [saving, setSaving] = useState(false);
-
-  const handleSelectSidebarItem = useSidebarNavigation({
-    currentKey: 'accounts',
-    onClose: () => setSidebarVisible(false),
-    onSelectedKeyChange: setSelectedSidebarItem,
-  });
-
-  const sidebarSwipeHandlers = useSidebarSwipe({
-    onOpen: () => setSidebarVisible(true),
-  });
 
   async function loadAccounts(showFullLoader = false) {
     if (!isLoaded) return;
@@ -124,15 +99,6 @@ export default function AccountsScreen() {
   async function handleRefresh() {
     setRefreshing(true);
     await loadAccounts(false);
-  }
-
-  async function handleLogout() {
-    try {
-      await signOut();
-      router.replace('/sign-in');
-    } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo cerrar sesión');
-    }
   }
 
   function openCreateModal() {
@@ -303,16 +269,10 @@ export default function AccountsScreen() {
   }
 
   return (
-    <View
-      style={styles.container}
-      {...sidebarSwipeHandlers}
+    <PrivateScreenLayout
+      title="Cuentas"
+      currentKey="accounts"
     >
-      <AppHeader
-        title="Cuentas"
-        onOpenSidebar={() => setSidebarVisible(true)}
-        onLogout={handleLogout}
-      />
-
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -376,17 +336,7 @@ export default function AccountsScreen() {
         onCancelDelete={closeModal}
         onDelete={handleDeleteAccount}
       />
-
-      <AppSidebar
-        visible={sidebarVisible}
-        userName={profileName}
-        selectedKey={selectedSidebarItem}
-        visualMode={isDarkMode}
-        onToggleVisualMode={setDarkMode}
-        onClose={() => setSidebarVisible(false)}
-        onSelectItem={handleSelectSidebarItem}
-      />
-    </View>
+    </PrivateScreenLayout>
   );
 }
 
@@ -578,10 +528,6 @@ function AccountModal({
 
 function createStyles(theme: AppTheme) {
   return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.colors.background,
-    },
     content: {
       padding: 14,
       paddingBottom: 120,

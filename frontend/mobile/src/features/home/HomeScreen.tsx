@@ -54,26 +54,19 @@ import {
   Movement,
   MovementType,
 } from '@/features/wallet/wallet.types';
-import { useProfileName } from '@/hooks/useProfileName';
-import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
-import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
-import { AppHeader } from '@/layouts/header/AppHeader';
-import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
-import { SidebarRouteKey } from '@/lib/sidebarNavigation';
+import {
+  PrivateScreenLayout,
+} from '@/layouts/private-screen/PrivateScreenLayout';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
   AppTheme,
   useAppTheme,
 } from '@/theme/ThemeContext';
-import {
-  useAuth,
-  useClerk,
-} from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 
 export default function HomeScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
-  const { signOut } = useClerk();
   const supabase = useSupabase();
 
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
@@ -87,15 +80,9 @@ export default function HomeScreen() {
   const [homeFilterVisible, setHomeFilterVisible] = useState(false);
   const [selectedHomeFilterAccountId, setSelectedHomeFilterAccountId] = useState('');
   const [selectedHomeFilterCategoryKey, setSelectedHomeFilterCategoryKey] = useState('');
-  const { profileName } = useProfileName();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  const [sidebarVisible, setSidebarVisible] = useState(false);
-  const [selectedSidebarItem, setSelectedSidebarItem] = useState<SidebarRouteKey>('home');
-
-  const [movementModalMode, setMovementModalMode] =
-    useState<HomeMovementModalMode>(null);
+  const [movementModalMode, setMovementModalMode] = useState<HomeMovementModalMode>(null);
 
   const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null);
 
@@ -108,16 +95,6 @@ export default function HomeScreen() {
   const [showCategoryOptions, setShowCategoryOptions] = useState(false);
 
   const [savingMovement, setSavingMovement] = useState(false);
-
-  const handleSelectSidebarItem = useSidebarNavigation({
-    currentKey: 'home',
-    onClose: () => setSidebarVisible(false),
-    onSelectedKeyChange: setSelectedSidebarItem,
-  });
-
-  const sidebarSwipeHandlers = useSidebarSwipe({
-    onOpen: () => setSidebarVisible(true),
-  });
 
   async function loadAccount(showFullLoader = false) {
     if (!isLoaded) return;
@@ -208,15 +185,6 @@ export default function HomeScreen() {
   async function handleRefresh() {
     setRefreshing(true);
     await loadAccount(false);
-  }
-
-  async function handleLogout() {
-    try {
-      await signOut();
-      router.replace('/sign-in');
-    } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo cerrar sesión');
-    }
   }
 
   function isManualMovementType(type: MovementType): type is ManualMovementType {
@@ -422,16 +390,10 @@ export default function HomeScreen() {
     });
 
     return (
-      <View
-        style={styles.container}
-        {...sidebarSwipeHandlers}
+      <PrivateScreenLayout
+        title="Inicio"
+        currentKey="home"
       >
-        <AppHeader
-          title="Inicio"
-          onOpenSidebar={() => setSidebarVisible(true)}
-          onLogout={handleLogout}
-        />
-
         <ScrollView
           contentContainerStyle={styles.content}
           refreshControl={
@@ -546,26 +508,12 @@ export default function HomeScreen() {
           onCancelDelete={closeMovementModal}
           onDelete={handleDeleteMovementFromHome}
         />
-
-        <AppSidebar
-          visible={sidebarVisible}
-          userName={profileName}
-          selectedKey={selectedSidebarItem}
-          visualMode={isDarkMode}
-          onToggleVisualMode={setDarkMode}
-          onClose={() => setSidebarVisible(false)}
-          onSelectItem={handleSelectSidebarItem}
-        />
-      </View>
+      </PrivateScreenLayout>
     );
   }
 
   function createStyles(theme: AppTheme) {
     return StyleSheet.create({
-      container: {
-        flex: 1,
-        backgroundColor: theme.colors.background,
-      },
       content: {
         padding: 16,
         paddingBottom: 40,

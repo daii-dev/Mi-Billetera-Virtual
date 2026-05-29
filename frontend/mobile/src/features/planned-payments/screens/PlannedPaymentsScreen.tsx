@@ -54,21 +54,16 @@ import {
   Account,
   Category,
 } from '@/features/wallet/wallet.types';
-import { useProfileName } from '@/hooks/useProfileName';
-import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
-import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
-import { AppHeader } from '@/layouts/header/AppHeader';
-import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
+import {
+  PrivateScreenLayout,
+} from '@/layouts/private-screen/PrivateScreenLayout';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
   AppTheme,
   useAppTheme,
 } from '@/theme/ThemeContext';
-import {
-  useAuth,
-  useClerk,
-} from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
@@ -96,45 +91,26 @@ function getDateFromInput(dateString: string): Date {
 
 export default function PlannedPaymentsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
-  const { signOut } = useClerk();
   const supabase = useSupabase();
-
-  const { theme, isDarkMode, setDarkMode } = useAppTheme();
+  const { theme } = useAppTheme();
   const styles = createStyles(theme);
-
   const [payments, setPayments] = useState<PlannedPayment[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const { profileName } = useProfileName();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  const [sidebarVisible, setSidebarVisible] = useState(false);
-
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [successAction, setSuccessAction] = useState<SuccessAction>('create');
   const [selectedPayment, setSelectedPayment] = useState<PlannedPayment | null>(null);
-
   const [paymentName, setPaymentName] = useState('');
   const [amountText, setAmountText] = useState('');
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [paymentDate, setPaymentDate] = useState('');
-
   const [showAccountOptions, setShowAccountOptions] = useState(false);
   const [showCategoryOptions, setShowCategoryOptions] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-
   const [saving, setSaving] = useState(false);
-
-  const handleSelectSidebarItem = useSidebarNavigation({
-    currentKey: 'planned-payments',
-    onClose: () => setSidebarVisible(false),
-  });
-
-  const sidebarSwipeHandlers = useSidebarSwipe({
-    onOpen: () => setSidebarVisible(true),
-  });
 
   const loadData = useCallback(async (showFullLoader = false) => {
     if (!isLoaded) return;
@@ -179,15 +155,6 @@ export default function PlannedPaymentsScreen() {
   async function handleRefresh() {
     setRefreshing(true);
     await loadData(false);
-  }
-
-  async function handleLogout() {
-    try {
-      await signOut();
-      router.replace('/sign-in');
-    } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo cerrar sesión');
-    }
   }
 
   function getTodayDate() {
@@ -407,16 +374,10 @@ export default function PlannedPaymentsScreen() {
   }
 
   return (
-    <View
-      style={styles.container}
-      {...sidebarSwipeHandlers}
+    <PrivateScreenLayout
+      title="Pagos Planificados"
+      currentKey="planned-payments"
     >
-      <AppHeader
-        title="Pagos Planificados"
-        onOpenSidebar={() => setSidebarVisible(true)}
-        onLogout={handleLogout}
-      />
-
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -547,17 +508,7 @@ export default function PlannedPaymentsScreen() {
         onCancelDelete={closeModal}
         onDelete={handleDeletePayment}
       />
-
-      <AppSidebar
-        visible={sidebarVisible}
-        userName={profileName}
-        selectedKey="planned-payments"
-        visualMode={isDarkMode}
-        onToggleVisualMode={setDarkMode}
-        onClose={() => setSidebarVisible(false)}
-        onSelectItem={handleSelectSidebarItem}
-      />
-    </View>
+    </PrivateScreenLayout>
   );
 }
 
@@ -849,10 +800,6 @@ function PlannedPaymentModal({
 
 function createStyles(theme: AppTheme) {
   return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.colors.background,
-    },
     content: {
       padding: 12,
       paddingBottom: 110,

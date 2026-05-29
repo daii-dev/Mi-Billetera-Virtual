@@ -40,47 +40,29 @@ import {
   money,
 } from '@/features/wallet/wallet.service';
 import { Account } from '@/features/wallet/wallet.types';
-import { useProfileName } from '@/hooks/useProfileName';
-import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
-import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
-import { AppHeader } from '@/layouts/header/AppHeader';
-import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
+import {
+  PrivateScreenLayout,
+} from '@/layouts/private-screen/PrivateScreenLayout';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
   AppTheme,
   useAppTheme,
 } from '@/theme/ThemeContext';
-import {
-  useAuth,
-  useClerk,
-} from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 
 export default function GoalsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
-  const { signOut } = useClerk();
   const supabase = useSupabase();
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
   const styles = createStyles(theme);
-
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
-  const { profileName } = useProfileName();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [sidebarVisible, setSidebarVisible] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedGoal, setSelectedGoal] = useState<SavingsGoal | null>(null);
   const [contributionModalVisible, setContributionModalVisible] = useState(false);
   const [savingContribution, setSavingContribution] = useState(false);
-
-  const handleSelectSidebarItem = useSidebarNavigation({
-    currentKey: 'goals',
-    onClose: () => setSidebarVisible(false),
-  });
-
-  const sidebarSwipeHandlers = useSidebarSwipe({
-    onOpen: () => setSidebarVisible(true),
-  });
 
   const loadGoals = useCallback(async (showFullLoader = false) => {
     if (!isLoaded) return;
@@ -121,15 +103,6 @@ export default function GoalsScreen() {
   async function handleRefresh() {
     setRefreshing(true);
     await loadGoals(false);
-  }
-
-  async function handleLogout() {
-    try {
-      await signOut();
-      router.replace('/sign-in');
-    } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo cerrar sesion');
-    }
   }
 
   async function handleDelete(goal: SavingsGoal) {
@@ -239,16 +212,10 @@ export default function GoalsScreen() {
   }
 
   return (
-    <View
-      style={styles.container}
-      {...sidebarSwipeHandlers}
+    <PrivateScreenLayout
+      title="Metas de Ahorro"
+      currentKey="goals"
     >
-      <AppHeader
-        title="Metas de Ahorro"
-        onOpenSidebar={() => setSidebarVisible(true)}
-        onLogout={handleLogout}
-      />
-
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
@@ -300,17 +267,6 @@ export default function GoalsScreen() {
         color={colors.secondary}
         onPress={() => router.push('/goals/create')}
       />
-
-      <AppSidebar
-        visible={sidebarVisible}
-        userName={profileName}
-        selectedKey="goals"
-        visualMode={isDarkMode}
-        onToggleVisualMode={setDarkMode}
-        onClose={() => setSidebarVisible(false)}
-        onSelectItem={handleSelectSidebarItem}
-      />
-
       <GoalContributionModal
         visible={contributionModalVisible}
         goal={selectedGoal}
@@ -319,7 +275,7 @@ export default function GoalsScreen() {
         onClose={closeContributionModal}
         onConfirm={handleRegisterContribution}
       />
-    </View>
+    </PrivateScreenLayout>
   );
 }
 
@@ -346,10 +302,6 @@ function buildDeleteConfirmationMessage(
 
 function createStyles(theme: AppTheme) {
   return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.colors.background,
-    },
     content: {
       padding: 16,
       paddingBottom: 120,

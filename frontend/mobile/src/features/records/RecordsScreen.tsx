@@ -12,7 +12,6 @@ import {
   TrendingUp,
 } from 'lucide-react-native';
 import {
-  Alert,
   Pressable,
   StyleSheet,
   Text,
@@ -25,22 +24,16 @@ import {
   Category,
   ManualMovementType,
 } from '@/features/wallet/wallet.types';
-import { useProfileName } from '@/hooks/useProfileName';
-import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
-import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
-import { AppHeader } from '@/layouts/header/AppHeader';
-import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
-import { SidebarRouteKey } from '@/lib/sidebarNavigation';
+import {
+  PrivateScreenLayout,
+} from '@/layouts/private-screen/PrivateScreenLayout';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
   AppTheme,
   useAppTheme,
 } from '@/theme/ThemeContext';
-import {
-  useAuth,
-  useClerk,
-} from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 
 const recordsConfig = {
   income: {
@@ -73,7 +66,6 @@ const recordsConfig = {
 
 export default function RecordsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
-  const { signOut } = useClerk();
   const supabase = useSupabase();
   const params = useLocalSearchParams<{ type?: string }>();
 
@@ -87,21 +79,6 @@ export default function RecordsScreen() {
     }
   }, [params.type]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const { profileName } = useProfileName();
-
-  const [sidebarVisible, setSidebarVisible] = useState(false);
-  const [selectedSidebarItem, setSelectedSidebarItem] =
-    useState<SidebarRouteKey>('records');
-
-  const handleSelectSidebarItem = useSidebarNavigation({
-    currentKey: 'records',
-    onClose: () => setSidebarVisible(false),
-    onSelectedKeyChange: setSelectedSidebarItem,
-  });
-
-  const sidebarSwipeHandlers = useSidebarSwipe({
-    onOpen: () => setSidebarVisible(true),
-  });
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -131,15 +108,6 @@ export default function RecordsScreen() {
 
     loadCategories();
   }, [supabase, userId, selectedType]);
-
-  async function handleLogout() {
-    try {
-      await signOut();
-      router.replace('/sign-in');
-    } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo cerrar sesión');
-    }
-  }
 
   function renderTabs() {
     const isIncomeSelected = selectedType === 'income';
@@ -195,16 +163,10 @@ export default function RecordsScreen() {
   const currentConfig = recordsConfig[selectedType];
 
   return (
-    <View
-      style={styles.container}
-      {...sidebarSwipeHandlers}
+    <PrivateScreenLayout
+      title="Registros"
+      currentKey="records"
     >
-      <AppHeader
-        title="Registros"
-        onOpenSidebar={() => setSidebarVisible(true)}
-        onLogout={handleLogout}
-      />
-
       <MovementManagerScreen
         key={selectedType}
         type={selectedType}
@@ -226,26 +188,12 @@ export default function RecordsScreen() {
         showFloatingButton
         contentHeader={renderTabs()}
       />
-
-      <AppSidebar
-        visible={sidebarVisible}
-        userName={profileName}
-        selectedKey={selectedSidebarItem}
-        visualMode={isDarkMode}
-        onToggleVisualMode={setDarkMode}
-        onClose={() => setSidebarVisible(false)}
-        onSelectItem={handleSelectSidebarItem}
-      />
-    </View>
+    </PrivateScreenLayout>
   );
 }
 
 function createStyles(theme: AppTheme) {
   return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.colors.background,
-    },
     tabsRow: {
       flexDirection: 'row',
       gap: 14,

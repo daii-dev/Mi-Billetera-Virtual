@@ -5,10 +5,8 @@ import {
   useState,
 } from 'react';
 
-import { router } from 'expo-router';
 import { Trash2 } from 'lucide-react-native';
 import {
-  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -31,22 +29,16 @@ import {
   Category,
   ManualMovementType,
 } from '@/features/wallet/wallet.types';
-import { useProfileName } from '@/hooks/useProfileName';
-import { useSidebarNavigation } from '@/hooks/useSidebarNavigation';
-import { useSidebarSwipe } from '@/hooks/useSidebarSwipe';
-import { AppHeader } from '@/layouts/header/AppHeader';
-import { AppSidebar } from '@/layouts/sidebar/AppSidebar';
-import { SidebarRouteKey } from '@/lib/sidebarNavigation';
+import {
+  PrivateScreenLayout,
+} from '@/layouts/private-screen/PrivateScreenLayout';
 import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
   AppTheme,
   useAppTheme,
 } from '@/theme/ThemeContext';
-import {
-  useAuth,
-  useClerk,
-} from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 
 const COLORS = [
   '#10B981',
@@ -71,13 +63,9 @@ const ICONS = [
 
 export default function CategoriesScreen() {
   const { userId } = useAuth();
-  const { signOut } = useClerk();
   const supabase = useSupabase();
-
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
   const styles = createStyles(theme);
-  const { profileName } = useProfileName();
-
   const [type, setType] = useState<ManualMovementType>('income');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
@@ -95,28 +83,6 @@ export default function CategoriesScreen() {
   const [name, setName] = useState('');
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   const [selectedIcon, setSelectedIcon] = useState('Wallet');
-
-  const [sidebarVisible, setSidebarVisible] = useState(false);
-  const [selectedSidebarItem, setSelectedSidebarItem] = useState<SidebarRouteKey>('categories');
-
-  const handleSelectSidebarItem = useSidebarNavigation({
-    currentKey: 'categories',
-    onClose: () => setSidebarVisible(false),
-    onSelectedKeyChange: setSelectedSidebarItem,
-  });
-
-  const sidebarSwipeHandlers = useSidebarSwipe({
-    onOpen: () => setSidebarVisible(true),
-  });
-
-  async function handleLogout() {
-    try {
-      await signOut();
-      router.replace('/sign-in');
-    } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo cerrar sesión');
-    }
-  }
 
   const loadCategories = useCallback(async () => {
     if (!userId) return;
@@ -268,16 +234,10 @@ export default function CategoriesScreen() {
   );
 
   return (
-    <View
-      style={styles.container}
-      {...sidebarSwipeHandlers}
+    <PrivateScreenLayout
+      title="Categorías"
+      currentKey="categories"
     >
-      <AppHeader
-        title="Categorías"
-        onOpenSidebar={() => setSidebarVisible(true)}
-        onLogout={handleLogout}
-      />
-
       <View style={styles.segmentedControl}>
         <TouchableOpacity
           style={[
@@ -522,26 +482,12 @@ export default function CategoriesScreen() {
           </View>
         </View>
       </Modal>
-
-      <AppSidebar
-        visible={sidebarVisible}
-        userName={profileName}
-        selectedKey={selectedSidebarItem}
-        visualMode={isDarkMode}
-        onToggleVisualMode={setDarkMode}
-        onClose={() => setSidebarVisible(false)}
-        onSelectItem={handleSelectSidebarItem}
-      />
-    </View>
+    </PrivateScreenLayout>
   );
 }
 
 function createStyles(theme: AppTheme) {
   return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.colors.background,
-    },
     segmentedControl: {
       flexDirection: 'row',
       backgroundColor: theme.mode === 'dark' ? '#1E293B' : '#F3F4F6',
@@ -781,44 +727,36 @@ function createStyles(theme: AppTheme) {
       color: theme.colors.textSecondary,
       textAlign: 'center',
     },
-
-    // Estilos para los modales rediseñados
     feedbackModalCard: {
       backgroundColor: theme.colors.card,
       borderRadius: 24,
       overflow: 'hidden',
     },
-
     feedbackHeader: {
       backgroundColor: '#0F2D8C',
       paddingVertical: 24,
       paddingHorizontal: 24,
     },
-
     feedbackHeaderTitle: {
       color: '#FFF',
       fontSize: 22,
       fontWeight: '700',
     },
-
     feedbackBody: {
       padding: 32,
       alignItems: 'center',
     },
-
     feedbackSuccessIcon: {
       fontSize: 42,
       color: '#52F436',
       marginBottom: 12,
     },
-
     feedbackSuccessText: {
       fontSize: 20,
       fontWeight: '700',
       color: '#52F436',
       textAlign: 'center',
     },
-
     feedbackDeleteText: {
       fontSize: 18,
       fontWeight: '600',
@@ -826,43 +764,36 @@ function createStyles(theme: AppTheme) {
       textAlign: 'center',
       marginTop: 20,
     },
-
     feedbackButtons: {
       flexDirection: 'row',
       gap: 12,
       marginTop: 28,
     },
-
     feedbackCancelButton: {
       backgroundColor: '#E5E7EB',
       paddingHorizontal: 24,
       paddingVertical: 12,
       borderRadius: 12,
     },
-
     feedbackCancelText: {
       color: '#374151',
       fontWeight: '600',
     },
-
     feedbackDeleteButton: {
       backgroundColor: '#EF4444',
       paddingHorizontal: 24,
       paddingVertical: 12,
       borderRadius: 12,
     },
-
     feedbackDeleteButtonText: {
       color: '#FFF',
       fontWeight: '700',
     },
-
     feedbackErrorIcon: {
       fontSize: 42,
       color: '#F59E0B',
       marginBottom: 12,
     },
-
     feedbackErrorText: {
       fontSize: 16,
       fontWeight: '600',
@@ -870,14 +801,12 @@ function createStyles(theme: AppTheme) {
       textAlign: 'center',
       marginBottom: 24,
     },
-
     feedbackErrorButton: {
       backgroundColor: '#F59E0B',
       paddingHorizontal: 32,
       paddingVertical: 12,
       borderRadius: 12,
     },
-
     feedbackErrorButtonText: {
       color: '#FFF',
       fontWeight: '700',
