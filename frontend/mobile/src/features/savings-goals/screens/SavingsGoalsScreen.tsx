@@ -11,7 +11,6 @@ import {
 import {
   LogOut,
   Menu,
-  Plus,
   Target,
 } from 'lucide-react-native';
 import {
@@ -25,13 +24,13 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoalCard } from '@/components/savings-goals/GoalCard';
 import {
   GoalContributionModal,
 } from '@/components/savings-goals/GoalContributionModal';
 import { AppButton } from '@/components/ui/AppButton';
+import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import {
   deleteSavingsGoal,
   getGoalDeletionRefundSummary,
@@ -69,7 +68,6 @@ export default function GoalsScreen() {
   const { signOut } = useClerk();
   const supabase = useSupabase();
   const { theme, isDarkMode, setDarkMode } = useAppTheme();
-  const insets = useSafeAreaInsets();
   const styles = createStyles(theme);
 
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
@@ -334,15 +332,10 @@ export default function GoalsScreen() {
         )}
       </ScrollView>
 
-      <Pressable
-        style={[
-          styles.floatingAddButton,
-          { bottom: insets.bottom + 24 },
-        ]}
+      <FloatingActionButton
+        color={colors.secondary}
         onPress={() => router.push('/goals/create')}
-      >
-        <Plus size={28} color="#FFFFFF" />
-      </Pressable>
+      />
 
       <AppSidebar
         visible={sidebarVisible}
@@ -465,22 +458,6 @@ function createStyles(theme: AppTheme) {
       color: theme.colors.text,
       fontSize: 18,
       fontWeight: '900',
-    },
-    floatingAddButton: {
-      position: 'absolute',
-      right: 20,
-      width: 58,
-      height: 58,
-      borderRadius: 29,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.secondary,
-      shadowColor: '#000',
-      shadowOpacity: 0.25,
-      shadowOffset: { width: 0, height: 5 },
-      shadowRadius: 7,
-      elevation: 8,
-      zIndex: 5,
     },
     emptyCard: {
       minHeight: 300,

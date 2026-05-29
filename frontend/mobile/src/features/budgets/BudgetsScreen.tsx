@@ -12,7 +12,6 @@ import {
   LogOut,
   Menu,
   Pencil,
-  Plus,
   Tags,
   Trash2,
   WalletCards,
@@ -29,6 +28,7 @@ import {
   View,
 } from 'react-native';
 
+import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import {
   deleteBudget,
   getBudgetAccountSpent,
@@ -435,9 +435,13 @@ export default function BudgetsScreen() {
         })}
       </ScrollView>
 
-      <Pressable style={styles.fab} onPress={() => { resetForm(); setModalVisible(true); }}>
-        <Plus color="white" size={30} />
-      </Pressable>
+      <FloatingActionButton
+        color="#F39C12"
+        onPress={() => {
+          resetForm();
+          setModalVisible(true);
+        }}
+      />
 
       <Modal visible={modalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -627,7 +631,6 @@ const styles = StyleSheet.create({
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between' },
   overspentBox: { marginTop: 8, paddingTop: 6, borderTopWidth: 1 },
   overspentText: { fontSize: 12, color: '#C0392B', fontWeight: '900' },
-  fab: { position: 'absolute', bottom: 30, right: 30, backgroundColor: '#F39C12', width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', elevation: 5 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 },
   modalBox: { borderRadius: 14, overflow: 'hidden' },
   modalHeader: { height: 54, backgroundColor: '#082B8C', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },

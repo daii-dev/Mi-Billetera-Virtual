@@ -9,7 +9,6 @@ import { router } from 'expo-router';
 import {
   LogOut,
   Menu,
-  Plus,
   Trash2,
 } from 'lucide-react-native';
 import {
@@ -26,6 +25,7 @@ import {
   View,
 } from 'react-native';
 
+import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { renderCategoryIcon } from '@/features/wallet/category.utils';
 import {
   createCategory,
@@ -51,14 +51,14 @@ import {
 } from '@clerk/expo';
 
 const COLORS = [
-  '#10B981', // Verde
-  '#EF4444', // Rojo
-  '#3B82F6', // Azul
-  '#F59E0B', // Amarillo
-  '#8B5CF6', // Púrpura
-  '#EC4899', // Rosa
-  '#06B6D4', // Cian
-  '#F97316', // Naranja
+  '#10B981',
+  '#EF4444',
+  '#3B82F6',
+  '#F59E0B',
+  '#8B5CF6',
+  '#EC4899',
+  '#06B6D4',
+  '#F97316',
 ];
 
 const ICONS = [
@@ -339,16 +339,11 @@ export default function CategoriesScreen() {
         }
       />
 
-      {/* FAB - Botón flotante */}
-      <TouchableOpacity
-        style={styles.fab}
+      <FloatingActionButton
+        color={type === 'income' ? colors.secondary : colors.expense}
         onPress={handleOpenCreateCategory}
-        activeOpacity={0.8}
-      >
-        <Plus size={28} color="#FFF" />
-      </TouchableOpacity>
+      />
 
-      {/* Modal Crear/Editar Categoría */}
       <Modal
         visible={modalVisible}
         transparent
@@ -658,44 +653,23 @@ function createStyles(theme: AppTheme) {
       justifyContent: 'center',
       alignItems: 'center',
     },
-
-    fab: {
-      position: 'absolute',
-      bottom: 24,
-      right: 24,
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: '#10B981',
-      justifyContent: 'center',
-      alignItems: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.2,
-      shadowRadius: 8,
-      elevation: 5,
-    },
-
     modalOverlay: {
       flex: 1,
       backgroundColor: theme.colors.overlay,
       justifyContent: 'center',
       padding: 20,
     },
-
     modalCard: {
       backgroundColor: theme.colors.card,
       borderRadius: 20,
       overflow: 'hidden',
       maxHeight: '90%',
     },
-
     modalHeader: {
       backgroundColor: '#3B82F6',
       paddingVertical: 20,
       paddingHorizontal: 24,
     },
-
     modalHeaderRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -704,13 +678,11 @@ function createStyles(theme: AppTheme) {
       paddingVertical: 20,
       paddingHorizontal: 24,
     },
-
     modalHeaderTitle: {
       fontSize: 20,
       fontWeight: '700',
       color: '#FFF',
     },
-
     menuOverlay: {
       position: 'absolute',
       top: 36,
@@ -725,20 +697,17 @@ function createStyles(theme: AppTheme) {
       elevation: 14,
       overflow: 'hidden',
     },
-
     menuOption: {
       flexDirection: 'row',
       alignItems: 'center',
       paddingVertical: 12,
       paddingHorizontal: 14,
     },
-
     menuText: {
       marginLeft: 10,
       fontSize: 15,
       color: theme.colors.text,
     },
-
     input: {
       borderWidth: 1,
       borderColor: theme.colors.border,
@@ -750,7 +719,6 @@ function createStyles(theme: AppTheme) {
       backgroundColor: theme.colors.surface,
       color: theme.colors.text,
     },
-
     inputLabel: {
       fontSize: 14,
       fontWeight: '600',
@@ -758,11 +726,9 @@ function createStyles(theme: AppTheme) {
       marginLeft: 20,
       marginBottom: 12,
     },
-
     colorsScroll: {
       marginBottom: 20,
     },
-
     colorsRow: {
       flexDirection: 'row',
       paddingHorizontal: 20,
@@ -776,23 +742,19 @@ function createStyles(theme: AppTheme) {
       borderWidth: 2,
       borderColor: theme.colors.border,
     },
-
     colorCircleSelected: {
       borderColor: '#000',
       borderWidth: 3,
       transform: [{ scale: 1.05 }],
     },
-
     iconsScroll: {
       marginBottom: 20,
     },
-
     iconsRow: {
       flexDirection: 'row',
       paddingHorizontal: 20,
       gap: 12,
     },
-
     iconCircle: {
       width: 64,
       height: 64,
@@ -803,61 +765,50 @@ function createStyles(theme: AppTheme) {
       borderWidth: 2,
       borderColor: 'transparent',
     },
-
     iconCircleSelected: {
       backgroundColor: '#3B82F6',
       borderColor: '#3B82F6',
     },
-
     modalActions: {
       flexDirection: 'row',
       padding: 20,
       gap: 12,
     },
-
     modalButton: {
       flex: 1,
       paddingVertical: 14,
       borderRadius: 12,
       alignItems: 'center',
     },
-
     cancelButton: {
       backgroundColor: '#F3F4F6',
     },
-
     cancelButtonText: {
       color: '#6B7280',
       fontWeight: '600',
       fontSize: 16,
     },
-
     createButton: {
       backgroundColor: '#10B981',
     },
-
     createButtonText: {
       color: '#FFF',
       fontWeight: '600',
       fontSize: 16,
     },
-
     buttonDisabled: {
       opacity: 0.5,
     },
-
     emptyContainer: {
       alignItems: 'center',
       paddingVertical: 60,
     },
-
     emptyText: {
       fontSize: 18,
       fontWeight: '600',
       color: theme.colors.textSecondary,
       marginBottom: 8,
     },
-
     emptySubtext: {
       fontSize: 14,
       color: theme.colors.textSecondary,

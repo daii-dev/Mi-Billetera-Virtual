@@ -13,7 +13,6 @@ import {
   LogOut,
   Menu,
   Pencil,
-  Plus,
   Trash2,
   Wallet,
   WalletCards,
@@ -32,6 +31,7 @@ import {
   View,
 } from 'react-native';
 
+import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import {
   createPlannedPayment,
   deletePlannedPayment,
@@ -547,12 +547,10 @@ export default function PlannedPaymentsScreen() {
         )}
       </ScrollView>
 
-      <Pressable
-        style={styles.fab}
+      <FloatingActionButton
+        color="#28A9D6"
         onPress={openCreateModal}
-      >
-        <Plus size={30} color="#FFFFFF" strokeWidth={3} />
-      </Pressable>
+      />
 
       <PlannedPaymentModal
         mode={modalMode}
@@ -1021,22 +1019,6 @@ function createStyles(theme: AppTheme) {
       color: '#28A9D6',
       fontSize: 13,
       fontWeight: '900',
-    },
-    fab: {
-      position: 'absolute',
-      right: 28,
-      bottom: 88,
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: '#28A9D6',
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
-      shadowOpacity: 0.28,
-      shadowOffset: { width: 0, height: 3 },
-      shadowRadius: 4,
-      elevation: 5,
     },
     modalOverlay: {
       flex: 1,

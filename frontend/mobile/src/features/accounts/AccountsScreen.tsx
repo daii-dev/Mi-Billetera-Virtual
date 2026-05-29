@@ -398,7 +398,7 @@ export default function AccountsScreen() {
       </ScrollView>
 
       <FloatingActionButton
-        color={colors.secondary}
+        color="#082B8C"
         onPress={openCreateModal}
       />
 
