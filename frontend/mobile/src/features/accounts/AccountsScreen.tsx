@@ -9,7 +9,6 @@ import {
   LogOut,
   Menu,
   MoreVertical,
-  Plus,
   Trash2,
   Wallet,
 } from 'lucide-react-native';
@@ -27,6 +26,7 @@ import {
   View,
 } from 'react-native';
 
+import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import {
   isValidMoneyInput,
   parseMoneyInput,
@@ -397,12 +397,10 @@ export default function AccountsScreen() {
         ))}
       </ScrollView>
 
-      <Pressable
-        style={styles.floatingButton}
+      <FloatingActionButton
+        color={colors.secondary}
         onPress={openCreateModal}
-      >
-        <Plus size={32} color="#FFFFFF" />
-      </Pressable>
+      />
 
       <AccountModal
         mode={modalMode}
@@ -729,22 +727,6 @@ function createStyles(theme: AppTheme) {
     },
     moreButton: {
       padding: 4,
-    },
-    floatingButton: {
-      position: 'absolute',
-      right: 28,
-      bottom: 74,
-      width: 48,
-      height: 48,
-      borderRadius: 12,
-      backgroundColor: colors.secondary,
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
-      shadowOpacity: 0.22,
-      shadowOffset: { width: 0, height: 3 },
-      shadowRadius: 4,
-      elevation: 5,
     },
     modalOverlay: {
       flex: 1,

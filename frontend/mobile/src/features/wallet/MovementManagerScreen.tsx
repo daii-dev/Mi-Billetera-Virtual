@@ -14,7 +14,6 @@ import {
   ChevronDown,
   Pencil,
   PiggyBank,
-  Plus,
   SlidersHorizontal,
   Tags,
   Trash2,
@@ -35,6 +34,7 @@ import {
   View,
 } from 'react-native';
 
+import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import {
   getCompletedSavingsGoals,
 } from '@/features/savings-goals/savings-goals.service';
@@ -691,12 +691,10 @@ const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
       </ScrollView>
 
       {showFloatingButton && (
-        <Pressable
-          style={styles.fab}
+        <FloatingActionButton
+          color={buttonColor}
           onPress={openCreateModal}
-        >
-          <Plus size={31} color="#FFFFFF" strokeWidth={3} />
-        </Pressable>
+        />
       )}
 
       <AccountFilterModal
@@ -1376,22 +1374,6 @@ function createStyles(
     content: {
       padding: 14,
       paddingBottom: 120,
-    },
-    fab: {
-      position: 'absolute',
-      right: 28,
-      bottom: 88,
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: buttonColor,
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
-      shadowOpacity: 0.28,
-      shadowOffset: { width: 0, height: 3 },
-      shadowRadius: 4,
-      elevation: 5,
     },
     registerButton: {
       alignSelf: 'center',
