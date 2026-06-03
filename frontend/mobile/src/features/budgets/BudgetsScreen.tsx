@@ -205,7 +205,9 @@ export default function BudgetsScreen() {
     const compareStartDate = new Date(startDate);
     compareStartDate.setHours(0, 0, 0, 0);
     
-    if (compareStartDate < today) {
+    // Solo bloqueamos la fecha de inicio pasada si es un presupuesto NUEVO. 
+    // Al editar, permitimos guardar fechas pasadas por si el presupuesto ya había empezado.
+    if (!editingBudgetId && compareStartDate < today) {
       Alert.alert(
         "Fecha inválida", 
         "No puedes crear un presupuesto con una fecha de inicio anterior al día de hoy."
@@ -227,7 +229,9 @@ export default function BudgetsScreen() {
     const accountObj = myAccounts.find(a => a.id === selectedAccountId);
     if (!accountObj) return;
 
-    if (!editingBudgetId && numAmount > Number(accountObj.current_balance)) {
+    // 🔥 SOLUCIÓN BUG 1: Le quitamos la excepción. Ahora la validación de saldo te frenará 
+    // tanto si estás creando como si estás editando un presupuesto.
+    if (numAmount > Number(accountObj.current_balance)) {
       Alert.alert(
         "Saldo Insuficiente ❌",
         `No puedes asignar un presupuesto de Bs. ${numAmount.toFixed(2)} porque el saldo disponible en la cuenta es de Bs. ${Number(accountObj.current_balance).toFixed(2)}.`
@@ -241,7 +245,21 @@ export default function BudgetsScreen() {
     setLoading(true);
     try {
       if (editingBudgetId) {
-        // ... (Tu código actual de update se queda igual)
+        // 🔥 SOLUCIÓN BUG 2: Ahora sí enviamos las fechas nuevas y el monto a Supabase
+        const { error: updateError } = await supabase
+          .from('budgets')
+          .update({
+            account_id: selectedAccountId,
+            category_name: selectedCategory,
+            amount: numAmount,
+            start_date: startDateString,
+            end_date: endDateString,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingBudgetId);
+
+        if (updateError) throw updateError;
+        Alert.alert("¡Éxito!", "Presupuesto actualizado correctamente.");
       } else {
         const { data: existingDuplicate, error: checkError } = await supabase
           .from('budgets')
