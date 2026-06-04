@@ -24,9 +24,17 @@ import {
 } from 'react-native';
 
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
+import { MovementCard } from '@/features/records/components/MovementCard';
 import {
-  getCompletedSavingsGoals,
-} from '@/features/savings-goals/savings-goals.service';
+  ModalMode,
+  MovementModal,
+} from '@/features/records/components/MovementModal';
+import {
+  useMovementFilters,
+} from '@/features/records/hooks/useMovementFilters';
+import {
+  useMovementManagerData,
+} from '@/features/records/hooks/useMovementManagerData';
 import { SavingsGoal } from '@/features/savings-goals/savings-goals.types';
 import {
   formatMoneyInput,
@@ -34,38 +42,23 @@ import {
   parseMoneyInput,
   sanitizeMoneyInput,
 } from '@/features/wallet/amount.utils';
-import { MovementCard } from '@/features/wallet/components/MovementCard';
-import {
-  ModalMode,
-  MovementModal,
-} from '@/features/wallet/components/MovementModal';
-import {
-  buildCategoryFilterKey,
-  getMovementFilterLabel,
-  movementMatchesCategoryFilter,
-} from '@/features/wallet/movement-filter.utils';
 import { MovementFilterModal } from '@/features/wallet/MovementFilterModal';
 import {
   createManualMovement,
   deleteManualMovement,
-  getMovementsByType,
-  getUserAccounts,
   registerExpenseFromGoal,
   updateManualMovement,
 } from '@/features/wallet/wallet.service';
 import {
-  Account,
   Category,
   ManualMovementType,
   Movement,
 } from '@/features/wallet/wallet.types';
-import { useSupabase } from '@/lib/useSupabase';
 import { colors } from '@/theme/colors';
 import {
   AppTheme,
   useAppTheme,
 } from '@/theme/ThemeContext';
-import { useAuth } from '@clerk/expo';
 
 type MovementManagerScreenProps = {
   type: ManualMovementType;
@@ -109,23 +102,10 @@ export function MovementManagerScreen({
   showFloatingButton = false,
   contentHeader,
 }: MovementManagerScreenProps) {
-  const { userId, isLoaded, isSignedIn } = useAuth();
   const { editId } = useLocalSearchParams<{ editId?: string }>();
-  const supabase = useSupabase();
 
   const { theme } = useAppTheme();
   const styles = createStyles(theme, headerColor, buttonColor);
-
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [movements, setMovements] = useState<Movement[]>([]);
-  const [completedGoals, setCompletedGoals] = useState<SavingsGoal[]>([]);
-
-  const [filterVisible, setFilterVisible] = useState(false);
-  const [selectedFilterAccountId, setSelectedFilterAccountId] = useState('');
-  const [selectedFilterCategoryKey, setSelectedFilterCategoryKey] = useState('');
-
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null);
@@ -145,59 +125,38 @@ export function MovementManagerScreen({
   const [openedParamEditId, setOpenedParamEditId] = useState<string | null>(null);
 
   const [successAction, setSuccessAction] = useState<'create' | 'edit'>('create');
+  const {
+    userId,
+    supabase,
+    accounts,
+    movements,
+    completedGoals,
+    loading,
+    refreshing,
+    loadData,
+    handleRefresh,
+  } = useMovementManagerData({
+    type,
+  });
 
-  async function loadData(showFullLoader = false) {
-    if (!isLoaded) return;
+  const {
+    filterVisible,
+    setFilterVisible,
+    selectedFilterAccountId,
+    setSelectedFilterAccountId,
+    selectedFilterCategoryKey,
+    setSelectedFilterCategoryKey,
+    hasActiveFilters,
+    filterButtonLabel,
+    filteredMovements,
+    clearFilters,
+  } = useMovementFilters({
+    accounts,
+    categories,
+    movements,
+  });
 
-    if (!isSignedIn || !userId) {
-      router.replace('/sign-in');
-      return;
-    }
-
-    try {
-      if (showFullLoader) {
-        setLoading(true);
-      }
-
-      const [userAccounts, userMovements, userCompletedGoals] = await Promise.all([
-        getUserAccounts(supabase, userId),
-        getMovementsByType(supabase, userId, type),
-        type === 'expense'
-          ? getCompletedSavingsGoals(supabase, userId)
-          : Promise.resolve([]),
-      ]);
-
-      setAccounts(userAccounts);
-      setMovements(userMovements);
-      setCompletedGoals(userCompletedGoals);
-    } catch (error: any) {
-      Alert.alert(
-        'Error',
-        error?.message || 'No se pudieron cargar los movimientos'
-      );
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }
-
-  useEffect(() => {
-    if (isLoaded) {
-      loadData(true);
-    }
-  }, [isLoaded, isSignedIn, userId]);
-
-  useEffect(() => {
-    if (!selectedFilterAccountId) return;
-
-    const accountExists = accounts.some(
-      (account) => account.id === selectedFilterAccountId
-    );
-
-    if (!accountExists) {
-      setSelectedFilterAccountId('');
-    }
-  }, [accounts, selectedFilterAccountId]);
+  
 
   useEffect(() => {
     if (!editId || openedParamEditId === editId || movements.length === 0) {
@@ -211,11 +170,6 @@ export function MovementManagerScreen({
       setOpenedParamEditId(editId);
     }
   }, [editId, movements, openedParamEditId]);
-
-  async function handleRefresh() {
-    setRefreshing(true);
-    await loadData(false);
-  }
 
   function handleChangeAmount(value: string) {
     if (useSavingsGoal && type === 'expense') {
@@ -496,39 +450,6 @@ export function MovementManagerScreen({
   ) ?? null;
 
   const isIncome = type === 'income';
-  const amountSign = isIncome ? '+' : '-';
-
-  const selectedFilterAccount = accounts.find(
-    (account) => account.id === selectedFilterAccountId
-  );
-
-  const selectedFilterCategory = categories.find(
-    (category) =>
-      buildCategoryFilterKey(category.type, category.name) === selectedFilterCategoryKey
-  );
-
-  const hasActiveFilters = Boolean(
-    selectedFilterAccountId ||
-    selectedFilterCategoryKey
-  );
-
-  const filterButtonLabel = getMovementFilterLabel(
-    selectedFilterAccount?.name,
-    selectedFilterCategory?.name
-  );
-
-  const filteredMovements = movements.filter((movement) => {
-    const matchesAccount =
-      !selectedFilterAccountId ||
-      movement.account_id === selectedFilterAccountId;
-
-    const matchesCategory = movementMatchesCategoryFilter(
-      movement,
-      selectedFilterCategoryKey
-    );
-
-    return matchesAccount && matchesCategory;
-  });
 
   if (loading) {
     return (
@@ -633,10 +554,7 @@ export function MovementManagerScreen({
         title="Filtrar movimientos"
         onSelectAccount={setSelectedFilterAccountId}
         onSelectCategory={setSelectedFilterCategoryKey}
-        onClear={() => {
-          setSelectedFilterAccountId('');
-          setSelectedFilterCategoryKey('');
-        }}
+        onClear={clearFilters}
         onClose={() => setFilterVisible(false)}
       />
 

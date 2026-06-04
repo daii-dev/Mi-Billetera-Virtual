@@ -8,8 +8,8 @@ import {
   View,
 } from 'react-native';
 
+import { MovementForm } from '@/features/records/components/MovementForm';
 import { SavingsGoal } from '@/features/savings-goals/savings-goals.types';
-import { MovementForm } from '@/features/wallet/components/MovementForm';
 import {
   Account,
   Category,
