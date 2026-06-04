@@ -9,6 +9,10 @@ import {
 } from 'react-native';
 
 import { MovementForm } from '@/features/records/components/MovementForm';
+import {
+  MovementModalMode,
+  MovementSuccessAction,
+} from '@/features/records/records.types';
 import { SavingsGoal } from '@/features/savings-goals/savings-goals.types';
 import {
   Account,
@@ -21,8 +25,6 @@ import {
   useAppTheme,
 } from '@/theme/ThemeContext';
 
-export type ModalMode = 'form' | 'edit' | 'delete' | 'success' | null;
-
 const MODAL_HEADER_COLOR = '#082B8C';
 const SAVE_BUTTON_COLOR = colors.secondary;
 
@@ -32,9 +34,9 @@ const registerPigImages = {
 };
 
 type MovementModalProps = {
-  mode: ModalMode;
+  mode: MovementModalMode;
   type: ManualMovementType;
-  successAction: 'create' | 'edit';
+  successAction: MovementSuccessAction;
 
   registerTitle: string;
   editTitle: string;

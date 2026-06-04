@@ -25,23 +25,17 @@ import {
 
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { MovementCard } from '@/features/records/components/MovementCard';
-import {
-  ModalMode,
-  MovementModal,
-} from '@/features/records/components/MovementModal';
+import { MovementModal } from '@/features/records/components/MovementModal';
 import {
   useMovementFilters,
 } from '@/features/records/hooks/useMovementFilters';
 import {
+  useMovementFormState,
+} from '@/features/records/hooks/useMovementFormState';
+import {
   useMovementManagerData,
 } from '@/features/records/hooks/useMovementManagerData';
-import { SavingsGoal } from '@/features/savings-goals/savings-goals.types';
-import {
-  formatMoneyInput,
-  isValidMoneyInput,
-  parseMoneyInput,
-  sanitizeMoneyInput,
-} from '@/features/wallet/amount.utils';
+import { MovementSuccessAction } from '@/features/records/records.types';
 import { MovementFilterModal } from '@/features/wallet/MovementFilterModal';
 import {
   createManualMovement,
@@ -52,7 +46,6 @@ import {
 import {
   Category,
   ManualMovementType,
-  Movement,
 } from '@/features/wallet/wallet.types';
 import { colors } from '@/theme/colors';
 import {
@@ -103,28 +96,11 @@ export function MovementManagerScreen({
   contentHeader,
 }: MovementManagerScreenProps) {
   const { editId } = useLocalSearchParams<{ editId?: string }>();
-
   const { theme } = useAppTheme();
   const styles = createStyles(theme, headerColor, buttonColor);
-
-  const [modalMode, setModalMode] = useState<ModalMode>(null);
-  const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null);
-
-  const [description, setDescription] = useState('');
-  const [amountText, setAmountText] = useState('');
-  const [selectedAccountId, setSelectedAccountId] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [useSavingsGoal, setUseSavingsGoal] = useState(false);
-  const [selectedGoalId, setSelectedGoalId] = useState('');
-
-  const [showAccountOptions, setShowAccountOptions] = useState(false);
-  const [showCategoryOptions, setShowCategoryOptions] = useState(false);
-  const [showGoalOptions, setShowGoalOptions] = useState(false);
-
   const [saving, setSaving] = useState(false);
   const [openedParamEditId, setOpenedParamEditId] = useState<string | null>(null);
-
-  const [successAction, setSuccessAction] = useState<'create' | 'edit'>('create');
+  const [successAction, setSuccessAction] = useState<MovementSuccessAction>('create');
   const {
     userId,
     supabase,
@@ -156,7 +132,44 @@ export function MovementManagerScreen({
     movements,
   });
 
-  
+  const {
+    modalMode,
+    setModalMode,
+    selectedMovement,
+    setSelectedMovement,
+
+    description,
+    setDescription,
+    amountText,
+    selectedAccountId,
+    setSelectedAccountId,
+    selectedCategory,
+    setSelectedCategory,
+    useSavingsGoal,
+
+    showAccountOptions,
+    setShowAccountOptions,
+    showCategoryOptions,
+    setShowCategoryOptions,
+    showGoalOptions,
+    setShowGoalOptions,
+
+    selectedAccount,
+    selectedGoal,
+
+    handleChangeAmount,
+    openCreateModal,
+    openEditModal,
+    closeModal,
+    handleToggleSavingsGoal,
+    handleSelectGoal,
+    validateForm,
+  } = useMovementFormState({
+    type,
+    accounts,
+    categories,
+    completedGoals,
+  });
 
   useEffect(() => {
     if (!editId || openedParamEditId === editId || movements.length === 0) {
@@ -171,173 +184,8 @@ export function MovementManagerScreen({
     }
   }, [editId, movements, openedParamEditId]);
 
-  function handleChangeAmount(value: string) {
-    if (useSavingsGoal && type === 'expense') {
-      return;
-    }
-
-    setAmountText(sanitizeMoneyInput(value, amountText));
-  }
-
   function getDefaultAccountId() {
     return accounts[0]?.id ?? '';
-  }
-
-  function getDefaultCategory() {
-    return categories[0]?.name ?? '';
-  }
-
-  function openCreateModal() {
-    setSelectedMovement(null);
-    setDescription('');
-    setAmountText('');
-    setSelectedAccountId(getDefaultAccountId());
-    setSelectedCategory(getDefaultCategory());
-    setUseSavingsGoal(false);
-    setSelectedGoalId('');
-    setShowAccountOptions(false);
-    setShowCategoryOptions(false);
-    setShowGoalOptions(false);
-    setModalMode('form');
-  }
-
-  function openEditModal(movement: Movement) {
-    if (movement.source !== 'manual') {
-      return;
-    }
-
-    setSelectedMovement(movement);
-    setDescription(movement.title);
-    setAmountText(formatMoneyInput(movement.amount));
-    setSelectedAccountId(movement.account_id);
-    setSelectedCategory(movement.category_name || getDefaultCategory());
-    setUseSavingsGoal(false);
-    setSelectedGoalId('');
-    setShowAccountOptions(false);
-    setShowCategoryOptions(false);
-    setShowGoalOptions(false);
-    setModalMode('edit');
-  }
-
-  function closeModal() {
-    setModalMode(null);
-    setSelectedMovement(null);
-    setDescription('');
-    setAmountText('');
-    setUseSavingsGoal(false);
-    setSelectedGoalId('');
-    setShowAccountOptions(false);
-    setShowCategoryOptions(false);
-    setShowGoalOptions(false);
-    setSaving(false);
-  }
-
-  function handleToggleSavingsGoal(enabled: boolean) {
-    setUseSavingsGoal(enabled);
-    setSelectedGoalId('');
-    setShowGoalOptions(false);
-    setShowAccountOptions(false);
-
-    if (enabled) {
-      setAmountText('');
-      return;
-    }
-
-    setAmountText('');
-  }
-
-  function getGoalReferenceAccountId(goal: SavingsGoal) {
-    if (goal.cuenta_id) {
-      return goal.cuenta_id;
-    }
-
-    const contributionAccount = goal.contribution_accounts
-      ?.slice()
-      .sort((first, second) => second.amount - first.amount)[0];
-
-    return contributionAccount?.accountId ?? getDefaultAccountId();
-  }
-
-  function handleSelectGoal(goal: SavingsGoal) {
-    setSelectedGoalId(goal.id_meta);
-    setSelectedAccountId(getGoalReferenceAccountId(goal));
-    setAmountText(formatMoneyInput(goal.monto_actual));
-    setShowGoalOptions(false);
-  }
-
-  function validateForm(): {
-    cleanDescription: string;
-    amount: number;
-    accountId: string;
-    category: string;
-    goalId: string | null;
-  } | null {
-    const cleanDescription = description.trim();
-    const cleanAmountText = amountText.trim();
-    const accountId = selectedAccountId;
-    const category = selectedCategory.trim();
-
-    if (!cleanDescription) {
-      Alert.alert('Campo requerido', 'Ingresa una descripción');
-      return null;
-    }
-
-    
-    if (type === 'expense' && useSavingsGoal && !selectedGoalId) {
-      Alert.alert('Meta requerida', 'Selecciona una meta de ahorro completada');
-      return null;
-    }
-
-    if (!isValidMoneyInput(cleanAmountText)) {
-        Alert.alert(
-            'Monto inválido',
-            'Usa coma decimal y máximo dos decimales. Ejemplo: 120,50'
-        );
-        return null;
-    }
-
-    const amount = parseMoneyInput(cleanAmountText);
-
-    if (amount <= 0) {
-        Alert.alert('Monto inválido', 'Ingresa un monto mayor a cero');
-        return null;
-    }
-
-    if (!accountId) {
-      Alert.alert('Cuenta requerida', 'Selecciona una cuenta');
-      return null;
-    }
-
-    if (!category) {
-      Alert.alert('Categoría requerida', 'Selecciona una categoría');
-      return null;
-    }
-
-    if (type === 'expense' && useSavingsGoal) {
-      const goalBalance = Number(selectedGoal?.monto_actual ?? 0);
-
-      if (amount > goalBalance) {
-        Alert.alert('Fondos insuficientes', 'Saldo insuficiente en la meta de ahorro');
-        return null;
-      }
-    } else if (!isIncome && selectedAccount) {
-      const currentBalance = Number(selectedAccount.current_balance ?? 0);
-      if (amount > currentBalance) {
-        Alert.alert(
-          'Fondos insuficientes',
-          'No tienes los suficientes fondos para retirar dinero de esta cuenta'
-        );
-        return null;
-      }
-    }
-
-    return {
-      cleanDescription,
-      amount,
-      accountId,
-      category,
-      goalId: type === 'expense' && useSavingsGoal ? selectedGoalId : null,
-    };
   }
 
   async function handleCreateMovement() {
@@ -441,15 +289,6 @@ export function MovementManagerScreen({
       setSaving(false);
     }
   }
-
-  const selectedAccount = accounts.find(
-    (account) => account.id === selectedAccountId
-  );
-  const selectedGoal = completedGoals.find(
-    (goal) => goal.id_meta === selectedGoalId
-  ) ?? null;
-
-  const isIncome = type === 'income';
 
   if (loading) {
     return (
@@ -714,12 +553,6 @@ function createStyles(
       marginTop: 14,
       color: theme.colors.text,
       fontWeight: '800',
-    },
-    movementCategoryRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      marginTop: 4,
     },
   });
 }
