@@ -13,6 +13,7 @@ import {
 } from 'lucide-react-native';
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -159,7 +160,11 @@ export default function SignInScreen() {
       behavior={Platform.select({ ios: 'padding', android: undefined })}
     >
       <View style={styles.logoBox}>
-        <Text style={styles.logo}>💵</Text>
+        <Image
+          source={require('../../../assets/logo-app.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
       </View>
 
       <Text style={styles.title}>Bienvenido a{'\n'}tu billetera virtual</Text>
@@ -186,10 +191,6 @@ export default function SignInScreen() {
             </Pressable>
           }
         />
-
-        <Pressable style={styles.forgotButton}>
-          <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
-        </Pressable>
 
         <AppButton title="Iniciar sesión" onPress={handleSignIn} loading={loading} />
 
@@ -232,11 +233,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoBox: {
-    marginTop: 72,
+    marginTop: 60,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  logo: {
-    fontSize: 76,
+  logoImage: {
+    width: 110,
+    height: 110,
   },
   title: {
     marginTop: 16,

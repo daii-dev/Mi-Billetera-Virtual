@@ -1,6 +1,11 @@
-import { useState } from 'react';
+import {
+  useEffect,
+  useState,
+} from 'react';
 
+import * as AuthSession from 'expo-auth-session';
 import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import {
   Eye,
   Lock,
@@ -19,121 +24,211 @@ import {
 
 import { AppButton } from '@/components/ui/AppButton';
 import { AppInput } from '@/components/ui/AppInput';
-import { savePendingFullName } from '@/lib/storage';
+import {
+  hasNameAndLastName,
+  isValidFullName,
+  normalizeFullName,
+  sanitizeFullNameInput,
+} from '@/features/auth/auth.validators';
+import { savePendingSignupData } from '@/lib/storage';
 import { colors } from '@/theme/colors';
-import { useSignUp } from '@clerk/expo';
+import {
+  useSignUp,
+  useSSO,
+} from '@clerk/expo';
+
+WebBrowser.maybeCompleteAuthSession();
+
+function useWarmUpBrowser() {
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    void WebBrowser.warmUpAsync();
+
+    return () => {
+      void WebBrowser.coolDownAsync();
+    };
+  }, []);
+}
 
 export default function SignUpScreen() {
+  useWarmUpBrowser();
+
   const { signUp } = useSignUp();
+  const { startSSOFlow } = useSSO();
 
   const [fullName, setFullName] = useState('');
   const [emailAddress, setEmailAddress] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  function handleChangeFullName(value: string) {
+    setFullName(sanitizeFullNameInput(value));
+  }
+
   const [securePassword, setSecurePassword] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   function validatePassword(password: string): string | null {
     if (password.length < 8) {
-        return 'La contraseña debe tener al menos 8 caracteres';
+      return 'La contraseña debe tener al menos 8 caracteres';
     }
 
     if (!/[A-ZÁÉÍÓÚÑ]/.test(password)) {
-        return 'La contraseña debe tener al menos una letra mayúscula';
+      return 'La contraseña debe tener al menos una letra mayúscula';
     }
 
-    if (!/[!@#$%^&*(),.?":{}|<>_\-+=/\\[\];'`~]/.test(password)) {
-        return 'La contraseña debe tener al menos un símbolo especial';
+    if (!/[!@#$%^&*(),.?":{}|<>_\-+=\/\\[\];'`~]/.test(password)) {
+      return 'La contraseña debe tener al menos un símbolo especial';
     }
 
     return null;
+  }
+
+  function getClerkErrorMessage(error: any): string {
+    console.log('CLERK SIGN UP ERROR RAW:', JSON.stringify(error, null, 2));
+
+    const firstError = error?.errors?.[0];
+
+    return (
+      firstError?.longMessage ||
+      firstError?.message ||
+      firstError?.code ||
+      error?.message ||
+      ''
+    );
+  }
+
+  function translateClerkError(message: string): string {
+    const lowerMessage = message.toLowerCase();
+
+    if (
+      lowerMessage.includes('online data breach') ||
+      lowerMessage.includes('data breach') ||
+      lowerMessage.includes('breached') ||
+      lowerMessage.includes('pwned')
+    ) {
+      return 'Esta contraseña apareció en una filtración de datos. Por seguridad, usa una contraseña diferente.';
     }
 
-    function getClerkErrorMessage(error: any): string {
-  console.log('CLERK SIGN UP ERROR RAW:', JSON.stringify(error, null, 2));
-
-  const firstError = error?.errors?.[0];
-
-  return (
-    firstError?.longMessage ||
-    firstError?.message ||
-    firstError?.code ||
-    error?.message ||
-    ''
-  );
-}
-
-    function translateClerkError(message: string): string {
-        const lowerMessage = message.toLowerCase();
-
-        if (
-            lowerMessage.includes('online data breach') ||
-            lowerMessage.includes('data breach') ||
-            lowerMessage.includes('breached') ||
-            lowerMessage.includes('pwned')
-        ) {
-            return 'Esta contraseña apareció en una filtración de datos. Por seguridad, usa una contraseña diferente.';
-        }
-
-        if (
-            lowerMessage.includes('already exists') ||
-            lowerMessage.includes('already in use') ||
-            lowerMessage.includes('is taken') ||
-            lowerMessage.includes('identifier_already_exists') ||
-            lowerMessage.includes('form_identifier_exists')
-        ) {
-            return 'Ya existe una cuenta registrada con este correo. Intenta iniciar sesión o usa otro correo.';
-        }
-
-        if (
-            lowerMessage.includes('passwords must be') ||
-            lowerMessage.includes('characters or more')
-        ) {
-            return 'La contraseña debe tener al menos 8 caracteres.';
-        }
-
-        if (
-            lowerMessage.includes('password is not strong enough') ||
-            lowerMessage.includes('given password is not strong enough') ||
-            lowerMessage.includes('not strong enough')
-        ) {
-            return 'La contraseña no es suficientemente segura. Usa al menos 8 caracteres, una mayúscula y un símbolo especial.';
-        }
-
-        if (
-            lowerMessage.includes('invalid email') ||
-            lowerMessage.includes('email address is invalid') ||
-            lowerMessage.includes('form_param_format_invalid')
-        ) {
-            return 'Ingresa un correo electrónico válido.';
-        }
-
-        if (
-            lowerMessage.includes('captcha') ||
-            lowerMessage.includes('bot') ||
-            lowerMessage.includes('challenge')
-        ) {
-            return 'No se pudo validar la protección de seguridad. Cierra y vuelve a abrir la app.';
-        }
-
-        if (
-            lowerMessage.includes('verification') ||
-            lowerMessage.includes('verify') ||
-            lowerMessage.includes('missing_requirements')
-        ) {
-            return 'Tu cuenta requiere verificación por correo. Para continuar sin código, desactiva la verificación en Clerk.';
-        }
-
-        return message || 'No se pudo crear la cuenta. Revisa los datos e intenta nuevamente.';
+    if (
+      lowerMessage.includes('already exists') ||
+      lowerMessage.includes('already in use') ||
+      lowerMessage.includes('is taken') ||
+      lowerMessage.includes('identifier_already_exists') ||
+      lowerMessage.includes('form_identifier_exists')
+    ) {
+      return 'Ya existe una cuenta registrada con este correo. Intenta iniciar sesión o usa otro correo.';
     }
+
+    if (
+      lowerMessage.includes('passwords must be') ||
+      lowerMessage.includes('characters or more')
+    ) {
+      return 'La contraseña debe tener al menos 8 caracteres.';
+    }
+
+    if (
+      lowerMessage.includes('password is not strong enough') ||
+      lowerMessage.includes('given password is not strong enough') ||
+      lowerMessage.includes('not strong enough')
+    ) {
+      return 'La contraseña no es suficientemente segura. Usa al menos 8 caracteres, una mayúscula y un símbolo especial.';
+    }
+
+    if (
+      lowerMessage.includes('invalid email') ||
+      lowerMessage.includes('email address is invalid') ||
+      lowerMessage.includes('form_param_format_invalid')
+    ) {
+      return 'Ingresa un correo electrónico válido.';
+    }
+
+    if (
+      lowerMessage.includes('captcha') ||
+      lowerMessage.includes('bot') ||
+      lowerMessage.includes('challenge')
+    ) {
+      return 'No se pudo validar la protección de seguridad. Cierra y vuelve a abrir la app.';
+    }
+
+    if (
+      lowerMessage.includes('verification') ||
+      lowerMessage.includes('verify') ||
+      lowerMessage.includes('missing_requirements')
+    ) {
+      return 'Tu cuenta requiere verificación por correo. Para continuar sin código, desactiva la verificación en Clerk.';
+    }
+
+    return message || 'No se pudo crear la cuenta. Revisa los datos e intenta nuevamente.';
+  }
+
+  async function handleGoogleSignUp() {
+    try {
+      setGoogleLoading(true);
+
+      const redirectUrl = AuthSession.makeRedirectUri({
+        scheme: 'mibilleteravirtual',
+        path: 'oauth-callback',
+      });
+
+      console.log('GOOGLE SIGN UP REDIRECT URL:', redirectUrl);
+
+      const { createdSessionId, setActive } = await startSSOFlow({
+        strategy: 'oauth_google',
+        redirectUrl,
+      });
+
+      if (createdSessionId) {
+        await setActive?.({
+          session: createdSessionId,
+        });
+
+        router.replace('/');
+        return;
+      }
+
+      Alert.alert(
+        'Registro con Google no completado',
+        'No se pudo crear la sesión con Google. Revisa la configuración de Google en Clerk.'
+      );
+    } catch (error: any) {
+      console.log('GOOGLE SIGN UP ERROR:', JSON.stringify(error, null, 2));
+
+      const message =
+        error?.errors?.[0]?.message ||
+        error?.message ||
+        'No se pudo crear la cuenta con Google';
+
+      Alert.alert('Error con Google', message);
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
 
   async function handleCreateAccount() {
-    const cleanFullName = fullName.trim();
+    const cleanFullName = normalizeFullName(fullName);
     const cleanEmail = emailAddress.trim().toLowerCase();
 
     if (!cleanFullName) {
       Alert.alert('Campo requerido', 'Ingresa tu nombre completo');
+      return;
+    }
+
+    if (!isValidFullName(cleanFullName)) {
+      Alert.alert(
+        'Nombre inválido',
+        'El nombre completo solo puede contener letras y espacios.'
+      );
+      return;
+    }
+
+    if (!hasNameAndLastName(cleanFullName)) {
+      Alert.alert(
+        'Nombre incompleto',
+        'Ingresa tu nombre y apellido.'
+      );
       return;
     }
 
@@ -150,13 +245,13 @@ export default function SignUpScreen() {
     const passwordError = validatePassword(password);
 
     if (passwordError) {
-    Alert.alert('Contraseña inválida', passwordError);
-    return;
+      Alert.alert('Contraseña inválida', passwordError);
+      return;
     }
 
     if (password !== confirmPassword) {
-    Alert.alert('Error', 'Las contraseñas no coinciden');
-    return;
+      Alert.alert('Error', 'Las contraseñas no coinciden');
+      return;
     }
 
     try {
@@ -167,7 +262,7 @@ export default function SignUpScreen() {
         return;
       }
 
-      await savePendingFullName(cleanFullName);
+      await savePendingSignupData(cleanFullName, cleanEmail);
 
       const { error } = await signUp.password({
         emailAddress: cleanEmail,
@@ -178,11 +273,11 @@ export default function SignUpScreen() {
         const clerkMessage = getClerkErrorMessage(error);
 
         Alert.alert(
-            'Error al registrarse',
-            translateClerkError(clerkMessage)
+          'Error al registrarse',
+          translateClerkError(clerkMessage)
         );
         return;
-    }
+      }
 
       if (signUp.status === 'complete') {
         await signUp.finalize({
@@ -196,10 +291,10 @@ export default function SignUpScreen() {
       Alert.alert(
         'Verificación requerida',
         'Tu cuenta fue iniciada, pero Clerk todavía exige verificar el correo.'
-        );
+      );
     } catch (error: any) {
       const clerkMessage = getClerkErrorMessage(error);
-      
+
       Alert.alert('Error al registrarse', translateClerkError(clerkMessage));
     } finally {
       setLoading(false);
@@ -217,7 +312,7 @@ export default function SignUpScreen() {
       <View style={styles.form}>
         <AppInput
           value={fullName}
-          onChangeText={setFullName}
+          onChangeText={handleChangeFullName}
           placeholder="Nombre completo"
           leftIcon={<User size={20} color={colors.secondary} />}
         />
@@ -264,16 +359,14 @@ export default function SignUpScreen() {
         </View>
 
         <Pressable
-          style={styles.googleButton}
-          onPress={() =>
-            Alert.alert(
-              'Google',
-              'Puedes usar el botón de Google desde la pantalla de inicio de sesión.'
-            )
-          }
+          style={[styles.googleButton, googleLoading && styles.disabledButton]}
+          onPress={handleGoogleSignUp}
+          disabled={googleLoading}
         >
           <Text style={styles.googleIcon}>G</Text>
-          <Text style={styles.googleText}>Google</Text>
+          <Text style={styles.googleText}>
+            {googleLoading ? 'Abriendo Google...' : 'Google'}
+          </Text>
         </Pressable>
       </View>
 
@@ -347,6 +440,9 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
     backgroundColor: '#ffffff',
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   googleIcon: {
     color: '#4285F4',

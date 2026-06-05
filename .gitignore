@@ -55,4 +55,6 @@ yarn-error.*
 .gradle/
 build/
 app/build/
-local.properties
+local.propertiessupabase/.temp/
+/supabase/.temp/
+/supabase/.temp/**
