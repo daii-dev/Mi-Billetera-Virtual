@@ -27,6 +27,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 
 import type {
   ReportAccount,
@@ -53,6 +56,7 @@ import {
 import {
   getPreviousPeriodMovements,
   getReportAccounts,
+  getReportMinimumDate,
   getReportMovements,
 } from '@/features/reports/reports.service';
 import {
@@ -105,6 +109,48 @@ const SECTION_OPTIONS: Array<{
   { key: 'charts', label: 'Graficos y categorias' },
 ];
 
+type CustomDateField = 'start' | 'end';
+
+function parseDateValue(value: string): Date {
+  const [year, month, day] = value.split('-').map(Number);
+
+  return new Date(year, month - 1, day);
+}
+
+function formatDisplayDate(value: string): string {
+  if (!value) {
+    return '';
+  }
+
+  const date = parseDateValue(value);
+
+  return date.toLocaleDateString('es-BO', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
+function isBeforeDate(firstDate: string, secondDate: string): boolean {
+  return Boolean(firstDate && secondDate && firstDate < secondDate);
+}
+
+function isAfterDate(firstDate: string, secondDate: string): boolean {
+  return Boolean(firstDate && secondDate && firstDate > secondDate);
+}
+
+function clampDateValue(value: string, minDate: string, maxDate: string): string {
+  if (!value || isBeforeDate(value, minDate)) {
+    return minDate;
+  }
+
+  if (isAfterDate(value, maxDate)) {
+    return maxDate;
+  }
+
+  return value;
+}
+
 export function ReportsMovementsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
   const supabase = useSupabase();
@@ -120,6 +166,8 @@ export function ReportsMovementsScreen() {
   const [accountMenuVisible, setAccountMenuVisible] = useState(false);
   const [typeMenuVisible, setTypeMenuVisible] = useState(false);
   const [customPeriodVisible, setCustomPeriodVisible] = useState(false);
+  const [customDateField, setCustomDateField] =
+    useState<CustomDateField | null>(null);
   const [downloadModalVisible, setDownloadModalVisible] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [selectedFileType, setSelectedFileType] =
@@ -132,6 +180,7 @@ export function ReportsMovementsScreen() {
   ]);
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+  const [reportMinDate, setReportMinDate] = useState(formatDateValue(new Date()));
   const [searchText, setSearchText] = useState('');
   const [filters, setFilters] = useState<ReportFilters>({
     period: 'last30days',
@@ -155,13 +204,15 @@ export function ReportsMovementsScreen() {
 
       setErrorMessage('');
 
-      const [reportAccounts, reportMovements, previousData] =
+      const [reportAccounts, reportMovements, previousData, minimumDate] =
         await Promise.all([
           getReportAccounts(supabase, userId),
           getReportMovements(supabase, userId, filters),
           getPreviousPeriodMovements(supabase, userId, filters),
+          getReportMinimumDate(supabase, userId),
         ]);
 
+      setReportMinDate(minimumDate);
       setAccounts(reportAccounts);
       setMovements(reportMovements);
       setPreviousMovements(previousData);
@@ -237,8 +288,10 @@ export function ReportsMovementsScreen() {
     setPeriodMenuVisible(false);
 
     if (period === 'custom') {
-      setCustomStartDate(filters.dateRange.startDate);
-      setCustomEndDate(filters.dateRange.endDate);
+      const today = formatDateValue(new Date());
+      setCustomStartDate(clampDateValue(filters.dateRange.startDate, reportMinDate, today));
+      setCustomEndDate(clampDateValue(filters.dateRange.endDate, reportMinDate, today));
+      setCustomDateField(null);
       setCustomPeriodVisible(true);
       return;
     }
@@ -250,28 +303,45 @@ export function ReportsMovementsScreen() {
     }));
   }
 
+  function getCustomRangeValidationError(range: ReportDateRange): string | null {
+    const today = formatDateValue(new Date());
+
+    if (!range.startDate || !range.endDate) {
+      return 'Ingresa fecha inicio y fecha fin.';
+    }
+
+    if (!isValidDateRange(range)) {
+      return 'La fecha inicio no puede ser mayor que la fecha fin.';
+    }
+
+    if (isBeforeDate(range.startDate, reportMinDate)) {
+      return `La fecha de inicio no puede ser anterior a la fecha de tu primer registro financiero.\nFecha mínima permitida: ${formatDisplayDate(reportMinDate)}.`;
+    }
+
+    if (isBeforeDate(range.endDate, reportMinDate)) {
+      return `La fecha final no puede ser anterior a la fecha de tu primer registro financiero.\nFecha mínima permitida: ${formatDisplayDate(reportMinDate)}.`;
+    }
+
+    if (isAfterDate(range.startDate, today)) {
+      return 'La fecha de inicio no puede ser mayor a la fecha actual.';
+    }
+
+    if (isAfterDate(range.endDate, today)) {
+      return 'La fecha final no puede ser mayor a la fecha actual.';
+    }
+
+    return null;
+  }
+
   function handleApplyCustomPeriod() {
     const range: ReportDateRange = {
       startDate: customStartDate.trim(),
       endDate: customEndDate.trim(),
     };
-    const today = formatDateValue(new Date());
+    const validationError = getCustomRangeValidationError(range);
 
-    if (!range.startDate || !range.endDate) {
-      Alert.alert('Fechas requeridas', 'Ingresa fecha inicio y fecha fin');
-      return;
-    }
-
-    if (!isValidDateRange(range)) {
-      Alert.alert(
-        'Rango invalido',
-        'La fecha inicio no puede ser mayor que la fecha fin'
-      );
-      return;
-    }
-
-    if (range.startDate > today || range.endDate > today) {
-      Alert.alert('Fecha invalida', 'No se permiten fechas futuras');
+    if (validationError) {
+      Alert.alert('Rango invalido', validationError);
       return;
     }
 
@@ -281,6 +351,31 @@ export function ReportsMovementsScreen() {
       dateRange: range,
     }));
     setCustomPeriodVisible(false);
+    setCustomDateField(null);
+  }
+
+  function handleCustomDateChange(
+    event: DateTimePickerEvent,
+    selectedDate?: Date
+  ) {
+    if (event.type === 'dismissed') {
+      setCustomDateField(null);
+      return;
+    }
+
+    if (!selectedDate || !customDateField) {
+      return;
+    }
+
+    const nextDate = formatDateValue(selectedDate);
+
+    if (customDateField === 'start') {
+      setCustomStartDate(nextDate);
+    } else {
+      setCustomEndDate(nextDate);
+    }
+
+    setCustomDateField(null);
   }
 
   function renderComparison(value: number | null) {
@@ -337,9 +432,13 @@ export function ReportsMovementsScreen() {
       return;
     }
 
-    if (filters.period === 'custom' && !isValidDateRange(filters.dateRange)) {
-      Alert.alert('Rango invalido', 'Revisa la fecha inicio y fecha fin.');
-      return;
+    if (filters.period === 'custom') {
+      const validationError = getCustomRangeValidationError(filters.dateRange);
+
+      if (validationError) {
+        Alert.alert('Rango invalido', validationError);
+        return;
+      }
     }
 
     if (filteredMovements.length === 0 && !selectedSections.includes('summary')) {
@@ -640,8 +739,11 @@ export function ReportsMovementsScreen() {
         styles={styles}
         startDate={customStartDate}
         endDate={customEndDate}
-        onChangeStartDate={setCustomStartDate}
-        onChangeEndDate={setCustomEndDate}
+        minDate={reportMinDate}
+        maxDate={formatDateValue(new Date())}
+        activeDateField={customDateField}
+        onOpenDatePicker={setCustomDateField}
+        onDatePickerChange={handleCustomDateChange}
         onCancel={() => setCustomPeriodVisible(false)}
         onApply={handleApplyCustomPeriod}
       />
@@ -727,8 +829,11 @@ type CustomPeriodModalProps = {
   styles: ReturnType<typeof createStyles>;
   startDate: string;
   endDate: string;
-  onChangeStartDate: (value: string) => void;
-  onChangeEndDate: (value: string) => void;
+  minDate: string;
+  maxDate: string;
+  activeDateField: CustomDateField | null;
+  onOpenDatePicker: (field: CustomDateField) => void;
+  onDatePickerChange: (event: DateTimePickerEvent, selectedDate?: Date) => void;
   onCancel: () => void;
   onApply: () => void;
 };
@@ -738,11 +843,18 @@ function CustomPeriodModal({
   styles,
   startDate,
   endDate,
-  onChangeStartDate,
-  onChangeEndDate,
+  minDate,
+  maxDate,
+  activeDateField,
+  onOpenDatePicker,
+  onDatePickerChange,
   onCancel,
   onApply,
 }: CustomPeriodModalProps) {
+  const pickerValue = parseDateValue(
+    activeDateField === 'end' ? endDate : startDate
+  );
+
   return (
     <Modal
       visible={visible}
@@ -760,22 +872,41 @@ function CustomPeriodModal({
 
           <View style={styles.modalContent}>
             <Text style={styles.inputLabel}>Fecha inicio</Text>
-            <TextInput
-              value={startDate}
-              onChangeText={onChangeStartDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#A8A8A8"
-              style={styles.input}
-            />
+            <Pressable
+              style={styles.dateSelectorBox}
+              onPress={() => onOpenDatePicker('start')}
+            >
+              <Text style={styles.dateSelectorText}>
+                {formatDisplayDate(startDate) || 'Selecciona fecha inicio'}
+              </Text>
+              <CalendarDays size={18} color={colors.primary} />
+            </Pressable>
 
             <Text style={styles.inputLabel}>Fecha fin</Text>
-            <TextInput
-              value={endDate}
-              onChangeText={onChangeEndDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#A8A8A8"
-              style={styles.input}
-            />
+            <Pressable
+              style={styles.dateSelectorBox}
+              onPress={() => onOpenDatePicker('end')}
+            >
+              <Text style={styles.dateSelectorText}>
+                {formatDisplayDate(endDate) || 'Selecciona fecha final'}
+              </Text>
+              <CalendarDays size={18} color={colors.primary} />
+            </Pressable>
+
+            <Text style={styles.minDateHelp}>
+              Fecha mínima permitida: {formatDisplayDate(minDate)}.
+            </Text>
+
+            {activeDateField && (
+              <DateTimePicker
+                value={pickerValue}
+                mode="date"
+                display="calendar"
+                minimumDate={parseDateValue(minDate)}
+                maximumDate={parseDateValue(maxDate)}
+                onChange={onDatePickerChange}
+              />
+            )}
 
             <View style={styles.modalButtonsRow}>
               <Pressable style={[styles.modalButton, styles.cancelButton]} onPress={onCancel}>
@@ -1210,6 +1341,31 @@ function createStyles(theme: AppTheme) {
       backgroundColor: theme.colors.surface,
       fontSize: 15,
       marginBottom: 12,
+    },
+    dateSelectorBox: {
+      minHeight: 42,
+      borderWidth: 1.5,
+      borderColor: colors.primary,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      backgroundColor: theme.colors.surface,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+      marginBottom: 12,
+    },
+    dateSelectorText: {
+      flex: 1,
+      color: theme.colors.text,
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    minDateHelp: {
+      color: theme.colors.textSecondary,
+      fontSize: 12,
+      lineHeight: 17,
+      marginBottom: 8,
     },
     modalButtonsRow: {
       flexDirection: 'row',

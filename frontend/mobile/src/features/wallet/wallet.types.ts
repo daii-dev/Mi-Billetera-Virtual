@@ -15,6 +15,7 @@ export type Account = {
   initial_balance: number | string;
   current_balance: number | string;
   initial_balance_configured: boolean;
+  visible: boolean;
   created_at: string;
   updated_at: string;
 };

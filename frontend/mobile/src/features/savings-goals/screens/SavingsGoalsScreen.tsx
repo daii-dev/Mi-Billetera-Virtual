@@ -25,6 +25,9 @@ import {
   GoalContributionModal,
 } from '@/features/savings-goals/components/GoalContributionModal';
 import {
+  GoalDeleteRefundModal,
+} from '@/features/savings-goals/components/GoalDeleteRefundModal';
+import {
   deleteSavingsGoal,
   getGoalDeletionRefundSummary,
   getSavingsGoals,
@@ -63,6 +66,13 @@ export default function GoalsScreen() {
   const [selectedGoal, setSelectedGoal] = useState<SavingsGoal | null>(null);
   const [contributionModalVisible, setContributionModalVisible] = useState(false);
   const [savingContribution, setSavingContribution] = useState(false);
+  const [deleteRefundModalVisible, setDeleteRefundModalVisible] = useState(false);
+  const [goalToDelete, setGoalToDelete] = useState<SavingsGoal | null>(null);
+  const [deleteRefundSummary, setDeleteRefundSummary] =
+    useState<GoalDeletionRefundSummary | null>(null);
+  const [selectedRefundAccountId, setSelectedRefundAccountId] = useState('');
+  const [refundAccountOptionsVisible, setRefundAccountOptionsVisible] = useState(false);
+  const [deletingGoal, setDeletingGoal] = useState(false);
 
   const loadGoals = useCallback(async (showFullLoader = false) => {
     if (!isLoaded) return;
@@ -110,6 +120,24 @@ export default function GoalsScreen() {
 
     try {
       const refundSummary = await getGoalDeletionRefundSummary(supabase, userId, goal.id_meta);
+
+      if (refundSummary.requiresRefundAccount) {
+        if (accounts.length === 0) {
+          Alert.alert(
+            'Cuenta activa requerida',
+            'Crea una cuenta activa para recibir el reembolso antes de eliminar esta meta.'
+          );
+          return;
+        }
+
+        setGoalToDelete(goal);
+        setDeleteRefundSummary(refundSummary);
+        setSelectedRefundAccountId(accounts[0]?.id ?? '');
+        setRefundAccountOptionsVisible(false);
+        setDeleteRefundModalVisible(true);
+        return;
+      }
+
       const message = buildDeleteConfirmationMessage(goal, refundSummary);
 
       Alert.alert(
@@ -121,18 +149,7 @@ export default function GoalsScreen() {
             text: 'Eliminar y devolver',
             style: 'destructive',
             onPress: async () => {
-              try {
-                await deleteSavingsGoal(supabase, goal.id_meta);
-                const [freshGoals, freshAccounts] = await Promise.all([
-                  getSavingsGoals(supabase, userId),
-                  getUserAccounts(supabase, userId),
-                ]);
-
-                setGoals(freshGoals);
-                setAccounts(freshAccounts);
-              } catch (error: any) {
-                Alert.alert('Error', error?.message || 'No se pudo eliminar la meta');
-              }
+              await confirmDeleteGoal(goal.id_meta);
             },
           },
         ]
@@ -140,6 +157,53 @@ export default function GoalsScreen() {
     } catch (error: any) {
       Alert.alert('Error', error?.message || 'No se pudo preparar la eliminacion de la meta');
     }
+  }
+
+  async function confirmDeleteGoal(goalId: string, refundAccountId?: string | null) {
+    if (!userId) return;
+
+    try {
+      setDeletingGoal(true);
+
+      await deleteSavingsGoal(supabase, goalId, refundAccountId);
+
+      const [freshGoals, freshAccounts] = await Promise.all([
+        getSavingsGoals(supabase, userId),
+        getUserAccounts(supabase, userId),
+      ]);
+
+      setGoals(freshGoals);
+      setAccounts(freshAccounts);
+      closeDeleteRefundModal();
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'No se pudo eliminar la meta');
+    } finally {
+      setDeletingGoal(false);
+    }
+  }
+
+  function closeDeleteRefundModal() {
+    if (deletingGoal) return;
+
+    setDeleteRefundModalVisible(false);
+    setGoalToDelete(null);
+    setDeleteRefundSummary(null);
+    setSelectedRefundAccountId('');
+    setRefundAccountOptionsVisible(false);
+  }
+
+  function handleConfirmRefundAccountDelete() {
+    if (!goalToDelete) return;
+
+    if (!selectedRefundAccountId) {
+      Alert.alert(
+        'Cuenta requerida',
+        'Selecciona una cuenta activa para recibir el reembolso.'
+      );
+      return;
+    }
+
+    confirmDeleteGoal(goalToDelete.id_meta, selectedRefundAccountId);
   }
 
   function openContributionModal(goal: SavingsGoal) {
@@ -275,6 +339,23 @@ export default function GoalsScreen() {
         loading={savingContribution}
         onClose={closeContributionModal}
         onConfirm={handleRegisterContribution}
+      />
+      <GoalDeleteRefundModal
+        visible={deleteRefundModalVisible}
+        refundSummary={deleteRefundSummary}
+        accounts={accounts}
+        selectedAccountId={selectedRefundAccountId}
+        accountOptionsVisible={refundAccountOptionsVisible}
+        loading={deletingGoal}
+        onSelectAccount={(accountId) => {
+          setSelectedRefundAccountId(accountId);
+          setRefundAccountOptionsVisible(false);
+        }}
+        onToggleAccountOptions={() =>
+          setRefundAccountOptionsVisible(!refundAccountOptionsVisible)
+        }
+        onCancel={closeDeleteRefundModal}
+        onConfirm={handleConfirmRefundAccountDelete}
       />
     </PrivateScreenLayout>
   );

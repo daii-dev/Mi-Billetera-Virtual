@@ -19,6 +19,7 @@ export type GoalContributionAccount = {
   accountId: string;
   accountName: string;
   amount: number;
+  accountVisible: boolean;
 };
 
 export type CreateSavingsGoalParams = {
@@ -71,9 +72,13 @@ export type GoalSavingsNeeded = {
 
 export type GoalDeletionRefundSummary = {
   totalAmount: number;
+  visibleRefundAmount: number;
+  hiddenRefundAmount: number;
+  requiresRefundAccount: boolean;
   accounts: Array<{
     accountId: string;
     accountName: string;
     amount: number;
+    accountVisible: boolean;
   }>;
 };
