@@ -4,7 +4,10 @@ import type {
   ReportFilters,
   ReportMovement,
 } from './report.types';
-import { getPreviousPeriodRange } from './reportPeriods';
+import {
+  formatDateValue,
+  getPreviousPeriodRange,
+} from './reportPeriods';
 import { enrichMovementsWithCategories } from '@/features/wallet/wallet.service';
 
 type ReportMovementQueryFilters = ReportFilters & {
@@ -39,8 +42,9 @@ export async function getReportAccounts(
 ): Promise<ReportAccount[]> {
   const { data, error } = await supabase
     .from('accounts')
-    .select('id, name, currency, clerk_user_id')
+    .select('id, name, currency, clerk_user_id, visible')
     .eq('clerk_user_id', clerkUserId)
+    .eq('visible', true)
     .order('created_at', { ascending: true });
 
   if (error) {
@@ -48,6 +52,49 @@ export async function getReportAccounts(
   }
 
   return (data ?? []) as ReportAccount[];
+}
+
+export async function getReportMinimumDate(
+  supabase: SupabaseClient,
+  clerkUserId: string
+): Promise<string> {
+  const [accountResult, movementResult] = await Promise.all([
+    supabase
+      .from('accounts')
+      .select('created_at')
+      .eq('clerk_user_id', clerkUserId)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('movements')
+      .select('movement_date')
+      .eq('clerk_user_id', clerkUserId)
+      .order('movement_date', { ascending: true })
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  if (accountResult.error) {
+    throw new Error(accountResult.error.message);
+  }
+
+  if (movementResult.error) {
+    throw new Error(movementResult.error.message);
+  }
+
+  const accountDate = accountResult.data?.created_at
+    ? formatDateValue(new Date(accountResult.data.created_at))
+    : null;
+  const movementDate = movementResult.data?.movement_date ?? null;
+  const dates = [accountDate, movementDate].filter(Boolean) as string[];
+
+  if (dates.length === 0) {
+    return formatDateValue(new Date());
+  }
+
+  return dates.sort()[0];
 }
 
 export async function getReportMovements(

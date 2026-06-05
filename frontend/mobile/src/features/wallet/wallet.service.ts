@@ -157,6 +157,7 @@ export async function getUserAccounts(
     .from('accounts')
     .select('*')
     .eq('clerk_user_id', clerkUserId)
+    .eq('visible', true)
     .order('created_at', { ascending: true });
 
   if (error) {
@@ -302,12 +303,17 @@ export async function updateAccountName(
 
 export async function deleteAccount(
   supabase: SupabaseClient,
-  accountId: string
+  accountId: string,
+  clerkUserId: string
 ): Promise<void> {
   const { error } = await supabase
     .from('accounts')
-    .delete()
-    .eq('id', accountId);
+    .update({
+      visible: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', accountId)
+    .eq('clerk_user_id', clerkUserId);
 
   if (error) {
     throw new Error(error.message);

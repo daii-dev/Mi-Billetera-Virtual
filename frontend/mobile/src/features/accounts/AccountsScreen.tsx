@@ -255,7 +255,9 @@ export default function AccountsScreen() {
     try {
       setSaving(true);
 
-      await deleteAccount(supabase, selectedAccount.id);
+      if (!userId) return;
+
+      await deleteAccount(supabase, selectedAccount.id, userId);
 
       await loadAccounts(false);
       closeModal();

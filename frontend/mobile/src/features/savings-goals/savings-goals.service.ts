@@ -110,7 +110,8 @@ export async function getCompletedSavingsGoals(
       cuenta_id,
       monto,
       account:accounts (
-        name
+        name,
+        visible
       )
     `)
     .eq('usuario_clerk_id', clerkUserId)
@@ -128,10 +129,12 @@ export async function getCompletedSavingsGoals(
     const goalAccounts = accountsByGoal.get(goalId) ?? new Map<string, GoalContributionAccount>();
     const current = goalAccounts.get(accountId);
     const accountName = contribution.account?.name || 'Cuenta';
+    const accountVisible = contribution.account?.visible !== false;
 
     goalAccounts.set(accountId, {
       accountId,
       accountName: current?.accountName ?? accountName,
+      accountVisible: current?.accountVisible ?? accountVisible,
       amount: (current?.amount ?? 0) + Number(contribution.monto ?? 0),
     });
     accountsByGoal.set(goalId, goalAccounts);
@@ -222,7 +225,8 @@ export async function getGoalDeletionRefundSummary(
       cuenta_id,
       monto,
       account:accounts (
-        name
+        name,
+        visible
       )
     `)
     .eq('meta_id', goalId)
@@ -232,25 +236,41 @@ export async function getGoalDeletionRefundSummary(
     throw new Error(error.message);
   }
 
-  const accountsById = new Map<string, { accountId: string; accountName: string; amount: number }>();
+  const accountsById = new Map<string, {
+    accountId: string;
+    accountName: string;
+    amount: number;
+    accountVisible: boolean;
+  }>();
 
   (data || []).forEach((contribution: any) => {
     const accountId = contribution.cuenta_id as string;
     const current = accountsById.get(accountId);
     const amount = Number(contribution.monto ?? 0);
     const accountName = contribution.account?.name || 'Cuenta';
+    const accountVisible = contribution.account?.visible !== false;
 
     accountsById.set(accountId, {
       accountId,
       accountName: current?.accountName ?? accountName,
+      accountVisible: current?.accountVisible ?? accountVisible,
       amount: (current?.amount ?? 0) + amount,
     });
   });
 
   const accounts = Array.from(accountsById.values());
+  const visibleRefundAmount = accounts
+    .filter((account) => account.accountVisible)
+    .reduce((sum, account) => sum + account.amount, 0);
+  const hiddenRefundAmount = accounts
+    .filter((account) => !account.accountVisible)
+    .reduce((sum, account) => sum + account.amount, 0);
 
   return {
     totalAmount: accounts.reduce((sum, account) => sum + account.amount, 0),
+    visibleRefundAmount,
+    hiddenRefundAmount,
+    requiresRefundAccount: hiddenRefundAmount > 0,
     accounts,
   };
 }
@@ -327,10 +347,12 @@ export async function updateSavingsGoal(
 
 export async function deleteSavingsGoal(
   supabase: SupabaseClient,
-  goalId: string
+  goalId: string,
+  refundAccountId?: string | null
 ): Promise<SavingsGoal> {
   const { data, error } = await supabase.rpc('eliminar_meta_ahorro', {
     p_meta_id: goalId,
+    p_cuenta_reembolso_id: refundAccountId ?? null,
   });
 
   if (error) {
