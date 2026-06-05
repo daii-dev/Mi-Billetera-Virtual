@@ -223,8 +223,8 @@ export default function BudgetsScreen() {
 
     const compareStartDate = new Date(startDate);
     compareStartDate.setHours(0, 0, 0, 0);
-
-    if (compareStartDate < today) {
+    
+    if (!editingBudgetId && compareStartDate < today) {
       Alert.alert(
         "Fecha inválida",
         "No puedes crear un presupuesto con una fecha de inicio anterior al día de hoy."
@@ -256,7 +256,7 @@ export default function BudgetsScreen() {
       return;
     }
 
-    if (!editingBudgetId && numAmount > Number(accountObj.current_balance)) {
+    if (numAmount > Number(accountObj.current_balance)) {
       Alert.alert(
         "Saldo Insuficiente ❌",
         `No puedes asignar un presupuesto de Bs. ${numAmount.toFixed(2)} porque el saldo disponible en la cuenta es de Bs. ${Number(accountObj.current_balance).toFixed(2)}.`
@@ -271,9 +271,12 @@ export default function BudgetsScreen() {
 
     try {
       if (editingBudgetId) {
-        const { error } = await supabase
+
+      const { error } = await supabase
           .from('budgets')
           .update({
+            account_id: selectedAccountId,
+            category_name: selectedCategory,
             amount: numAmount,
             start_date: startDateString,
             end_date: endDateString,
@@ -286,11 +289,13 @@ export default function BudgetsScreen() {
         setModalVisible(false);
         resetForm();
         await loadBudgetsData();
-
+        
+        // Modal de éxito de tu compañero (DEVELOP)
         showBudgetSuccessModal('edit');
         return;
       }
 
+      // Lógica de Creación (DEVELOP)
       const { data: existingDuplicate, error: checkError } = await supabase
         .from('budgets')
         .select('id, start_date, end_date')
@@ -332,6 +337,7 @@ export default function BudgetsScreen() {
       resetForm();
       await loadBudgetsData();
 
+      // Modal de éxito de tu compañero (DEVELOP)
       showBudgetSuccessModal('create');
     } catch (error: any) {
       Alert.alert("Error", error.message || "Verifica los campos.");
