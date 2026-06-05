@@ -24,6 +24,12 @@ import {
 
 import { AppButton } from '@/components/ui/AppButton';
 import { AppInput } from '@/components/ui/AppInput';
+import {
+  hasNameAndLastName,
+  isValidFullName,
+  normalizeFullName,
+  sanitizeFullNameInput,
+} from '@/features/auth/auth.validators';
 import { savePendingSignupData } from '@/lib/storage';
 import { colors } from '@/theme/colors';
 import {
@@ -55,6 +61,10 @@ export default function SignUpScreen() {
   const [emailAddress, setEmailAddress] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  function handleChangeFullName(value: string) {
+    setFullName(sanitizeFullNameInput(value));
+  }
 
   const [securePassword, setSecurePassword] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -198,11 +208,27 @@ export default function SignUpScreen() {
   }
 
   async function handleCreateAccount() {
-    const cleanFullName = fullName.trim();
+    const cleanFullName = normalizeFullName(fullName);
     const cleanEmail = emailAddress.trim().toLowerCase();
 
     if (!cleanFullName) {
       Alert.alert('Campo requerido', 'Ingresa tu nombre completo');
+      return;
+    }
+
+    if (!isValidFullName(cleanFullName)) {
+      Alert.alert(
+        'Nombre inválido',
+        'El nombre completo solo puede contener letras y espacios.'
+      );
+      return;
+    }
+
+    if (!hasNameAndLastName(cleanFullName)) {
+      Alert.alert(
+        'Nombre incompleto',
+        'Ingresa tu nombre y apellido.'
+      );
       return;
     }
 
@@ -286,7 +312,7 @@ export default function SignUpScreen() {
       <View style={styles.form}>
         <AppInput
           value={fullName}
-          onChangeText={setFullName}
+          onChangeText={handleChangeFullName}
           placeholder="Nombre completo"
           leftIcon={<User size={20} color={colors.secondary} />}
         />

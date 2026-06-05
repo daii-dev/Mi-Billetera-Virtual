@@ -7,8 +7,8 @@ import {
   FileText,
   HandCoins,
   Home,
-  PiggyBank,
   Tags,
+  Target,
   WalletCards,
 } from 'lucide-react-native';
 
@@ -42,7 +42,7 @@ export const sidebarItems: SidebarItem[] = [
   { key: 'accounts', label: 'Cuentas', icon: WalletCards, path: '/accounts' },
   { key: 'categories', label: 'Categorías', icon: Tags, path: '/categories' },
   { key: 'budgets', label: 'Presupuestos', icon: ChartPie, path: '/budgets' },
-  { key: 'goals', label: 'Metas de Ahorro', icon: PiggyBank, path: '/goals' },
+  { key: 'goals', label: 'Metas de Ahorro', icon: Target, path: '/goals' },
   { key: 'planned-payments', label: 'Pagos Planificados', icon: CalendarClock, path: '/planned-payments'},
   { key: 'reports', label: 'Reportes', icon: FileText, path: '/reports' },
   { key: 'statistics', label: 'Estadísticas', icon: BarChart3, path: '/statistics' },

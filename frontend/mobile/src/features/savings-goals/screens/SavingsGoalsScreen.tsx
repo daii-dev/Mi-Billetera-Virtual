@@ -18,6 +18,7 @@ import {
   View,
 } from 'react-native';
 
+import { AppEmptyState } from '@/components/empty-state/AppEmptyState';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { GoalCard } from '@/features/savings-goals/components/GoalCard';
 import {
@@ -240,15 +241,15 @@ export default function GoalsScreen() {
         </View>
 
         {goals.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyIcon}>
-              <Target size={34} color="#FFFFFF" />
-            </View>
-            <Text style={styles.emptyTitle}>Aun no tienes metas</Text>
-            <Text style={styles.emptyText}>
-              Crea una meta de ahorro con nombre, monto objetivo y fecha limite.
-            </Text>
-          </View>
+          <AppEmptyState
+            icon={Target}
+            title="Aun no tienes metas"
+            description="Crea una meta de ahorro con nombre, monto objetivo y fecha limite."
+            iconBackgroundColor={theme.colors.primary}
+            iconSize={34}
+            minHeight={300}
+            marginTop={0}
+          />
         ) : (
           goals.map((goal) => (
             <GoalCard
@@ -351,40 +352,6 @@ function createStyles(theme: AppTheme) {
       color: theme.colors.text,
       fontSize: 18,
       fontWeight: '900',
-    },
-    emptyCard: {
-      minHeight: 300,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      backgroundColor: theme.colors.card,
-      padding: 22,
-      justifyContent: 'center',
-      gap: 12,
-    },
-    emptyIcon: {
-      width: 68,
-      height: 68,
-      borderRadius: 34,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.colors.primary,
-      alignSelf: 'center',
-      marginBottom: 4,
-    },
-    emptyTitle: {
-      color: theme.colors.text,
-      fontSize: 20,
-      fontWeight: '900',
-      textAlign: 'center',
-    },
-    emptyText: {
-      color: theme.colors.textSecondary,
-      fontSize: 14,
-      fontWeight: '700',
-      textAlign: 'center',
-      lineHeight: 20,
-      marginBottom: 8,
     },
     loadingContainer: {
       flex: 1,

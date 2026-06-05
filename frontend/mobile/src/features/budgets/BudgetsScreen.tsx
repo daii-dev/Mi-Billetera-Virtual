@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   Calendar,
   CalendarDays,
+  ChartPie,
   ChevronDown,
   Hourglass,
   Pencil,
@@ -26,6 +27,7 @@ import {
   View,
 } from 'react-native';
 
+import { AppEmptyState } from '@/components/empty-state/AppEmptyState';
 import {
   SuccessFeedbackModal,
 } from '@/components/feedback/SuccessFeedbackModal';
@@ -343,7 +345,18 @@ export default function BudgetsScreen() {
       currentKey="budgets"
     >
       <ScrollView contentContainerStyle={styles.content}>
-        {budgets.map((item) => {
+        {budgets.length === 0 ? (
+          <AppEmptyState
+            icon={ChartPie}
+            title="Aun no tienes presupuestos"
+            description="Crea un presupuesto con categoria, cuenta, monto limite y rango de fechas."
+            iconBackgroundColor="#F39C12"
+            iconSize={38}
+            minHeight={220}
+            marginTop={24}
+          />
+        ) : (
+          budgets.map((item) => {
           const visualProgress = Math.min(item.progress, 100);
           const isExceeded = item.progress >= 100;
           const isNearLimit = item.progress >= 70 && item.progress < 100;
@@ -459,8 +472,9 @@ export default function BudgetsScreen() {
               )}
             </View>
           );
-        })}
-      </ScrollView>
+        })
+      )}
+    </ScrollView>
 
       <FloatingActionButton
         color="#F39C12"

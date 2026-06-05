@@ -4,6 +4,7 @@ import {
 } from 'react';
 
 import { router } from 'expo-router';
+import { WalletCards } from 'lucide-react-native';
 import {
   ActivityIndicator,
   Alert,
@@ -14,6 +15,7 @@ import {
   View,
 } from 'react-native';
 
+import { AppEmptyState } from '@/components/empty-state/AppEmptyState';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import {
   AccountModalMode,
@@ -302,14 +304,26 @@ export default function AccountsScreen() {
 
         <Text style={styles.sectionTitle}>Tus cuentas</Text>
 
-        {accounts.map((account) => (
-          <AccountCard
-            key={account.id}
-            account={account}
-            onEdit={openEditModal}
-            onDelete={openDeleteModal}
+        {accounts.length === 0 ? (
+          <AppEmptyState
+            icon={WalletCards}
+            title="Aun no tienes cuentas"
+            description="Crea una cuenta para organizar tu dinero, registrar movimientos y controlar tu saldo."
+            iconBackgroundColor={colors.primary}
+            iconSize={38}
+            minHeight={220}
+            marginTop={12}
           />
-        ))}
+        ) : (
+          accounts.map((account) => (
+            <AccountCard
+              key={account.id}
+              account={account}
+              onEdit={openEditModal}
+              onDelete={openDeleteModal}
+            />
+          ))
+        )}
       </ScrollView>
 
       <FloatingActionButton
