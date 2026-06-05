@@ -24,7 +24,7 @@ import {
 import {
   SuccessFeedbackModal,
 } from '@/components/feedback/SuccessFeedbackModal';
-import { GoalForm } from '@/components/savings-goals/GoalForm';
+import { GoalForm } from '@/features/savings-goals/components/GoalForm';
 import {
   createSavingsGoal,
 } from '@/features/savings-goals/savings-goals.service';

@@ -18,12 +18,12 @@ import {
   View,
 } from 'react-native';
 
-import { GoalCard } from '@/components/savings-goals/GoalCard';
-import {
-  GoalContributionModal,
-} from '@/components/savings-goals/GoalContributionModal';
 import { AppButton } from '@/components/ui/AppButton';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
+import { GoalCard } from '@/features/savings-goals/components/GoalCard';
+import {
+  GoalContributionModal,
+} from '@/features/savings-goals/components/GoalContributionModal';
 import {
   deleteSavingsGoal,
   getGoalDeletionRefundSummary,

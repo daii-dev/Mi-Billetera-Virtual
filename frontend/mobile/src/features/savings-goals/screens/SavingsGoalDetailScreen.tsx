@@ -24,11 +24,11 @@ import {
 import {
   SuccessFeedbackModal,
 } from '@/components/feedback/SuccessFeedbackModal';
+import { AppButton } from '@/components/ui/AppButton';
 import {
   GoalContributionModal,
-} from '@/components/savings-goals/GoalContributionModal';
-import { GoalForm } from '@/components/savings-goals/GoalForm';
-import { AppButton } from '@/components/ui/AppButton';
+} from '@/features/savings-goals/components/GoalContributionModal';
+import { GoalForm } from '@/features/savings-goals/components/GoalForm';
 import {
   calculateDaysRemaining,
   calculateGoalProgress,
