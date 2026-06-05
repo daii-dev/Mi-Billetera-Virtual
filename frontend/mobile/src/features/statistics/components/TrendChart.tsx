@@ -54,7 +54,7 @@ export function TrendChart({ data, theme, title }: TrendChartProps) {
                         styles.bar,
                         {
                           height: Math.max(barHeight, 4),
-                          backgroundColor: theme.colors.primary,
+                          backgroundColor: data.type === 'income' ? theme.colors.income : theme.colors.expense,
                         },
                       ]}
                     />

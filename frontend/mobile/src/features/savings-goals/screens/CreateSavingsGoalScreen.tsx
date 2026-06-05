@@ -21,8 +21,13 @@ import {
   View,
 } from 'react-native';
 
-import { GoalForm } from '@/components/savings-goals/GoalForm';
-import { createSavingsGoal } from '@/features/savings-goals/savings-goals.service';
+import {
+  SuccessFeedbackModal,
+} from '@/components/feedback/SuccessFeedbackModal';
+import { GoalForm } from '@/features/savings-goals/components/GoalForm';
+import {
+  createSavingsGoal,
+} from '@/features/savings-goals/savings-goals.service';
 import { getPersonalAccount } from '@/features/wallet/wallet.service';
 import { Account } from '@/features/wallet/wallet.types';
 import { useSupabase } from '@/lib/useSupabase';
@@ -51,6 +56,7 @@ export default function CreateGoalScreen() {
   const [personalAccount, setPersonalAccount] = useState<Account | null>(null);
   const [loadingAccount, setLoadingAccount] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
 
   const loadAccount = useCallback(async () => {
     if (!isLoaded) return;
@@ -91,7 +97,12 @@ export default function CreateGoalScreen() {
         icono: values.icono || undefined,
         color: values.color || undefined,
       });
-      router.back();
+      setSuccessModalVisible(true);
+
+      setTimeout(() => {
+        setSuccessModalVisible(false);
+        router.back();
+      }, 1200);
     } catch (error: any) {
       Alert.alert('Error', error?.message || 'No se pudo crear la meta');
     } finally {
@@ -100,46 +111,54 @@ export default function CreateGoalScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
-          <ArrowLeft size={26} color="#FFFFFF" />
-        </Pressable>
-        <Text style={styles.topTitle}>Nueva Meta</Text>
-        <View style={styles.topSpacer} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.hero}>
-          <View style={styles.heroIcon}>
-            <Target size={30} color="#FFFFFF" />
-          </View>
-          <View style={styles.heroTextBox}>
-            <Text style={styles.heroTitle}>Define tu objetivo</Text>
-            <Text style={styles.heroText}>
-              Registra nombre, monto objetivo y fecha limite para empezar con Bs. 0,00 ahorrados.
-            </Text>
-          </View>
+    <>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.topBar}>
+          <Pressable onPress={() => router.back()} hitSlop={10}>
+            <ArrowLeft size={26} color="#FFFFFF" />
+          </Pressable>
+          <Text style={styles.topTitle}>Nueva Meta</Text>
+          <View style={styles.topSpacer} />
         </View>
 
-        {loadingAccount ? (
-          <View style={styles.loaderBox}>
-            <ActivityIndicator color={colors.primary} />
-            <Text style={styles.loaderText}>Preparando formulario...</Text>
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.hero}>
+            <View style={styles.heroIcon}>
+              <Target size={30} color="#FFFFFF" />
+            </View>
+            <View style={styles.heroTextBox}>
+              <Text style={styles.heroTitle}>Define tu objetivo</Text>
+              <Text style={styles.heroText}>
+                Registra nombre, monto objetivo y fecha limite para empezar con Bs. 0,00 ahorrados.
+              </Text>
+            </View>
           </View>
-        ) : (
-          <GoalForm
-            personalAccount={personalAccount}
-            submitLabel="Guardar Meta"
-            loading={saving}
-            onSubmit={handleSubmit}
-          />
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+          {loadingAccount ? (
+            <View style={styles.loaderBox}>
+              <ActivityIndicator color={colors.primary} />
+              <Text style={styles.loaderText}>Preparando formulario...</Text>
+            </View>
+          ) : (
+            <GoalForm
+              personalAccount={personalAccount}
+              submitLabel="Guardar Meta"
+              loading={saving}
+              onSubmit={handleSubmit}
+            />
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <SuccessFeedbackModal
+        visible={successModalVisible}
+        title="Nueva Meta de Ahorro"
+        message="Meta de ahorro guardada correctamente"
+        onRequestClose={() => setSuccessModalVisible(false)}
+      />
+    </>
   );
 }
 

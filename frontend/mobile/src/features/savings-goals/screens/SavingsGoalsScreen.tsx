@@ -18,12 +18,12 @@ import {
   View,
 } from 'react-native';
 
-import { GoalCard } from '@/components/savings-goals/GoalCard';
+import { AppEmptyState } from '@/components/empty-state/AppEmptyState';
+import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
+import { GoalCard } from '@/features/savings-goals/components/GoalCard';
 import {
   GoalContributionModal,
-} from '@/components/savings-goals/GoalContributionModal';
-import { AppButton } from '@/components/ui/AppButton';
-import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
+} from '@/features/savings-goals/components/GoalContributionModal';
 import {
   deleteSavingsGoal,
   getGoalDeletionRefundSummary,
@@ -154,6 +154,10 @@ export default function GoalsScreen() {
     setSelectedGoal(null);
   }
 
+  function openHistoryScreen(goal: SavingsGoal) {
+    router.push(`/goals/history/${goal.id_meta}`);
+  }
+
   async function handleRegisterContribution(params: {
     cuentaId: string;
     monto: number;
@@ -237,19 +241,15 @@ export default function GoalsScreen() {
         </View>
 
         {goals.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyIcon}>
-              <Target size={34} color="#FFFFFF" />
-            </View>
-            <Text style={styles.emptyTitle}>Aun no tienes metas</Text>
-            <Text style={styles.emptyText}>
-              Crea una meta de ahorro con nombre, monto objetivo y fecha limite.
-            </Text>
-            <AppButton
-              title="Nueva Meta"
-              onPress={() => router.push('/goals/create')}
-            />
-          </View>
+          <AppEmptyState
+            icon={Target}
+            title="Aun no tienes metas"
+            description="Crea una meta de ahorro con nombre, monto objetivo y fecha limite."
+            iconBackgroundColor={theme.colors.primary}
+            iconSize={34}
+            minHeight={300}
+            marginTop={0}
+          />
         ) : (
           goals.map((goal) => (
             <GoalCard
@@ -258,6 +258,7 @@ export default function GoalsScreen() {
               onEdit={(selectedGoal) => router.push(`/goals/${selectedGoal.id_meta}`)}
               onDelete={handleDelete}
               onContribute={openContributionModal}
+              onViewHistory={openHistoryScreen}
             />
           ))
         )}
@@ -351,40 +352,6 @@ function createStyles(theme: AppTheme) {
       color: theme.colors.text,
       fontSize: 18,
       fontWeight: '900',
-    },
-    emptyCard: {
-      minHeight: 300,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      backgroundColor: theme.colors.card,
-      padding: 22,
-      justifyContent: 'center',
-      gap: 12,
-    },
-    emptyIcon: {
-      width: 68,
-      height: 68,
-      borderRadius: 34,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.colors.primary,
-      alignSelf: 'center',
-      marginBottom: 4,
-    },
-    emptyTitle: {
-      color: theme.colors.text,
-      fontSize: 20,
-      fontWeight: '900',
-      textAlign: 'center',
-    },
-    emptyText: {
-      color: theme.colors.textSecondary,
-      fontSize: 14,
-      fontWeight: '700',
-      textAlign: 'center',
-      lineHeight: 20,
-      marginBottom: 8,
     },
     loadingContainer: {
       flex: 1,

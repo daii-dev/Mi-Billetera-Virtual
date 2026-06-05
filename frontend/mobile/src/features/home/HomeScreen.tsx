@@ -7,7 +7,6 @@ import {
 import { router } from 'expo-router';
 import { SlidersHorizontal } from 'lucide-react-native';
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   RefreshControl,
@@ -17,6 +16,7 @@ import {
   View,
 } from 'react-native';
 
+import { AppLoadingScreen } from '@/components/loading/AppLoadingScreen';
 import { HomeBalanceCard } from '@/features/home/components/HomeBalanceCard';
 import { HomeMovementCard } from '@/features/home/components/HomeMovementCard';
 import {
@@ -335,10 +335,7 @@ export default function HomeScreen() {
 
   if (loading && !account) {
       return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Cargando tu billetera...</Text>
-        </View>
+        <AppLoadingScreen message="Cargando tu billetera..." />
       );
     }
 

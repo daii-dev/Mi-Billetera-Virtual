@@ -8,8 +8,15 @@ import {
   View,
 } from 'react-native';
 
+import {
+  SuccessFeedbackContent,
+} from '@/components/feedback/SuccessFeedbackContent';
+import { MovementForm } from '@/features/records/components/MovementForm';
+import {
+  MovementModalMode,
+  MovementSuccessAction,
+} from '@/features/records/records.types';
 import { SavingsGoal } from '@/features/savings-goals/savings-goals.types';
-import { MovementForm } from '@/features/wallet/components/MovementForm';
 import {
   Account,
   Category,
@@ -21,8 +28,6 @@ import {
   useAppTheme,
 } from '@/theme/ThemeContext';
 
-export type ModalMode = 'form' | 'edit' | 'delete' | 'success' | null;
-
 const MODAL_HEADER_COLOR = '#082B8C';
 const SAVE_BUTTON_COLOR = colors.secondary;
 
@@ -32,9 +37,9 @@ const registerPigImages = {
 };
 
 type MovementModalProps = {
-  mode: ModalMode;
+  mode: MovementModalMode;
   type: ManualMovementType;
-  successAction: 'create' | 'edit';
+  successAction: MovementSuccessAction;
 
   registerTitle: string;
   editTitle: string;
@@ -261,9 +266,7 @@ export function MovementModal({
 
             {isSuccess && (
               <View style={styles.successContent}>
-                <Text style={styles.successText}>
-                  ♡ {finalSuccessMessage}
-                </Text>
+                <SuccessFeedbackContent message={finalSuccessMessage} />
               </View>
             )}
 
@@ -381,11 +384,6 @@ function createStyles(theme: AppTheme, registerHeaderColor: string) {
     successContent: {
       paddingHorizontal: 22,
       paddingVertical: 24,
-    },
-    successText: {
-      color: colors.secondary,
-      fontSize: 16,
-      fontWeight: '700',
     },
     deleteContent: {
       paddingHorizontal: 24,

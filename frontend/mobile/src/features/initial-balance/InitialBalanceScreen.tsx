@@ -1,9 +1,9 @@
 import { useState } from 'react';
 
 import { router } from 'expo-router';
-import { PiggyBank } from 'lucide-react-native';
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -79,7 +79,11 @@ export default function InitialBalanceScreen() {
       <Text style={styles.subtitle}>Ingresa el monto con el que iniciarás</Text>
 
       <View style={styles.iconContainer}>
-        <PiggyBank size={110} color={colors.secondary} strokeWidth={2.6} />
+        <Image
+          source={require('../../../assets/chanchito-ingreso.png')}
+          style={styles.piggyImage}
+          resizeMode="contain"
+        />
       </View>
 
       <View style={styles.inputBox}>
@@ -150,5 +154,9 @@ const styles = StyleSheet.create({
   buttonBox: {
     width: '100%',
     marginTop: 68,
+  },
+  piggyImage: {
+    width: 118,
+    height: 118,
   },
 });

@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   Calendar,
   CalendarDays,
+  ChartPie,
   ChevronDown,
   Hourglass,
   Pencil,
@@ -26,6 +27,10 @@ import {
   View,
 } from 'react-native';
 
+import { AppEmptyState } from '@/components/empty-state/AppEmptyState';
+import {
+  SuccessFeedbackModal,
+} from '@/components/feedback/SuccessFeedbackModal';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import {
   deleteBudget,
@@ -43,8 +48,10 @@ import { useAppTheme } from '@/theme/ThemeContext';
 import { useAuth } from '@clerk/expo';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
+type BudgetSuccessAction = 'create' | 'edit';
+
 export default function BudgetsScreen() {
-  const { theme, isDarkMode, setDarkMode } = useAppTheme();
+  const { theme, isDarkMode } = useAppTheme();
   const supabase = useSupabase();
   const { userId } = useAuth();
   const [budgets, setBudgets] = useState<any[]>([]);
@@ -52,7 +59,9 @@ export default function BudgetsScreen() {
   const [myCategories, setMyCategories] = useState<any[]>([]); 
   const [loading, setLoading] = useState(false);  
   const [modalVisible, setModalVisible] = useState(false);
-  
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [successAction, setSuccessAction] =
+    useState<BudgetSuccessAction>('create');
   const [selectedCategory, setSelectedCategory] = useState(''); 
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [selectedAccountName, setSelectedAccountName] = useState('');
@@ -190,8 +199,18 @@ export default function BudgetsScreen() {
     );
   };
 
+  function showBudgetSuccessModal(action: BudgetSuccessAction) {
+    setSuccessAction(action);
+    setSuccessModalVisible(true);
+
+    setTimeout(() => {
+      setSuccessModalVisible(false);
+    }, 1200);
+  }
+
   const handleCreateBudget = async () => {
     const clerkId = userId;
+
     if (!clerkId) return;
 
     if (!selectedCategory || !selectedAccountId || !amount) {
@@ -201,36 +220,42 @@ export default function BudgetsScreen() {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const compareStartDate = new Date(startDate);
     compareStartDate.setHours(0, 0, 0, 0);
     
-    // Solo bloqueamos la fecha de inicio pasada si es un presupuesto NUEVO. 
-    // Al editar, permitimos guardar fechas pasadas por si el presupuesto ya había empezado.
     if (!editingBudgetId && compareStartDate < today) {
       Alert.alert(
-        "Fecha inválida", 
+        "Fecha inválida",
         "No puedes crear un presupuesto con una fecha de inicio anterior al día de hoy."
       );
       return;
     }
 
     if (startDate > endDate) {
-      Alert.alert("Fechas inconsistentes", "La fecha de inicio no puede ser mayor que la fecha de fin.");
+      Alert.alert(
+        "Fechas inconsistentes",
+        "La fecha de inicio no puede ser mayor que la fecha de fin."
+      );
       return;
     }
 
     const numAmount = parseFloat(amount.replace(',', '.'));
+
     if (isNaN(numAmount) || numAmount <= 0) {
       Alert.alert("Monto inválido", "El monto debe ser positivo.");
       return;
     }
 
-    const accountObj = myAccounts.find(a => a.id === selectedAccountId);
-    if (!accountObj) return;
+    const accountObj = myAccounts.find(
+      (account) => account.id === selectedAccountId
+    );
 
-    // 🔥 SOLUCIÓN BUG 1: Le quitamos la excepción. Ahora la validación de saldo te frenará 
-    // tanto si estás creando como si estás editando un presupuesto.
+    if (!accountObj) {
+      Alert.alert("Cuenta requerida", "Selecciona una cuenta válida.");
+      return;
+    }
+
     if (numAmount > Number(accountObj.current_balance)) {
       Alert.alert(
         "Saldo Insuficiente ❌",
@@ -243,10 +268,11 @@ export default function BudgetsScreen() {
     const endDateString = endDate.toISOString().split('T')[0];
 
     setLoading(true);
+
     try {
       if (editingBudgetId) {
-        // 🔥 SOLUCIÓN BUG 2: Ahora sí enviamos las fechas nuevas y el monto a Supabase
-        const { error: updateError } = await supabase
+
+      const { error } = await supabase
           .from('budgets')
           .update({
             account_id: selectedAccountId,
@@ -254,52 +280,65 @@ export default function BudgetsScreen() {
             amount: numAmount,
             start_date: startDateString,
             end_date: endDateString,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .eq('id', editingBudgetId);
 
-        if (updateError) throw updateError;
-        Alert.alert("¡Éxito!", "Presupuesto actualizado correctamente.");
-      } else {
-        const { data: existingDuplicate, error: checkError } = await supabase
-          .from('budgets')
-          .select('id, start_date, end_date')
-          .eq('clerk_user_id', clerkId)
-          .eq('account_id', selectedAccountId)
-          .eq('category_name', selectedCategory)
-          .maybeSingle();
+        if (error) throw error;
 
-        if (checkError) throw checkError;
+        setModalVisible(false);
+        resetForm();
+        await loadBudgetsData();
+        
+        // Modal de éxito de tu compañero (DEVELOP)
+        showBudgetSuccessModal('edit');
+        return;
+      }
 
-        if (existingDuplicate) {
-          Alert.alert(
-            "Presupuesto Duplicado ⚠️",
-            `Ya tienes configurado un presupuesto de "${selectedCategory}" para esta billetera. Si deseas cambiar el monto límite, búscalo en la lista principal y presiona "Editar".`
-          );
-          setLoading(false);
-          return;
-        }
+      // Lógica de Creación (DEVELOP)
+      const { data: existingDuplicate, error: checkError } = await supabase
+        .from('budgets')
+        .select('id, start_date, end_date')
+        .eq('clerk_user_id', clerkId)
+        .eq('account_id', selectedAccountId)
+        .eq('category_name', selectedCategory)
+        .maybeSingle();
 
-        const { error } = await supabase
-          .from('budgets')
-          .insert([{
+      if (checkError) throw checkError;
+
+      if (existingDuplicate) {
+        Alert.alert(
+          "Presupuesto Duplicado ⚠️",
+          `Ya tienes configurado un presupuesto de "${selectedCategory}" para esta billetera. Si deseas cambiar el monto límite, búscalo en la lista principal y presiona "Editar".`
+        );
+        return;
+      }
+
+      const { error } = await supabase
+        .from('budgets')
+        .insert([
+          {
             clerk_user_id: clerkId,
             account_id: selectedAccountId,
-            category_name: selectedCategory, 
+            category_name: selectedCategory,
             amount: numAmount,
-            period_type: 'monthly', 
+            period_type: 'monthly',
             start_date: startDateString,
             end_date: endDateString,
             period_year: new Date().getFullYear(),
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }]);
-        if (error) throw error;
-        Alert.alert("¡Éxito!", "Presupuesto configurado correctamente.");
-      }
+            updated_at: new Date().toISOString(),
+          },
+        ]);
+
+      if (error) throw error;
+
       setModalVisible(false);
       resetForm();
-      loadBudgetsData();
+      await loadBudgetsData();
+
+      // Modal de éxito de tu compañero (DEVELOP)
+      showBudgetSuccessModal('create');
     } catch (error: any) {
       Alert.alert("Error", error.message || "Verifica los campos.");
     } finally {
@@ -312,7 +351,18 @@ export default function BudgetsScreen() {
       currentKey="budgets"
     >
       <ScrollView contentContainerStyle={styles.content}>
-        {budgets.map((item) => {
+        {budgets.length === 0 ? (
+          <AppEmptyState
+            icon={ChartPie}
+            title="Aun no tienes presupuestos"
+            description="Crea un presupuesto con categoria, cuenta, monto limite y rango de fechas."
+            iconBackgroundColor="#F39C12"
+            iconSize={38}
+            minHeight={220}
+            marginTop={24}
+          />
+        ) : (
+          budgets.map((item) => {
           const visualProgress = Math.min(item.progress, 100);
           const isExceeded = item.progress >= 100;
           const isNearLimit = item.progress >= 70 && item.progress < 100;
@@ -428,8 +478,9 @@ export default function BudgetsScreen() {
               )}
             </View>
           );
-        })}
-      </ScrollView>
+        })
+      )}
+    </ScrollView>
 
       <FloatingActionButton
         color="#F39C12"
@@ -548,6 +599,21 @@ export default function BudgetsScreen() {
           </View>
         </View>
       </Modal>
+      <SuccessFeedbackModal
+        visible={successModalVisible}
+        title={
+          successAction === 'edit'
+            ? 'Editar Presupuesto'
+            : 'Nuevo Presupuesto'
+        }
+        message={
+          successAction === 'edit'
+            ? 'Presupuesto editado correctamente'
+            : 'Presupuesto guardado correctamente'
+        }
+        onRequestClose={() => setSuccessModalVisible(false)}
+        headerColor="#F39C12"
+      />
     </PrivateScreenLayout>
   );
 }

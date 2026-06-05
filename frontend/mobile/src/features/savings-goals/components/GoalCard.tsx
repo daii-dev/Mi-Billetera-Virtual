@@ -2,6 +2,7 @@ import {
   Calendar,
   Gift,
   GraduationCap,
+  History,
   Home,
   Pencil,
   PiggyBank,
@@ -18,8 +19,8 @@ import {
 
 import {
   calculateDaysRemaining,
-  calculateRemainingAmount,
   calculateProgress,
+  calculateRemainingAmount,
 } from '@/features/savings-goals/savings-goals.service';
 import { SavingsGoal } from '@/features/savings-goals/savings-goals.types';
 import { money } from '@/features/wallet/wallet.service';
@@ -34,6 +35,7 @@ type GoalCardProps = {
   onEdit: (goal: SavingsGoal) => void;
   onDelete: (goal: SavingsGoal) => void;
   onContribute: (goal: SavingsGoal) => void;
+  onViewHistory: (goal: SavingsGoal) => void;
 };
 
 const iconMap = {
@@ -45,7 +47,13 @@ const iconMap = {
   target: Target,
 };
 
-export function GoalCard({ goal, onEdit, onDelete, onContribute }: GoalCardProps) {
+export function GoalCard({
+  goal,
+  onEdit,
+  onDelete,
+  onContribute,
+  onViewHistory,
+}: GoalCardProps) {
   const { theme } = useAppTheme();
   const styles = createStyles(theme);
 
@@ -97,19 +105,29 @@ export function GoalCard({ goal, onEdit, onDelete, onContribute }: GoalCardProps
       </View>
 
       <View style={styles.amountRow}>
-        <View>
+        <View style={styles.amountBox}>
           <Text style={styles.amountLabel}>Ahorrado</Text>
-          <Text style={styles.currentAmount}>{money(goal.monto_actual)}</Text>
+
+          <Text style={styles.currentAmount}>
+            {money(goal.monto_actual)}
+          </Text>
         </View>
-        <View style={styles.targetBox}>
+
+        <View style={styles.amountBox}>
           <Text style={styles.amountLabel}>Objetivo</Text>
-          <Text style={styles.targetAmount}>{money(goal.monto_objetivo)}</Text>
+
+          <Text style={styles.targetAmount}>
+            {money(goal.monto_objetivo)}
+          </Text>
         </View>
       </View>
 
       <View style={styles.remainingBox}>
         <Text style={styles.amountLabel}>Faltante</Text>
-        <Text style={styles.remainingAmount}>{money(remainingAmount)}</Text>
+
+        <Text style={styles.remainingAmount}>
+          {money(remainingAmount)}
+        </Text>
       </View>
 
       <View style={styles.progressTrack}>
@@ -146,6 +164,17 @@ export function GoalCard({ goal, onEdit, onDelete, onContribute }: GoalCardProps
           {isCompleted ? 'Completada' : isSpent ? 'Gastada' : isExpired ? 'Vencida' : 'Activa'}
         </Text>
       </View>
+
+      <Pressable
+        onPress={() => onViewHistory(goal)}
+        style={styles.historyButton}
+      >
+        <History size={16} color={theme.colors.primary} />
+
+        <Text style={styles.historyButtonText}>
+          Historial de abonos
+        </Text>
+      </Pressable>
 
       <Pressable
         disabled={!canContribute}
@@ -237,13 +266,16 @@ function createStyles(theme: AppTheme) {
     },
     amountRow: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
       marginTop: 16,
-      gap: 12,
+      gap: 10,
     },
-    targetBox: {
-      alignItems: 'flex-end',
+    amountBox: {
       flex: 1,
+      borderRadius: 10,
+      backgroundColor: theme.mode === 'dark' ? '#0F172A' : '#F8FAFC',
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      padding: 10,
     },
     amountLabel: {
       color: theme.colors.textSecondary,
@@ -261,10 +293,9 @@ function createStyles(theme: AppTheme) {
       color: theme.colors.text,
       fontSize: 16,
       fontWeight: '900',
-      textAlign: 'right',
     },
     remainingBox: {
-      marginTop: 12,
+      marginTop: 10,
       borderRadius: 10,
       backgroundColor: theme.mode === 'dark' ? '#0F172A' : '#F8FAFC',
       borderWidth: 1,
@@ -328,10 +359,27 @@ function createStyles(theme: AppTheme) {
       fontWeight: '900',
       textTransform: 'uppercase',
     },
-    hu16Button: {
+    historyButton: {
       height: 38,
       borderRadius: 19,
       marginTop: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+      gap: 8,
+      backgroundColor: theme.mode === 'dark' ? '#0F172A' : '#F8FAFC',
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    historyButtonText: {
+      color: theme.colors.primary,
+      fontSize: 12,
+      fontWeight: '900',
+    },
+    hu16Button: {
+      height: 38,
+      borderRadius: 19,
+      marginTop: 8,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.secondary,
