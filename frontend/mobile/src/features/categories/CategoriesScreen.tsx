@@ -18,6 +18,9 @@ import {
   View,
 } from 'react-native';
 
+import {
+  SuccessFeedbackModal,
+} from '@/components/feedback/SuccessFeedbackModal';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { renderCategoryIcon } from '@/features/wallet/category.utils';
 import {
@@ -156,7 +159,11 @@ export default function CategoriesScreen() {
       closeModal();
       await loadCategories();
 
-      setSuccessMessage('Categoría creada correctamente');
+      setSuccessMessage(
+        type === 'income'
+          ? 'Categoría de ingreso guardada correctamente'
+          : 'Categoría de gasto guardada correctamente'
+      );
       setSuccessModalVisible(true);
       
       setTimeout(() => {
@@ -430,29 +437,16 @@ export default function CategoriesScreen() {
         </View>
       </Modal>
 
-      {/* Modal Éxito */}
-      <Modal
+      <SuccessFeedbackModal
         visible={successModalVisible}
-        transparent
-        animationType="fade"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.feedbackModalCard}>
-            <View style={styles.feedbackHeader}>
-              <Text style={styles.feedbackHeaderTitle}>
-                {type === 'expense' ? 'Nuevo Gasto' : 'Nuevo Ingreso'}
-              </Text>
-            </View>
-
-            <View style={styles.feedbackBody}>
-              <Text style={styles.feedbackSuccessIcon}>♡</Text>
-              <Text style={styles.feedbackSuccessText}>
-                {successMessage}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        title={
+          type === 'income'
+            ? 'Nueva Categoría de Ingreso'
+            : 'Nueva Categoría de Gasto'
+        }
+        message={successMessage}
+        onRequestClose={() => setSuccessModalVisible(false)}
+      />
 
       {/* Modal Error */}
       <Modal
@@ -745,17 +739,6 @@ function createStyles(theme: AppTheme) {
     feedbackBody: {
       padding: 32,
       alignItems: 'center',
-    },
-    feedbackSuccessIcon: {
-      fontSize: 42,
-      color: '#52F436',
-      marginBottom: 12,
-    },
-    feedbackSuccessText: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: '#52F436',
-      textAlign: 'center',
     },
     feedbackDeleteText: {
       fontSize: 18,

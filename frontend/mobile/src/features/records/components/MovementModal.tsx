@@ -8,6 +8,9 @@ import {
   View,
 } from 'react-native';
 
+import {
+  SuccessFeedbackContent,
+} from '@/components/feedback/SuccessFeedbackContent';
 import { MovementForm } from '@/features/records/components/MovementForm';
 import {
   MovementModalMode,
@@ -263,9 +266,7 @@ export function MovementModal({
 
             {isSuccess && (
               <View style={styles.successContent}>
-                <Text style={styles.successText}>
-                  ♡ {finalSuccessMessage}
-                </Text>
+                <SuccessFeedbackContent message={finalSuccessMessage} />
               </View>
             )}
 
@@ -383,11 +384,6 @@ function createStyles(theme: AppTheme, registerHeaderColor: string) {
     successContent: {
       paddingHorizontal: 22,
       paddingVertical: 24,
-    },
-    successText: {
-      color: colors.secondary,
-      fontSize: 16,
-      fontWeight: '700',
     },
     deleteContent: {
       paddingHorizontal: 24,

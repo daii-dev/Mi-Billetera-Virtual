@@ -7,6 +7,9 @@ import {
   View,
 } from 'react-native';
 
+import {
+  SuccessFeedbackContent,
+} from '@/components/feedback/SuccessFeedbackContent';
 import { AccountModalMode } from '@/features/accounts/accounts.types';
 import { colors } from '@/theme/colors';
 import {
@@ -124,11 +127,9 @@ export function AccountModal({
 
           {isSuccess && (
             <View style={styles.successContent}>
-              <Text style={styles.successText}>
-                Cuenta guardada correctamente
-              </Text>
+                <SuccessFeedbackContent message="Cuenta guardada correctamente" />
             </View>
-          )}
+            )}
 
           {isEdit && (
             <View style={styles.modalContent}>
@@ -301,11 +302,6 @@ function createStyles(theme: AppTheme) {
     successContent: {
       paddingHorizontal: 22,
       paddingVertical: 26,
-    },
-    successText: {
-      color: colors.secondary,
-      fontSize: 16,
-      fontWeight: '700',
     },
     deleteContent: {
       paddingHorizontal: 24,

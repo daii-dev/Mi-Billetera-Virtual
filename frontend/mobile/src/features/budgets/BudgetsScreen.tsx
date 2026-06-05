@@ -26,6 +26,9 @@ import {
   View,
 } from 'react-native';
 
+import {
+  SuccessFeedbackModal,
+} from '@/components/feedback/SuccessFeedbackModal';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import {
   deleteBudget,
@@ -52,7 +55,7 @@ export default function BudgetsScreen() {
   const [myCategories, setMyCategories] = useState<any[]>([]); 
   const [loading, setLoading] = useState(false);  
   const [modalVisible, setModalVisible] = useState(false);
-  
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(''); 
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [selectedAccountName, setSelectedAccountName] = useState('');
@@ -277,7 +280,10 @@ export default function BudgetsScreen() {
             updated_at: new Date().toISOString()
           }]);
         if (error) throw error;
-        Alert.alert("¡Éxito!", "Presupuesto configurado correctamente.");
+        setSuccessModalVisible(true);
+        setTimeout(() => {
+          setSuccessModalVisible(false);
+        }, 1200);
       }
       setModalVisible(false);
       resetForm();
@@ -530,6 +536,17 @@ export default function BudgetsScreen() {
           </View>
         </View>
       </Modal>
+      <SuccessFeedbackModal
+        visible={successModalVisible}
+        title={editingBudgetId ? 'Editar Presupuesto' : 'Nuevo Presupuesto'}
+        message={
+          editingBudgetId
+            ? 'Presupuesto editado correctamente'
+            : 'Presupuesto guardado correctamente'
+        }
+        onRequestClose={() => setSuccessModalVisible(false)}
+        headerColor="#F39C12"
+      />
     </PrivateScreenLayout>
   );
 }

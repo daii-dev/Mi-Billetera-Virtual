@@ -13,6 +13,9 @@ import {
 } from 'react-native';
 
 import {
+  SuccessFeedbackContent,
+} from '@/components/feedback/SuccessFeedbackContent';
+import {
   PlannedPaymentModalMode,
   PlannedPaymentSuccessAction,
 } from '@/features/planned-payments/planned-payments.ui-types';
@@ -51,10 +54,7 @@ type PlannedPaymentModalProps = {
   onChangeName: (value: string) => void;
   onChangeAmount: (value: string) => void;
   onOpenDatePicker: () => void;
-  onDatePickerChange: (
-    event: DateTimePickerEvent,
-    selectedDate?: Date
-  ) => void;
+  onDatePickerChange: (event: DateTimePickerEvent, selectedDate?: Date) => void;
   onSelectAccount: (accountId: string) => void;
   onSelectCategory: (category: string) => void;
   onToggleAccountOptions: () => void;
@@ -100,18 +100,17 @@ export function PlannedPaymentModal({
 
   if (!mode) return null;
 
-  const isCreate = mode === 'form';
-  const isEdit = mode === 'edit';
-  const isDelete = mode === 'delete';
-  const isSuccess = mode === 'success';
+  const isCreate = mode === "form";
+  const isEdit = mode === "edit";
+  const isDelete = mode === "delete";
+  const isSuccess = mode === "success";
 
-  const successTitle = successAction === 'edit'
-    ? 'Editar Pago'
-    : 'Nuevo Pago';
+  const successTitle = successAction === "edit" ? "Editar Pago" : "Nuevo Pago";
 
-  const successMessage = successAction === 'edit'
-    ? 'Pago editado correctamente'
-    : 'Pago guardado correctamente';
+  const successMessage =
+    successAction === "edit"
+      ? "Pago editado correctamente"
+      : "Pago guardado correctamente";
 
   return (
     <Modal
@@ -126,11 +125,11 @@ export function PlannedPaymentModal({
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
               {isCreate
-                ? 'Nuevo Pago'
+                ? "Nuevo Pago"
                 : isEdit
-                  ? 'Editar Pago'
+                  ? "Editar Pago"
                   : isDelete
-                    ? 'Eliminar Pago Planificado'
+                    ? "Eliminar Pago Planificado"
                     : successTitle}
             </Text>
           </View>
@@ -172,7 +171,7 @@ export function PlannedPaymentModal({
                   <Wallet size={22} color="#4B5563" />
 
                   <Text style={styles.selectorText}>
-                    {selectedAccountName || 'Selecciona una cuenta'}
+                    {selectedAccountName || "Selecciona una cuenta"}
                   </Text>
                 </View>
 
@@ -200,16 +199,18 @@ export function PlannedPaymentModal({
                 onPress={onToggleCategoryOptions}
               >
                 <View style={styles.selectorLeft}>
-                  {selectedCategoryData
-                    ? renderCategoryIcon(
-                        selectedCategoryData.icon,
-                        20,
-                        selectedCategoryData.color
-                      )
-                    : <Text style={styles.categoryFallbackIcon}>♟</Text>}
+                  {selectedCategoryData ? (
+                    renderCategoryIcon(
+                      selectedCategoryData.icon,
+                      20,
+                      selectedCategoryData.color,
+                    )
+                  ) : (
+                    <Text style={styles.categoryFallbackIcon}>♟</Text>
+                  )}
 
                   <Text style={styles.selectorText}>
-                    {selectedCategory || 'Selecciona una categoría'}
+                    {selectedCategory || "Selecciona una categoría"}
                   </Text>
                 </View>
 
@@ -235,17 +236,14 @@ export function PlannedPaymentModal({
 
               <Text style={styles.inputLabel}>Fecha programada</Text>
 
-              <Pressable
-                style={styles.dateInputBox}
-                onPress={onOpenDatePicker}
-              >
+              <Pressable style={styles.dateInputBox} onPress={onOpenDatePicker}>
                 <Text
                   style={[
                     styles.dateText,
                     !paymentDate && styles.datePlaceholder,
                   ]}
                 >
-                  {paymentDate || 'Selecciona una fecha'}
+                  {paymentDate || "Selecciona una fecha"}
                 </Text>
 
                 <CalendarDays size={21} color="#6B7280" />
@@ -276,7 +274,7 @@ export function PlannedPaymentModal({
                   disabled={saving}
                 >
                   <Text style={styles.modalButtonText}>
-                    {saving ? 'Guardando...' : 'Guardar'}
+                    {saving ? "Guardando..." : "Guardar"}
                   </Text>
                 </Pressable>
               </View>
@@ -304,7 +302,7 @@ export function PlannedPaymentModal({
                   style={styles.deleteTextButton}
                 >
                   <Text style={styles.deleteOptionText}>
-                    {saving ? 'Eliminando...' : 'Si'}
+                    {saving ? "Eliminando..." : "Si"}
                   </Text>
                 </Pressable>
               </View>
@@ -313,9 +311,7 @@ export function PlannedPaymentModal({
 
           {isSuccess && (
             <View style={styles.successContent}>
-              <Text style={styles.successText}>
-                {successMessage}
-              </Text>
+              <SuccessFeedbackContent message={successMessage} />
             </View>
           )}
         </View>
@@ -328,31 +324,31 @@ function createStyles(theme: AppTheme) {
   return StyleSheet.create({
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.62)',
-      alignItems: 'center',
-      justifyContent: 'center',
+      backgroundColor: "rgba(0,0,0,0.62)",
+      alignItems: "center",
+      justifyContent: "center",
       paddingHorizontal: 18,
     },
     modalBox: {
-      width: '100%',
+      width: "100%",
       maxWidth: 340,
       backgroundColor: theme.colors.card,
       borderRadius: 14,
-      overflow: 'hidden',
+      overflow: "hidden",
     },
     modalHeader: {
       minHeight: 54,
       backgroundColor: colors.primary,
       paddingHorizontal: 22,
       paddingVertical: 10,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
     },
     modalTitle: {
-      color: '#FFFFFF',
+      color: "#FFFFFF",
       fontSize: 24,
-      fontWeight: '900',
+      fontWeight: "900",
       flex: 1,
     },
     modalContent: {
@@ -363,7 +359,7 @@ function createStyles(theme: AppTheme) {
     inputLabel: {
       color: theme.colors.text,
       fontSize: 15,
-      fontWeight: '900',
+      fontWeight: "900",
       marginBottom: 6,
     },
     input: {
@@ -383,15 +379,15 @@ function createStyles(theme: AppTheme) {
       borderColor: colors.primary,
       borderRadius: 7,
       paddingHorizontal: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       backgroundColor: theme.colors.surface,
       marginBottom: 10,
     },
     amountPrefix: {
       color: theme.colors.textSecondary,
       fontSize: 15,
-      fontWeight: '900',
+      fontWeight: "900",
       marginRight: 12,
     },
     amountInput: {
@@ -406,14 +402,14 @@ function createStyles(theme: AppTheme) {
       borderRadius: 7,
       paddingHorizontal: 12,
       backgroundColor: theme.colors.surface,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       marginBottom: 8,
     },
     selectorLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 10,
       flex: 1,
     },
@@ -423,7 +419,7 @@ function createStyles(theme: AppTheme) {
     },
     categoryFallbackIcon: {
       fontSize: 21,
-      color: '#4B5563',
+      color: "#4B5563",
     },
     optionsBox: {
       borderWidth: 1,
@@ -431,7 +427,7 @@ function createStyles(theme: AppTheme) {
       borderRadius: 8,
       backgroundColor: theme.colors.surface,
       marginBottom: 8,
-      overflow: 'hidden',
+      overflow: "hidden",
       maxHeight: 150,
     },
     optionItem: {
@@ -443,11 +439,11 @@ function createStyles(theme: AppTheme) {
     optionText: {
       color: theme.colors.text,
       fontSize: 14,
-      fontWeight: '700',
+      fontWeight: "700",
     },
     categoryOptionRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 8,
     },
     dateInputBox: {
@@ -457,9 +453,9 @@ function createStyles(theme: AppTheme) {
       borderRadius: 7,
       paddingHorizontal: 12,
       backgroundColor: theme.colors.surface,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       marginBottom: 10,
     },
     dateText: {
@@ -468,11 +464,11 @@ function createStyles(theme: AppTheme) {
       fontSize: 15,
     },
     datePlaceholder: {
-      color: '#A8A8A8',
+      color: "#A8A8A8",
     },
     modalButtonsRow: {
-      flexDirection: 'row',
-      justifyContent: 'center',
+      flexDirection: "row",
+      justifyContent: "center",
       gap: 18,
       marginTop: 18,
     },
@@ -480,9 +476,9 @@ function createStyles(theme: AppTheme) {
       width: 108,
       height: 38,
       borderRadius: 22,
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: "#000",
       shadowOpacity: 0.22,
       shadowOffset: { width: 0, height: 2 },
       shadowRadius: 3,
@@ -495,18 +491,13 @@ function createStyles(theme: AppTheme) {
       backgroundColor: colors.secondary,
     },
     modalButtonText: {
-      color: '#FFFFFF',
-      fontWeight: '900',
+      color: "#FFFFFF",
+      fontWeight: "900",
       fontSize: 14,
     },
     successContent: {
       paddingHorizontal: 22,
       paddingVertical: 24,
-    },
-    successText: {
-      color: colors.secondary,
-      fontSize: 16,
-      fontWeight: '700',
     },
     deleteContent: {
       paddingHorizontal: 24,
@@ -520,8 +511,8 @@ function createStyles(theme: AppTheme) {
     },
     deleteActions: {
       marginTop: 20,
-      flexDirection: 'row',
-      justifyContent: 'center',
+      flexDirection: "row",
+      justifyContent: "center",
       gap: 44,
     },
     deleteTextButton: {
@@ -529,9 +520,9 @@ function createStyles(theme: AppTheme) {
       paddingVertical: 8,
     },
     deleteOptionText: {
-      color: theme.mode === 'dark' ? '#FFFFFF' : colors.primary,
+      color: theme.mode === "dark" ? "#FFFFFF" : colors.primary,
       fontSize: 14,
-      fontWeight: '900',
+      fontWeight: "900",
     },
   });
 }

@@ -81,53 +81,58 @@ export default function PlannedPaymentsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [modalMode, setModalMode] = useState<PlannedPaymentModalMode>(null);
   const [successAction, setSuccessAction] =
-    useState<PlannedPaymentSuccessAction>('create');
-  const [selectedPayment, setSelectedPayment] = useState<PlannedPayment | null>(null);
-  const [paymentName, setPaymentName] = useState('');
-  const [amountText, setAmountText] = useState('');
-  const [selectedAccountId, setSelectedAccountId] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [paymentDate, setPaymentDate] = useState('');
+    useState<PlannedPaymentSuccessAction>("create");
+  const [selectedPayment, setSelectedPayment] = useState<PlannedPayment | null>(
+    null,
+  );
+  const [paymentName, setPaymentName] = useState("");
+  const [amountText, setAmountText] = useState("");
+  const [selectedAccountId, setSelectedAccountId] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [paymentDate, setPaymentDate] = useState("");
   const [showAccountOptions, setShowAccountOptions] = useState(false);
   const [showCategoryOptions, setShowCategoryOptions] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const loadData = useCallback(async (showFullLoader = false) => {
-    if (!isLoaded) return;
+  const loadData = useCallback(
+    async (showFullLoader = false) => {
+      if (!isLoaded) return;
 
-    if (!isSignedIn || !userId) {
-      router.replace('/sign-in');
-      return;
-    }
-
-    try {
-      if (showFullLoader) {
-        setLoading(true);
+      if (!isSignedIn || !userId) {
+        router.replace("/sign-in");
+        return;
       }
 
-      await processDuePlannedPayments(supabase);
+      try {
+        if (showFullLoader) {
+          setLoading(true);
+        }
 
-      const [userAccounts, expenseCategories, plannedPayments] =
-        await Promise.all([
-          getUserAccounts(supabase, userId),
-          getCategoriesByType(supabase, userId, 'expense'),
-          getPlannedPayments(supabase, userId),
-        ]);
+        await processDuePlannedPayments(supabase);
 
-      setAccounts(userAccounts);
-      setCategories(expenseCategories);
-      setPayments(plannedPayments);
-    } catch (error: any) {
-      Alert.alert(
-        'Error',
-        error?.message || 'No se pudieron cargar los pagos planificados'
-      );
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [isLoaded, isSignedIn, userId, supabase]);
+        const [userAccounts, expenseCategories, plannedPayments] =
+          await Promise.all([
+            getUserAccounts(supabase, userId),
+            getCategoriesByType(supabase, userId, "expense"),
+            getPlannedPayments(supabase, userId),
+          ]);
+
+        setAccounts(userAccounts);
+        setCategories(expenseCategories);
+        setPayments(plannedPayments);
+      } catch (error: any) {
+        Alert.alert(
+          "Error",
+          error?.message || "No se pudieron cargar los pagos planificados",
+        );
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [isLoaded, isSignedIn, userId, supabase],
+  );
 
   useEffect(() => {
     loadData(true);
@@ -144,12 +149,12 @@ export default function PlannedPaymentsScreen() {
 
   function handleDatePickerChange(
     event: DateTimePickerEvent,
-    selectedDate?: Date
+    selectedDate?: Date,
   ) {
     setShowDatePicker(false);
 
-    if (event.type === 'dismissed' || !selectedDate) {
-        return;
+    if (event.type === "dismissed" || !selectedDate) {
+      return;
     }
 
     setPaymentDate(formatDateForInput(selectedDate));
@@ -157,14 +162,14 @@ export default function PlannedPaymentsScreen() {
 
   function openCreateModal() {
     setSelectedPayment(null);
-    setPaymentName('');
-    setAmountText('');
-    setSelectedAccountId(accounts[0]?.id ?? '');
-    setSelectedCategory(categories[0]?.name ?? '');
+    setPaymentName("");
+    setAmountText("");
+    setSelectedAccountId(accounts[0]?.id ?? "");
+    setSelectedCategory(categories[0]?.name ?? "");
     setPaymentDate(getTodayDate());
     setShowAccountOptions(false);
     setShowCategoryOptions(false);
-    setModalMode('form');
+    setModalMode("form");
   }
 
   function openEditModal(payment: PlannedPayment) {
@@ -176,17 +181,17 @@ export default function PlannedPaymentsScreen() {
     setPaymentDate(payment.next_payment_date);
     setShowAccountOptions(false);
     setShowCategoryOptions(false);
-    setModalMode('edit');
+    setModalMode("edit");
   }
 
   function closeModal() {
     setModalMode(null);
     setSelectedPayment(null);
-    setPaymentName('');
-    setAmountText('');
-    setSelectedAccountId('');
-    setSelectedCategory('');
-    setPaymentDate('');
+    setPaymentName("");
+    setAmountText("");
+    setSelectedAccountId("");
+    setSelectedCategory("");
+    setPaymentDate("");
     setShowAccountOptions(false);
     setShowCategoryOptions(false);
     setShowDatePicker(false);
@@ -207,14 +212,14 @@ export default function PlannedPaymentsScreen() {
     const date = paymentDate.trim();
 
     if (!cleanName) {
-      Alert.alert('Campo requerido', 'Ingresa el nombre del pago');
+      Alert.alert("Campo requerido", "Ingresa el nombre del pago");
       return null;
     }
 
     if (!isValidMoneyInput(cleanAmountText)) {
       Alert.alert(
-        'Monto inválido',
-        'Usa coma decimal y máximo dos decimales. Ejemplo: 120,50'
+        "Monto inválido",
+        "Usa coma decimal y máximo dos decimales. Ejemplo: 120,50",
       );
       return null;
     }
@@ -222,22 +227,22 @@ export default function PlannedPaymentsScreen() {
     const amount = parseMoneyInput(cleanAmountText);
 
     if (amount <= 0) {
-      Alert.alert('Monto inválido', 'Ingresa un monto mayor a cero');
+      Alert.alert("Monto inválido", "Ingresa un monto mayor a cero");
       return null;
     }
 
     if (!accountId) {
-      Alert.alert('Cuenta requerida', 'Selecciona una cuenta');
+      Alert.alert("Cuenta requerida", "Selecciona una cuenta");
       return null;
     }
 
     if (!category) {
-      Alert.alert('Categoría requerida', 'Selecciona una categoría de gasto');
+      Alert.alert("Categoría requerida", "Selecciona una categoría de gasto");
       return null;
     }
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      Alert.alert('Fecha inválida', 'Usa el formato YYYY-MM-DD');
+      Alert.alert("Fecha inválida", "Usa el formato YYYY-MM-DD");
       return null;
     }
 
@@ -270,14 +275,14 @@ export default function PlannedPaymentsScreen() {
 
       await loadData(false);
 
-      setSuccessAction('create');
-      setModalMode('success');
+      setSuccessAction("create");
+      setModalMode("success");
 
       setTimeout(() => {
         closeModal();
       }, 1200);
     } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo guardar el pago');
+      Alert.alert("Error", error?.message || "No se pudo guardar el pago");
     } finally {
       setSaving(false);
     }
@@ -303,14 +308,14 @@ export default function PlannedPaymentsScreen() {
 
       await loadData(false);
 
-      setSuccessAction('edit');
-      setModalMode('success');
+      setSuccessAction("edit");
+      setModalMode("success");
 
       setTimeout(() => {
         closeModal();
       }, 1200);
     } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo actualizar el pago');
+      Alert.alert("Error", error?.message || "No se pudo actualizar el pago");
     } finally {
       setSaving(false);
     }
@@ -327,18 +332,18 @@ export default function PlannedPaymentsScreen() {
       await loadData(false);
       closeModal();
     } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo eliminar el pago');
+      Alert.alert("Error", error?.message || "No se pudo eliminar el pago");
     } finally {
       setSaving(false);
     }
   }
 
   const selectedAccount = accounts.find(
-    (account) => account.id === selectedAccountId
+    (account) => account.id === selectedAccountId,
   );
 
   const selectedCategoryData = categories.find(
-    (category) => category.name === selectedCategory
+    (category) => category.name === selectedCategory,
   );
 
   if (loading) {
@@ -366,7 +371,7 @@ export default function PlannedPaymentsScreen() {
         ) : (
           payments.map((payment) => {
             const category = categories.find(
-              (item) => item.name === payment.category_name
+              (item) => item.name === payment.category_name,
             );
 
             return (
@@ -377,7 +382,7 @@ export default function PlannedPaymentsScreen() {
                 onEdit={openEditModal}
                 onDelete={(paymentToDelete) => {
                   setSelectedPayment(paymentToDelete);
-                  setModalMode('delete');
+                  setModalMode("delete");
                 }}
               />
             );
@@ -385,10 +390,7 @@ export default function PlannedPaymentsScreen() {
         )}
       </ScrollView>
 
-      <FloatingActionButton
-        color="#28A9D6"
-        onPress={openCreateModal}
-      />
+      <FloatingActionButton color="#28A9D6" onPress={openCreateModal} />
 
       <PlannedPaymentModal
         mode={modalMode}
@@ -397,7 +399,7 @@ export default function PlannedPaymentsScreen() {
         amountText={amountText}
         paymentDate={paymentDate}
         showDatePicker={showDatePicker}
-        selectedAccountName={selectedAccount?.name ?? ''}
+        selectedAccountName={selectedAccount?.name ?? ""}
         selectedCategory={selectedCategory}
         selectedCategoryData={selectedCategoryData ?? null}
         accounts={accounts}
@@ -417,8 +419,12 @@ export default function PlannedPaymentsScreen() {
           setSelectedCategory(category);
           setShowCategoryOptions(false);
         }}
-        onToggleAccountOptions={() => setShowAccountOptions(!showAccountOptions)}
-        onToggleCategoryOptions={() => setShowCategoryOptions(!showCategoryOptions)}
+        onToggleAccountOptions={() =>
+          setShowAccountOptions(!showAccountOptions)
+        }
+        onToggleCategoryOptions={() =>
+          setShowCategoryOptions(!showCategoryOptions)
+        }
         onClose={closeModal}
         onCreate={handleCreatePayment}
         onUpdate={handleUpdatePayment}
@@ -438,13 +444,13 @@ function createStyles(theme: AppTheme) {
     loadingContainer: {
       flex: 1,
       backgroundColor: theme.colors.background,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
     },
     loadingText: {
       marginTop: 14,
       color: theme.colors.text,
-      fontWeight: '800',
+      fontWeight: "800",
     },
   });
 }
