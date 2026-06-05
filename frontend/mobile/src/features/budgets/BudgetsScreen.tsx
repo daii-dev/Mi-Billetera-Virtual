@@ -49,7 +49,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 type BudgetSuccessAction = 'create' | 'edit';
 
 export default function BudgetsScreen() {
-  const { theme, isDarkMode, setDarkMode } = useAppTheme();
+  const { theme, isDarkMode } = useAppTheme();
   const supabase = useSupabase();
   const { userId } = useAuth();
   const [budgets, setBudgets] = useState<any[]>([]);
@@ -579,17 +579,6 @@ export default function BudgetsScreen() {
           </View>
         </View>
       </Modal>
-      <SuccessFeedbackModal
-        visible={successModalVisible}
-        title={editingBudgetId ? 'Editar Presupuesto' : 'Nuevo Presupuesto'}
-        message={
-          editingBudgetId
-            ? 'Presupuesto editado correctamente'
-            : 'Presupuesto guardado correctamente'
-        }
-        onRequestClose={() => setSuccessModalVisible(false)}
-        headerColor="#F39C12"
-      />
       <SuccessFeedbackModal
         visible={successModalVisible}
         title={

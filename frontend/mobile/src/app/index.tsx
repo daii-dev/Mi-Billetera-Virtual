@@ -7,13 +7,8 @@ import {
   router,
   useLocalSearchParams,
 } from 'expo-router';
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
 
+import { AppLoadingScreen } from '@/components/loading/AppLoadingScreen';
 import { ensureUserWallet } from '@/features/wallet/wallet.service';
 import {
   clearPendingSignupData,
@@ -21,7 +16,6 @@ import {
   getPendingSignupData,
 } from '@/lib/storage';
 import { useSupabase } from '@/lib/useSupabase';
-import { colors } from '@/theme/colors';
 import {
   useAuth,
   useUser,
@@ -113,37 +107,6 @@ export default function IndexScreen() {
   }, [isLoaded, isSignedIn, user, supabase, shouldSkipOnboardingThisTime]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.logo}>💰</Text>
-      <Text style={styles.title}>Mi Billetera Virtual</Text>
-      <Text style={styles.subtitle}>{message}</Text>
-      <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />
-    </View>
+    <AppLoadingScreen message={message} />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logo: {
-    fontSize: 72,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: colors.primary,
-    textAlign: 'center',
-  },
-  subtitle: {
-    marginTop: 8,
-    fontSize: 14,
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
-});
