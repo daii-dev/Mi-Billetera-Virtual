@@ -105,19 +105,29 @@ export function GoalCard({
       </View>
 
       <View style={styles.amountRow}>
-        <View>
+        <View style={styles.amountBox}>
           <Text style={styles.amountLabel}>Ahorrado</Text>
-          <Text style={styles.currentAmount}>{money(goal.monto_actual)}</Text>
+
+          <Text style={styles.currentAmount}>
+            {money(goal.monto_actual)}
+          </Text>
         </View>
-        <View style={styles.targetBox}>
+
+        <View style={styles.amountBox}>
           <Text style={styles.amountLabel}>Objetivo</Text>
-          <Text style={styles.targetAmount}>{money(goal.monto_objetivo)}</Text>
+
+          <Text style={styles.targetAmount}>
+            {money(goal.monto_objetivo)}
+          </Text>
         </View>
       </View>
 
       <View style={styles.remainingBox}>
         <Text style={styles.amountLabel}>Faltante</Text>
-        <Text style={styles.remainingAmount}>{money(remainingAmount)}</Text>
+
+        <Text style={styles.remainingAmount}>
+          {money(remainingAmount)}
+        </Text>
       </View>
 
       <View style={styles.progressTrack}>
@@ -256,13 +266,16 @@ function createStyles(theme: AppTheme) {
     },
     amountRow: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
       marginTop: 16,
-      gap: 12,
+      gap: 10,
     },
-    targetBox: {
-      alignItems: 'flex-end',
+    amountBox: {
       flex: 1,
+      borderRadius: 10,
+      backgroundColor: theme.mode === 'dark' ? '#0F172A' : '#F8FAFC',
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      padding: 10,
     },
     amountLabel: {
       color: theme.colors.textSecondary,
@@ -280,10 +293,9 @@ function createStyles(theme: AppTheme) {
       color: theme.colors.text,
       fontSize: 16,
       fontWeight: '900',
-      textAlign: 'right',
     },
     remainingBox: {
-      marginTop: 12,
+      marginTop: 10,
       borderRadius: 10,
       backgroundColor: theme.mode === 'dark' ? '#0F172A' : '#F8FAFC',
       borderWidth: 1,
