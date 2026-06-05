@@ -525,6 +525,7 @@ async function createInitialBalanceMovement(
       title: 'Saldo inicial',
       description: 'Movimiento generado automáticamente al crear la cuenta',
       amount,
+      category_name: "Saldo Inicial",
       currency: account.currency ?? 'BOB',
       movement_date: formatLocalDate(),
     });
