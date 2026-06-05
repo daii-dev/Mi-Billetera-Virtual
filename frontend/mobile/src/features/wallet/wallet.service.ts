@@ -64,6 +64,29 @@ export async function ensureUserWallet(
     throw new Error(profileError.message);
   }
 
+  // Inicializar categorías por defecto si el usuario no tiene ninguna
+  try {
+    const { data: userCategories, error: userCategoriesError } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('clerk_user_id', clerkUserId)
+      .limit(1);
+
+    if (!userCategoriesError && (!userCategories || userCategories.length === 0)) {
+      const defaultCategories = [
+        { clerk_user_id: clerkUserId, type: 'expense', name: 'Comida', icon: 'Utensils', color: '#FF6B6B' },
+        { clerk_user_id: clerkUserId, type: 'expense', name: 'Transporte', icon: 'Car', color: '#4ECDC4' },
+        { clerk_user_id: clerkUserId, type: 'expense', name: 'Ocio', icon: 'Gamepad2', color: '#BB8FCE' },
+        { clerk_user_id: clerkUserId, type: 'income', name: 'Regalo', icon: 'ShoppingCart', color: '#F8B88B' },
+        { clerk_user_id: clerkUserId, type: 'income', name: 'Trabajo', icon: 'Wallet', color: '#45B7D1' },
+      ];
+
+      await supabase.from('categories').insert(defaultCategories);
+    }
+  } catch (catErr) {
+    console.error('Error al inicializar categorías por defecto:', catErr);
+  }
+
   const accounts = await getUserAccounts(supabase, clerkUserId);
 
   if (accounts.length > 0) {
@@ -309,6 +332,61 @@ export function money(value: number | string | null | undefined): string {
 
 // --- SERVICIOS DE MOVIMIENTOS / TRANSACCIONES (ÚNICA COPIA SANEADA) ---
 
+export async function enrichMovementsWithCategories<
+  T extends {
+    category_name?: string | null;
+    category_icon?: string | null;
+    category_color?: string | null;
+  }
+>(
+  supabase: SupabaseClient,
+  clerkUserId: string,
+  movements: T[]
+): Promise<T[]> {
+  if (movements.length === 0) {
+    return movements;
+  }
+
+  try {
+    const { data: categories, error } = await supabase
+      .from('categories')
+      .select('name, icon, color')
+      .eq('clerk_user_id', clerkUserId);
+
+    if (error || !categories) {
+      return movements;
+    }
+
+    const categoryMap = new Map<string, { icon: string | null; color: string | null }>();
+    categories.forEach((cat) => {
+      if (cat.name) {
+        categoryMap.set(cat.name.trim().toLowerCase(), {
+          icon: cat.icon,
+          color: cat.color,
+        });
+      }
+    });
+
+    return movements.map((movement) => {
+      const key = movement.category_name?.trim().toLowerCase();
+      if (key) {
+        const match = categoryMap.get(key);
+        if (match) {
+          return {
+            ...movement,
+            category_icon: match.icon,
+            category_color: match.color,
+          };
+        }
+      }
+      return movement;
+    });
+  } catch (err) {
+    console.error('Error enriqueciendo movimientos con categorías:', err);
+    return movements;
+  }
+}
+
 export async function getRecentMovements(
   supabase: SupabaseClient,
   clerkUserId: string,
@@ -331,10 +409,16 @@ export async function getRecentMovements(
     throw new Error(error.message);
   }
 
-  return enrichSavingsGoalMovementAccounts(
+  const enriched = await enrichMovementsWithCategories(
     supabase,
     clerkUserId,
     (data ?? []) as Movement[]
+  );
+
+  return enrichSavingsGoalMovementAccounts(
+    supabase,
+    clerkUserId,
+    enriched
   );
 }
 
@@ -518,10 +602,16 @@ export async function getMovementsByType(
     throw new Error(error.message);
   }
 
-  return enrichSavingsGoalMovementAccounts(
+  const enriched = await enrichMovementsWithCategories(
     supabase,
     clerkUserId,
     (data ?? []) as Movement[]
+  );
+
+  return enrichSavingsGoalMovementAccounts(
+    supabase,
+    clerkUserId,
+    enriched
   );
 }
 
@@ -561,7 +651,13 @@ export async function createManualMovement(
   const delta = getMovementDelta(payload.type, payload.amount);
   await adjustAccountBalance(supabase, payload.accountId, delta);
 
-  return data as Movement;
+  const enriched = await enrichMovementsWithCategories(
+    supabase,
+    payload.clerkUserId,
+    [data as Movement]
+  );
+
+  return enriched[0];
 }
 
 export async function registerExpenseFromGoal(
@@ -639,7 +735,13 @@ export async function updateManualMovement(
     await adjustAccountBalance(supabase, payload.accountId, newDelta);
   }
 
-  return data as Movement;
+  const enriched = await enrichMovementsWithCategories(
+    supabase,
+    payload.clerkUserId,
+    [data as Movement]
+  );
+
+  return enriched[0];
 }
 
 export async function deleteManualMovement(

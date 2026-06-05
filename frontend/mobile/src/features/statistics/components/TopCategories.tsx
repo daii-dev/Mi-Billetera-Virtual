@@ -44,16 +44,7 @@ export function TopCategories({ data, theme }: TopCategoriesProps) {
   };
 
   const getRankMedal = (rank: number): string => {
-    switch (rank) {
-      case 1:
-        return '🥇';
-      case 2:
-        return '🥈';
-      case 3:
-        return '🥉';
-      default:
-        return `#${rank}`;
-    }
+    return `#${rank}`;
   };
 
   const displayedCategories = showAll ? data.categories : data.topCategories;

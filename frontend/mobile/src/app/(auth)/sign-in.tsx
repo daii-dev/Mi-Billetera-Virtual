@@ -192,10 +192,6 @@ export default function SignInScreen() {
           }
         />
 
-        <Pressable style={styles.forgotButton}>
-          <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
-        </Pressable>
-
         <AppButton title="Iniciar sesión" onPress={handleSignIn} loading={loading} />
 
         <View style={styles.separator}>

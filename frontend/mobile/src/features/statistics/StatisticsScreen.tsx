@@ -56,7 +56,7 @@ export function StatisticsScreen() {
 
   const [filters, setFilters] = useState<StatisticsFilters>({
     period: 'monthly',
-    type: 'expense',
+    type: 'income',
     accountId: null,
     dateRange: getDateRange('monthly'),
   });
