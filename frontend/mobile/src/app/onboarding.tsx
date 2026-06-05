@@ -1,8 +1,13 @@
-import { useState } from 'react';
+import {
+  useEffect,
+  useState,
+} from 'react';
 
+import { Asset } from 'expo-asset';
 import { router } from 'expo-router';
 import {
   Dimensions,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -18,6 +23,20 @@ const { width } = Dimensions.get('window');
 export default function OnboardingScreen() {
   const [pageIndex, setPageIndex] = useState(0);
   const page = onboardingPages[pageIndex];
+
+  useEffect(() => {
+    async function preloadImages() {
+      try {
+        await Asset.loadAsync(
+          onboardingPages.map((onboardingPage) => onboardingPage.image as number)
+        );
+      } catch (error) {
+        console.log('ERROR PRELOAD ONBOARDING IMAGES:', error);
+      }
+    }
+
+    preloadImages();
+  }, []);
 
   async function finishOnboarding() {
     await setHasSeenOnboarding();
@@ -46,7 +65,12 @@ export default function OnboardingScreen() {
       </View>
 
       <View style={styles.imageBox}>
-        <Text style={styles.image}>{page.image}</Text>
+        <Image
+          source={page.image}
+          style={styles.image}
+          resizeMode="contain"
+          fadeDuration={0}
+        />
       </View>
 
       <Text style={styles.title}>{page.title}</Text>
@@ -99,14 +123,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   imageBox: {
-    marginTop: 78,
-    height: 135,
-    width: 180,
+    marginTop: 58,
+    height: 185,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
   image: {
-    fontSize: 100,
+    fontSize: 220,
+    height: 180,
   },
   title: {
     marginTop: 54,
@@ -117,7 +142,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   description: {
-    width: width - 70,
+    width: '100%',
     marginTop: 22,
     fontSize: 15,
     lineHeight: 20,
