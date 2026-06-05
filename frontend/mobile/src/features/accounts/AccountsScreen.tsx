@@ -5,24 +5,19 @@ import {
 
 import { router } from 'expo-router';
 import {
-  MoreVertical,
-  Trash2,
-  Wallet,
-} from 'lucide-react-native';
-import {
   ActivityIndicator,
   Alert,
-  Modal,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
+import { AccountModalMode } from '@/features/accounts/accounts.types';
+import { AccountCard } from '@/features/accounts/components/AccountCard';
+import { AccountModal } from '@/features/accounts/components/AccountModal';
 import {
   isValidMoneyInput,
   parseMoneyInput,
@@ -48,12 +43,10 @@ import {
 } from '@/theme/ThemeContext';
 import { useAuth } from '@clerk/expo';
 
-type AccountModalMode = 'create' | 'success' | 'edit' | 'delete' | null;
-
 export default function AccountsScreen() {
   const { userId, isLoaded, isSignedIn } = useAuth();
   const supabase = useSupabase();
-  const { theme, isDarkMode, setDarkMode } = useAppTheme();
+  const { theme } = useAppTheme();
   const styles = createStyles(theme);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,6 +106,13 @@ export default function AccountsScreen() {
     setAccountName(account.name);
     setInitialBalanceText('');
     setModalMode('edit');
+  }
+
+  function openDeleteModal(account: Account) {
+    setSelectedAccount(account);
+    setAccountName(account.name);
+    setInitialBalanceText('');
+    setModalMode('delete');
   }
 
   function closeModal() {
@@ -293,26 +293,12 @@ export default function AccountsScreen() {
         <Text style={styles.sectionTitle}>Tus cuentas</Text>
 
         {accounts.map((account) => (
-          <View key={account.id} style={styles.accountCard}>
-            <View style={styles.accountIcon}>
-              <Wallet size={24} color="#FFFFFF" />
-            </View>
-
-            <View style={styles.accountInfo}>
-              <Text style={styles.accountName}>{account.name}</Text>
-              <Text style={styles.accountBalance}>
-                {money(account.current_balance)}
-              </Text>
-            </View>
-
-            <Pressable
-              onPress={() => openEditModal(account)}
-              hitSlop={10}
-              style={styles.moreButton}
-            >
-              <MoreVertical size={24} color={theme.colors.textSecondary} />
-            </Pressable>
-          </View>
+          <AccountCard
+            key={account.id}
+            account={account}
+            onEdit={openEditModal}
+            onDelete={openDeleteModal}
+          />
         ))}
       </ScrollView>
 
@@ -323,7 +309,6 @@ export default function AccountsScreen() {
 
       <AccountModal
         mode={modalMode}
-        styles={styles}
         accountName={accountName}
         initialBalanceText={initialBalanceText}
         saving={saving}
@@ -332,197 +317,10 @@ export default function AccountsScreen() {
         onClose={closeModal}
         onCreate={handleCreateAccount}
         onUpdate={handleUpdateAccount}
-        onGoDelete={() => setModalMode('delete')}
         onCancelDelete={closeModal}
         onDelete={handleDeleteAccount}
       />
     </PrivateScreenLayout>
-  );
-}
-
-type AccountModalProps = {
-  mode: AccountModalMode;
-  styles: ReturnType<typeof createStyles>;
-  accountName: string;
-  initialBalanceText: string;
-  saving: boolean;
-  onChangeAccountName: (value: string) => void;
-  onChangeInitialBalance: (value: string) => void;
-  onClose: () => void;
-  onCreate: () => void;
-  onUpdate: () => void;
-  onGoDelete: () => void;
-  onCancelDelete: () => void;
-  onDelete: () => void;
-};
-
-function AccountModal({
-  mode,
-  styles,
-  accountName,
-  initialBalanceText,
-  saving,
-  onChangeAccountName,
-  onChangeInitialBalance,
-  onClose,
-  onCreate,
-  onUpdate,
-  onGoDelete,
-  onCancelDelete,
-  onDelete,
-}: AccountModalProps) {
-  if (!mode) {
-    return null;
-  }
-
-  const isCreate = mode === 'create';
-  const isSuccess = mode === 'success';
-  const isEdit = mode === 'edit';
-  const isDelete = mode === 'delete';
-
-  return (
-    <Modal
-      visible
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalBox}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              {isCreate || isSuccess
-                ? 'Nueva Cuenta'
-                : isEdit
-                  ? 'Editar Cuenta'
-                  : 'Eliminar Cuenta'}
-            </Text>
-
-            {isEdit && (
-              <Pressable onPress={onGoDelete} hitSlop={10}>
-                <Trash2 size={27} color="#FFFFFF" />
-              </Pressable>
-            )}
-          </View>
-
-          {isCreate && (
-            <View style={styles.modalContent}>
-              <Text style={styles.inputLabel}>Nombre de la cuenta</Text>
-              <TextInput
-                value={accountName}
-                onChangeText={onChangeAccountName}
-                placeholder="Ej. Emprendimiento"
-                placeholderTextColor="#A8A8A8"
-                style={styles.input}
-              />
-
-              <Text style={styles.inputLabel}>Saldo inicial</Text>
-              <View style={styles.amountInputBox}>
-                <Text style={styles.amountPrefix}>Bs.</Text>
-                <TextInput
-                  value={initialBalanceText}
-                  onChangeText={onChangeInitialBalance}
-                  placeholder="0,00"
-                  placeholderTextColor="#A8A8A8"
-                  keyboardType="decimal-pad"
-                  style={styles.amountInput}
-                />
-              </View>
-
-              <View style={styles.modalButtonsRow}>
-                <Pressable
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={onClose}
-                  disabled={saving}
-                >
-                  <Text style={styles.modalButtonText}>Cancelar</Text>
-                </Pressable>
-
-                <Pressable
-                  style={[styles.modalButton, styles.createButton]}
-                  onPress={onCreate}
-                  disabled={saving}
-                >
-                  <Text style={styles.modalButtonText}>
-                    {saving ? 'Guardando...' : 'Crear'}
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
-
-          {isSuccess && (
-            <View style={styles.successContent}>
-              <Text style={styles.successText}>
-                ♡ Cuenta guardada correctamente
-              </Text>
-            </View>
-          )}
-
-          {isEdit && (
-            <View style={styles.modalContent}>
-              <Text style={styles.inputLabel}>Nombre de la cuenta</Text>
-              <TextInput
-                value={accountName}
-                onChangeText={onChangeAccountName}
-                placeholder="Nombre de la cuenta"
-                placeholderTextColor="#A8A8A8"
-                style={styles.input}
-              />
-
-              <View style={styles.modalButtonsRow}>
-                <Pressable
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={onClose}
-                  disabled={saving}
-                >
-                  <Text style={styles.modalButtonText}>Cancelar</Text>
-                </Pressable>
-
-                <Pressable
-                  style={[styles.modalButton, styles.createButton]}
-                  onPress={onUpdate}
-                  disabled={saving}
-                >
-                  <Text style={styles.modalButtonText}>
-                    {saving ? 'Guardando...' : 'Guardar'}
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
-
-          {isDelete && (
-            <View style={styles.deleteContent}>
-              <Text style={styles.deleteText}>
-                ¿Estas seguro que quieres eliminar la cuenta con todos sus registros y objetos relacionados?
-              </Text>
-
-              <View style={styles.deleteActions}>
-                <Pressable
-                  onPress={onCancelDelete}
-                  disabled={saving}
-                  style={styles.deleteTextButton}
-                >
-                  <Text style={styles.deleteOptionText}>No</Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={onDelete}
-                  disabled={saving}
-                  style={styles.deleteTextButton}
-                >
-                  <Text style={styles.deleteOptionText}>
-                    {saving ? 'Eliminando...' : 'Si'}
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
-        </View>
-      </View>
-    </Modal>
   );
 }
 
@@ -569,183 +367,6 @@ function createStyles(theme: AppTheme) {
       marginBottom: 10,
       color: theme.colors.text,
       fontSize: 17,
-      fontWeight: '900',
-    },
-    accountCard: {
-      minHeight: 66,
-      backgroundColor: theme.colors.card,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      marginBottom: 14,
-      flexDirection: 'row',
-      alignItems: 'center',
-      shadowColor: '#000',
-      shadowOpacity: 0.16,
-      shadowOffset: { width: 0, height: 2 },
-      shadowRadius: 3,
-      elevation: 3,
-    },
-    accountIcon: {
-      width: 46,
-      height: 46,
-      borderRadius: 23,
-      backgroundColor: '#D9D9D9',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    accountInfo: {
-      flex: 1,
-      marginLeft: 14,
-    },
-    accountName: {
-      color: theme.colors.text,
-      fontSize: 15,
-      fontWeight: '900',
-    },
-    accountBalance: {
-      marginTop: 6,
-      color: theme.colors.textSecondary,
-      fontSize: 15,
-      fontWeight: '900',
-    },
-    moreButton: {
-      padding: 4,
-    },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.62)',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 18,
-    },
-    modalBox: {
-      width: '100%',
-      maxWidth: 340,
-      backgroundColor: theme.colors.card,
-      borderRadius: 14,
-      overflow: 'hidden',
-    },
-    modalHeader: {
-      height: 54,
-      backgroundColor: theme.colors.sidebarHeader,
-      paddingHorizontal: 22,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    modalTitle: {
-      color: '#FFFFFF',
-      fontSize: 25,
-      fontWeight: '900',
-    },
-    modalContent: {
-      paddingHorizontal: 28,
-      paddingTop: 20,
-      paddingBottom: 18,
-    },
-    inputLabel: {
-      color: theme.colors.textSecondary,
-      fontSize: 16,
-      fontWeight: '900',
-      marginBottom: 6,
-    },
-    input: {
-      height: 46,
-      borderWidth: 1.5,
-      borderColor: colors.primary,
-      borderRadius: 7,
-      paddingHorizontal: 12,
-      color: theme.colors.text,
-      backgroundColor: theme.colors.surface,
-      fontSize: 16,
-      marginBottom: 12,
-    },
-    amountInputBox: {
-      height: 46,
-      borderWidth: 1.5,
-      borderColor: colors.primary,
-      borderRadius: 7,
-      paddingHorizontal: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.colors.surface,
-      marginBottom: 18,
-    },
-    amountPrefix: {
-      color: theme.colors.textSecondary,
-      fontSize: 16,
-      fontWeight: '900',
-      marginRight: 12,
-    },
-    amountInput: {
-      flex: 1,
-      color: theme.colors.text,
-      fontSize: 16,
-    },
-    modalButtonsRow: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      gap: 18,
-      marginTop: 4,
-    },
-    modalButton: {
-      width: 108,
-      height: 42,
-      borderRadius: 22,
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
-      shadowOpacity: 0.22,
-      shadowOffset: { width: 0, height: 2 },
-      shadowRadius: 3,
-      elevation: 3,
-    },
-    cancelButton: {
-      backgroundColor: colors.expense,
-    },
-    createButton: {
-      backgroundColor: colors.secondary,
-    },
-    modalButtonText: {
-      color: '#FFFFFF',
-      fontWeight: '900',
-      fontSize: 14,
-    },
-    successContent: {
-      paddingHorizontal: 22,
-      paddingVertical: 26,
-    },
-    successText: {
-      color: colors.secondary,
-      fontSize: 16,
-      fontWeight: '700',
-    },
-    deleteContent: {
-      paddingHorizontal: 24,
-      paddingTop: 22,
-      paddingBottom: 18,
-    },
-    deleteText: {
-      color: theme.colors.textSecondary,
-      fontSize: 16,
-      lineHeight: 22,
-    },
-    deleteActions: {
-      marginTop: 20,
-      flexDirection: 'row',
-      justifyContent: 'center',
-      gap: 44,
-    },
-    deleteTextButton: {
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-    },
-    deleteOptionText: {
-      color: colors.primary,
-      fontSize: 14,
       fontWeight: '900',
     },
     loadingContainer: {
