@@ -2,6 +2,7 @@ import {
   Calendar,
   Gift,
   GraduationCap,
+  History,
   Home,
   Pencil,
   PiggyBank,
@@ -18,8 +19,8 @@ import {
 
 import {
   calculateDaysRemaining,
-  calculateRemainingAmount,
   calculateProgress,
+  calculateRemainingAmount,
 } from '@/features/savings-goals/savings-goals.service';
 import { SavingsGoal } from '@/features/savings-goals/savings-goals.types';
 import { money } from '@/features/wallet/wallet.service';
@@ -34,6 +35,7 @@ type GoalCardProps = {
   onEdit: (goal: SavingsGoal) => void;
   onDelete: (goal: SavingsGoal) => void;
   onContribute: (goal: SavingsGoal) => void;
+  onViewHistory: (goal: SavingsGoal) => void;
 };
 
 const iconMap = {
@@ -45,7 +47,13 @@ const iconMap = {
   target: Target,
 };
 
-export function GoalCard({ goal, onEdit, onDelete, onContribute }: GoalCardProps) {
+export function GoalCard({
+  goal,
+  onEdit,
+  onDelete,
+  onContribute,
+  onViewHistory,
+}: GoalCardProps) {
   const { theme } = useAppTheme();
   const styles = createStyles(theme);
 
@@ -146,6 +154,17 @@ export function GoalCard({ goal, onEdit, onDelete, onContribute }: GoalCardProps
           {isCompleted ? 'Completada' : isSpent ? 'Gastada' : isExpired ? 'Vencida' : 'Activa'}
         </Text>
       </View>
+
+      <Pressable
+        onPress={() => onViewHistory(goal)}
+        style={styles.historyButton}
+      >
+        <History size={16} color={theme.colors.primary} />
+
+        <Text style={styles.historyButtonText}>
+          Historial de abonos
+        </Text>
+      </Pressable>
 
       <Pressable
         disabled={!canContribute}
@@ -328,10 +347,27 @@ function createStyles(theme: AppTheme) {
       fontWeight: '900',
       textTransform: 'uppercase',
     },
-    hu16Button: {
+    historyButton: {
       height: 38,
       borderRadius: 19,
       marginTop: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+      gap: 8,
+      backgroundColor: theme.mode === 'dark' ? '#0F172A' : '#F8FAFC',
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    historyButtonText: {
+      color: theme.colors.primary,
+      fontSize: 12,
+      fontWeight: '900',
+    },
+    hu16Button: {
+      height: 38,
+      borderRadius: 19,
+      marginTop: 8,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.secondary,

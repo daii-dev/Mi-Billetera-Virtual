@@ -18,7 +18,6 @@ import {
   View,
 } from 'react-native';
 
-import { AppButton } from '@/components/ui/AppButton';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { GoalCard } from '@/features/savings-goals/components/GoalCard';
 import {
@@ -154,6 +153,10 @@ export default function GoalsScreen() {
     setSelectedGoal(null);
   }
 
+  function openHistoryScreen(goal: SavingsGoal) {
+    router.push(`/goals/history/${goal.id_meta}`);
+  }
+
   async function handleRegisterContribution(params: {
     cuentaId: string;
     monto: number;
@@ -245,10 +248,6 @@ export default function GoalsScreen() {
             <Text style={styles.emptyText}>
               Crea una meta de ahorro con nombre, monto objetivo y fecha limite.
             </Text>
-            <AppButton
-              title="Nueva Meta"
-              onPress={() => router.push('/goals/create')}
-            />
           </View>
         ) : (
           goals.map((goal) => (
@@ -258,6 +257,7 @@ export default function GoalsScreen() {
               onEdit={(selectedGoal) => router.push(`/goals/${selectedGoal.id_meta}`)}
               onDelete={handleDelete}
               onContribute={openContributionModal}
+              onViewHistory={openHistoryScreen}
             />
           ))
         )}

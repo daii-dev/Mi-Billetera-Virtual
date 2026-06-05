@@ -34,16 +34,12 @@ import {
   calculateGoalProgress,
   calculateRemainingAmount,
   calculateSavingsNeeded,
-  getGoalContributions,
   getSavingsGoalById,
   registerGoalContribution,
   updateExpiredGoalsIfNeeded,
   updateSavingsGoal,
 } from '@/features/savings-goals/savings-goals.service';
-import {
-  AbonoMetaAhorro,
-  SavingsGoal,
-} from '@/features/savings-goals/savings-goals.types';
+import { SavingsGoal } from '@/features/savings-goals/savings-goals.types';
 import {
   getPersonalAccount,
   getUserAccounts,
@@ -77,7 +73,6 @@ export default function EditGoalScreen() {
   const [goal, setGoal] = useState<SavingsGoal | null>(null);
   const [personalAccount, setPersonalAccount] = useState<Account | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [contributions, setContributions] = useState<AbonoMetaAhorro[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [successModalVisible, setSuccessModalVisible] = useState(false);
@@ -100,11 +95,10 @@ export default function EditGoalScreen() {
     try {
       await updateExpiredGoalsIfNeeded(supabase, userId);
 
-      const [goalData, account, userAccounts, goalContributions] = await Promise.all([
+      const [goalData, account, userAccounts] = await Promise.all([
         getSavingsGoalById(supabase, userId, id),
         getPersonalAccount(supabase, userId),
         getUserAccounts(supabase, userId),
-        getGoalContributions(supabase, userId, id),
       ]);
 
       if (!goalData) {
@@ -116,7 +110,6 @@ export default function EditGoalScreen() {
       setGoal(goalData);
       setPersonalAccount(account);
       setAccounts(userAccounts);
-      setContributions(goalContributions);
     } catch (error: any) {
       Alert.alert('Error', error?.message || 'No se pudo cargar la meta');
     } finally {
@@ -168,13 +161,9 @@ export default function EditGoalScreen() {
         nota: params.nota,
       });
 
-      const [freshContributions, freshAccounts] = await Promise.all([
-        getGoalContributions(supabase, userId, id),
-        getUserAccounts(supabase, userId),
-      ]);
+      const freshAccounts = await getUserAccounts(supabase, userId);
 
       setGoal(updatedGoal);
-      setContributions(freshContributions);
       setAccounts(freshAccounts);
       setContributionModalVisible(false);
 
@@ -218,7 +207,6 @@ export default function EditGoalScreen() {
                 onContribute={() => setContributionModalVisible(true)}
               />
 
-              <ContributionsHistory contributions={contributions} />
               <GoalForm
                 initialGoal={goal}
                 personalAccount={personalAccount}
@@ -329,45 +317,6 @@ function Metric({ label, value }: { label: string; value: string }) {
       <Text style={styles.metricValue}>{value}</Text>
     </View>
   );
-}
-
-function ContributionsHistory({ contributions }: { contributions: AbonoMetaAhorro[] }) {
-  const { theme } = useAppTheme();
-  const styles = createStyles(theme);
-
-  return (
-    <View style={styles.historyCard}>
-      <Text style={styles.historyTitle}>Historial de abonos</Text>
-      {contributions.length === 0 ? (
-        <Text style={styles.emptyHistory}>Aun no registraste abonos para esta meta.</Text>
-      ) : (
-        contributions.map((contribution) => (
-          <View key={contribution.id_abono} style={styles.historyItem}>
-            <View style={styles.historyInfo}>
-              <Text style={styles.historyAmount}>{money(contribution.monto)}</Text>
-              <Text style={styles.historyMeta}>
-                {formatDate(contribution.fecha_abono)}
-                {contribution.account?.name ? ` · ${contribution.account.name}` : ''}
-              </Text>
-              {contribution.nota ? (
-                <Text style={styles.historyNote}>{contribution.nota}</Text>
-              ) : null}
-            </View>
-          </View>
-        ))
-      )}
-    </View>
-  );
-}
-
-function formatDate(dateString: string) {
-  const date = new Date(`${dateString}T00:00:00`);
-
-  return date.toLocaleDateString('es-BO', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
 }
 
 function createStyles(theme: AppTheme) {
@@ -500,50 +449,6 @@ function createStyles(theme: AppTheme) {
       color: theme.colors.textSecondary,
       fontSize: 12,
       fontWeight: '800',
-    },
-    historyCard: {
-      borderRadius: 16,
-      backgroundColor: theme.colors.card,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      padding: 16,
-      marginBottom: 16,
-    },
-    historyTitle: {
-      color: theme.colors.text,
-      fontSize: 17,
-      fontWeight: '900',
-      marginBottom: 12,
-    },
-    emptyHistory: {
-      color: theme.colors.textSecondary,
-      fontSize: 13,
-      fontWeight: '800',
-      lineHeight: 18,
-    },
-    historyItem: {
-      minHeight: 62,
-      borderTopWidth: 1,
-      borderTopColor: theme.colors.border,
-      paddingVertical: 10,
-    },
-    historyInfo: {
-      gap: 4,
-    },
-    historyAmount: {
-      color: colors.secondary,
-      fontSize: 15,
-      fontWeight: '900',
-    },
-    historyMeta: {
-      color: theme.colors.textSecondary,
-      fontSize: 12,
-      fontWeight: '800',
-    },
-    historyNote: {
-      color: theme.colors.text,
-      fontSize: 12,
-      fontWeight: '700',
     },
     noticeBox: {
       borderRadius: 12,
