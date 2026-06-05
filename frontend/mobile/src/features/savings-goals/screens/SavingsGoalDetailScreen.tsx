@@ -21,7 +21,12 @@ import {
   View,
 } from 'react-native';
 
-import { GoalContributionModal } from '@/components/savings-goals/GoalContributionModal';
+import {
+  SuccessFeedbackModal,
+} from '@/components/feedback/SuccessFeedbackModal';
+import {
+  GoalContributionModal,
+} from '@/components/savings-goals/GoalContributionModal';
 import { GoalForm } from '@/components/savings-goals/GoalForm';
 import { AppButton } from '@/components/ui/AppButton';
 import {
@@ -75,6 +80,7 @@ export default function EditGoalScreen() {
   const [contributions, setContributions] = useState<AbonoMetaAhorro[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
   const [contributionModalVisible, setContributionModalVisible] = useState(false);
   const [savingContribution, setSavingContribution] = useState(false);
 
@@ -133,7 +139,12 @@ export default function EditGoalScreen() {
         icono: values.icono,
         color: values.color,
       });
-      router.back();
+      setSuccessModalVisible(true);
+
+      setTimeout(() => {
+        setSuccessModalVisible(false);
+        router.back();
+      }, 1200);
     } catch (error: any) {
       Alert.alert('Error', error?.message || 'No se pudo actualizar la meta');
     } finally {
@@ -181,56 +192,64 @@ export default function EditGoalScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
-          <ArrowLeft size={26} color="#FFFFFF" />
-        </Pressable>
-        <Text style={styles.topTitle}>Editar Meta</Text>
-        <View style={styles.topSpacer} />
-      </View>
+    <>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.topBar}>
+          <Pressable onPress={() => router.back()} hitSlop={10}>
+            <ArrowLeft size={26} color="#FFFFFF" />
+          </Pressable>
+          <Text style={styles.topTitle}>Editar Meta</Text>
+          <View style={styles.topSpacer} />
+        </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {loading || !goal ? (
-          <View style={styles.loaderBox}>
-            <ActivityIndicator color={colors.primary} />
-            <Text style={styles.loaderText}>Cargando meta...</Text>
-          </View>
-        ) : (
-          <>
-            <GoalProgressDetail
-              goal={goal}
-              onContribute={() => setContributionModalVisible(true)}
-            />
+        <ScrollView contentContainerStyle={styles.content}>
+          {loading || !goal ? (
+            <View style={styles.loaderBox}>
+              <ActivityIndicator color={colors.primary} />
+              <Text style={styles.loaderText}>Cargando meta...</Text>
+            </View>
+          ) : (
+            <>
+              <GoalProgressDetail
+                goal={goal}
+                onContribute={() => setContributionModalVisible(true)}
+              />
 
-            <ContributionsHistory contributions={contributions} />
-            <GoalForm
-              initialGoal={goal}
-              personalAccount={personalAccount}
-              submitLabel="Actualizar Meta"
-              loading={saving}
-              onSubmit={handleSubmit}
-            />
-          </>
-        )}
-      </ScrollView>
+              <ContributionsHistory contributions={contributions} />
+              <GoalForm
+                initialGoal={goal}
+                personalAccount={personalAccount}
+                submitLabel="Actualizar Meta"
+                loading={saving}
+                onSubmit={handleSubmit}
+              />
+            </>
+          )}
+        </ScrollView>
 
-      <GoalContributionModal
-        visible={contributionModalVisible}
-        goal={goal}
-        accounts={accounts}
-        loading={savingContribution}
-        onClose={() => {
-          if (!savingContribution) {
-            setContributionModalVisible(false);
-          }
-        }}
-        onConfirm={handleRegisterContribution}
-      />
-    </KeyboardAvoidingView>
+        <GoalContributionModal
+          visible={contributionModalVisible}
+          goal={goal}
+          accounts={accounts}
+          loading={savingContribution}
+          onClose={() => {
+            if (!savingContribution) {
+              setContributionModalVisible(false);
+            }
+          }}
+          onConfirm={handleRegisterContribution}
+        />
+      </KeyboardAvoidingView>
+      <SuccessFeedbackModal
+      visible={successModalVisible}
+      title="Editar Meta de Ahorro"
+      message="Meta de ahorro editada correctamente"
+      onRequestClose={() => setSuccessModalVisible(false)}
+    />
+  </>
   );
 }
 

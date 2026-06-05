@@ -15,7 +15,10 @@ import {
 } from 'react-native';
 
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
-import { AccountModalMode } from '@/features/accounts/accounts.types';
+import {
+  AccountModalMode,
+  AccountSuccessAction,
+} from '@/features/accounts/accounts.types';
 import { AccountCard } from '@/features/accounts/components/AccountCard';
 import { AccountModal } from '@/features/accounts/components/AccountModal';
 import {
@@ -56,6 +59,8 @@ export default function AccountsScreen() {
   const [accountName, setAccountName] = useState('');
   const [initialBalanceText, setInitialBalanceText] = useState('');
   const [saving, setSaving] = useState(false);
+  const [successAction, setSuccessAction] =
+    useState<AccountSuccessAction>('create');
 
   async function loadAccounts(showFullLoader = false) {
     if (!isLoaded) return;
@@ -176,7 +181,7 @@ export default function AccountsScreen() {
       );
 
       await loadAccounts(false);
-
+      setSuccessAction('create');
       setModalMode('success');
 
       setTimeout(() => {
@@ -226,7 +231,12 @@ export default function AccountsScreen() {
       );
 
       await loadAccounts(false);
-      closeModal();
+      setSuccessAction('edit');
+      setModalMode('success');
+
+      setTimeout(() => {
+        closeModal();
+      }, 1200);
     } catch (error: any) {
       Alert.alert(
         'Error',
@@ -309,6 +319,7 @@ export default function AccountsScreen() {
 
       <AccountModal
         mode={modalMode}
+        successAction={successAction}
         accountName={accountName}
         initialBalanceText={initialBalanceText}
         saving={saving}

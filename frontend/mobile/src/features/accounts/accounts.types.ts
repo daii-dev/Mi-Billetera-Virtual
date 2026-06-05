@@ -4,3 +4,5 @@ export type AccountModalMode =
   | 'edit'
   | 'delete'
   | null;
+
+export type AccountSuccessAction = 'create' | 'edit';

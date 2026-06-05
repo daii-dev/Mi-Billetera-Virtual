@@ -10,7 +10,10 @@ import {
 import {
   SuccessFeedbackContent,
 } from '@/components/feedback/SuccessFeedbackContent';
-import { AccountModalMode } from '@/features/accounts/accounts.types';
+import {
+  AccountModalMode,
+  AccountSuccessAction,
+} from '@/features/accounts/accounts.types';
 import { colors } from '@/theme/colors';
 import {
   AppTheme,
@@ -19,6 +22,7 @@ import {
 
 type AccountModalProps = {
   mode: AccountModalMode;
+  successAction: AccountSuccessAction;
   accountName: string;
   initialBalanceText: string;
   saving: boolean;
@@ -33,6 +37,7 @@ type AccountModalProps = {
 
 export function AccountModal({
   mode,
+  successAction,
   accountName,
   initialBalanceText,
   saving,
@@ -51,10 +56,17 @@ export function AccountModal({
     return null;
   }
 
-  const isCreate = mode === 'create';
-  const isSuccess = mode === 'success';
-  const isEdit = mode === 'edit';
-  const isDelete = mode === 'delete';
+  const isCreate = mode === "create";
+  const isSuccess = mode === "success";
+  const isEdit = mode === "edit";
+  const isDelete = mode === "delete";
+  const successTitle =
+    successAction === "edit" ? "Editar Cuenta" : "Nueva Cuenta";
+
+  const successMessage =
+    successAction === "edit"
+      ? "Cuenta editada correctamente"
+      : "Cuenta guardada correctamente";
 
   return (
     <Modal
@@ -68,11 +80,13 @@ export function AccountModal({
         <View style={styles.modalBox}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
-              {isCreate || isSuccess
-                ? 'Nueva Cuenta'
-                : isEdit
-                  ? 'Editar Cuenta'
-                  : 'Eliminar Cuenta'}
+              {isCreate
+                ? "Nueva Cuenta"
+                : isSuccess
+                  ? successTitle
+                  : isEdit
+                    ? "Editar Cuenta"
+                    : "Eliminar Cuenta"}
             </Text>
           </View>
 
@@ -118,7 +132,7 @@ export function AccountModal({
                   disabled={saving}
                 >
                   <Text style={styles.modalButtonText}>
-                    {saving ? 'Guardando...' : 'Crear'}
+                    {saving ? "Guardando..." : "Crear"}
                   </Text>
                 </Pressable>
               </View>
@@ -127,9 +141,9 @@ export function AccountModal({
 
           {isSuccess && (
             <View style={styles.successContent}>
-                <SuccessFeedbackContent message="Cuenta guardada correctamente" />
+              <SuccessFeedbackContent message={successMessage} />
             </View>
-            )}
+          )}
 
           {isEdit && (
             <View style={styles.modalContent}>
@@ -158,7 +172,7 @@ export function AccountModal({
                   disabled={saving}
                 >
                   <Text style={styles.modalButtonText}>
-                    {saving ? 'Guardando...' : 'Guardar'}
+                    {saving ? "Guardando..." : "Guardar"}
                   </Text>
                 </Pressable>
               </View>
@@ -168,7 +182,8 @@ export function AccountModal({
           {isDelete && (
             <View style={styles.deleteContent}>
               <Text style={styles.deleteText}>
-                ¿Estas seguro que quieres eliminar la cuenta con todos sus registros y objetos relacionados?
+                ¿Estas seguro que quieres eliminar la cuenta con todos sus
+                registros y objetos relacionados?
               </Text>
 
               <View style={styles.deleteActions}>
@@ -186,7 +201,7 @@ export function AccountModal({
                   style={styles.deleteTextButton}
                 >
                   <Text style={styles.deleteOptionText}>
-                    {saving ? 'Eliminando...' : 'Si'}
+                    {saving ? "Eliminando..." : "Si"}
                   </Text>
                 </Pressable>
               </View>
@@ -202,29 +217,29 @@ function createStyles(theme: AppTheme) {
   return StyleSheet.create({
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.62)',
-      alignItems: 'center',
-      justifyContent: 'center',
+      backgroundColor: "rgba(0,0,0,0.62)",
+      alignItems: "center",
+      justifyContent: "center",
       paddingHorizontal: 18,
     },
     modalBox: {
-      width: '100%',
+      width: "100%",
       maxWidth: 340,
       backgroundColor: theme.colors.card,
       borderRadius: 14,
-      overflow: 'hidden',
+      overflow: "hidden",
     },
     modalHeader: {
       height: 54,
       backgroundColor: theme.colors.sidebarHeader,
       paddingHorizontal: 22,
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
     },
     modalTitle: {
-      color: '#FFFFFF',
+      color: "#FFFFFF",
       fontSize: 25,
-      fontWeight: '900',
+      fontWeight: "900",
     },
     modalContent: {
       paddingHorizontal: 28,
@@ -234,7 +249,7 @@ function createStyles(theme: AppTheme) {
     inputLabel: {
       color: theme.colors.textSecondary,
       fontSize: 16,
-      fontWeight: '900',
+      fontWeight: "900",
       marginBottom: 6,
     },
     input: {
@@ -254,15 +269,15 @@ function createStyles(theme: AppTheme) {
       borderColor: colors.primary,
       borderRadius: 7,
       paddingHorizontal: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       backgroundColor: theme.colors.surface,
       marginBottom: 18,
     },
     amountPrefix: {
       color: theme.colors.textSecondary,
       fontSize: 16,
-      fontWeight: '900',
+      fontWeight: "900",
       marginRight: 12,
     },
     amountInput: {
@@ -271,8 +286,8 @@ function createStyles(theme: AppTheme) {
       fontSize: 16,
     },
     modalButtonsRow: {
-      flexDirection: 'row',
-      justifyContent: 'center',
+      flexDirection: "row",
+      justifyContent: "center",
       gap: 18,
       marginTop: 4,
     },
@@ -280,9 +295,9 @@ function createStyles(theme: AppTheme) {
       width: 108,
       height: 42,
       borderRadius: 22,
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: "#000",
       shadowOpacity: 0.22,
       shadowOffset: { width: 0, height: 2 },
       shadowRadius: 3,
@@ -295,8 +310,8 @@ function createStyles(theme: AppTheme) {
       backgroundColor: colors.secondary,
     },
     modalButtonText: {
-      color: '#FFFFFF',
-      fontWeight: '900',
+      color: "#FFFFFF",
+      fontWeight: "900",
       fontSize: 14,
     },
     successContent: {
@@ -315,8 +330,8 @@ function createStyles(theme: AppTheme) {
     },
     deleteActions: {
       marginTop: 20,
-      flexDirection: 'row',
-      justifyContent: 'center',
+      flexDirection: "row",
+      justifyContent: "center",
       gap: 44,
     },
     deleteTextButton: {
@@ -324,9 +339,9 @@ function createStyles(theme: AppTheme) {
       paddingVertical: 8,
     },
     deleteOptionText: {
-      color: theme.mode === 'dark' ? '#FFFFFF' : colors.primary,
+      color: theme.mode === "dark" ? "#FFFFFF" : colors.primary,
       fontSize: 14,
-      fontWeight: '900',
+      fontWeight: "900",
     },
   });
 }
