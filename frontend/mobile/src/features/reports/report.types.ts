@@ -63,6 +63,7 @@ export type ReportAccount = {
   clerk_user_id: string;
   name: string;
   currency: string;
+  visible: boolean;
 };
 
 export type ReportSummary = {

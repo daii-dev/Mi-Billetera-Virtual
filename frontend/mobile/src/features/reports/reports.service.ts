@@ -39,8 +39,9 @@ export async function getReportAccounts(
 ): Promise<ReportAccount[]> {
   const { data, error } = await supabase
     .from('accounts')
-    .select('id, name, currency, clerk_user_id')
+    .select('id, name, currency, clerk_user_id, visible')
     .eq('clerk_user_id', clerkUserId)
+    .eq('visible', true)
     .order('created_at', { ascending: true });
 
   if (error) {
