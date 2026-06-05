@@ -21,8 +21,13 @@ export default function OnboardingScreen() {
 
   async function finishOnboarding() {
     await setHasSeenOnboarding();
-    router.replace('/sign-in');
-  }
+    router.replace({
+    pathname: '/',
+    params: {
+      skipOnboarding: 'true',
+    },
+  });
+}
 
   function nextPage() {
     if (pageIndex < onboardingPages.length - 1) {

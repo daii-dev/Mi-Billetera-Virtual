@@ -1,5 +1,5 @@
 import InitialBalanceScreen
-  from '@/features/wallet-setup/screens/InitialBalanceScreen';
+  from '@/features/initial-balance/InitialBalanceScreen';
 
 export default function InitialBalanceRoute() {
     return <InitialBalanceScreen />;
