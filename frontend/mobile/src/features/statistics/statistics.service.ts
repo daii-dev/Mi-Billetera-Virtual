@@ -8,6 +8,7 @@ import type {
   PeriodData,
 } from './statistics.types';
 import type { ReportMovement } from '@/features/reports/report.types';
+import { enrichMovementsWithCategories } from '@/features/wallet/wallet.service';
 import {
   generateDailyTrendDates,
   generateMonthlyTrendDates,
@@ -63,7 +64,11 @@ export async function getStatisticsMovements(
     throw new Error(error.message);
   }
 
-  return (data ?? []) as ReportMovement[];
+  return enrichMovementsWithCategories(
+    supabase,
+    clerkUserId,
+    (data ?? []) as ReportMovement[]
+  );
 }
 
 function toAmount(value: number | string | null | undefined): number {

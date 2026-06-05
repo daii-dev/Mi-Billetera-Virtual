@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, FlatList } from 'react-native';
-import Svg, { Circle, G } from 'react-native-svg';
+import Svg, { Circle, G, Text as SVGText } from 'react-native-svg';
 import type { StatisticsData } from '../statistics.types';
 import { AppTheme } from '@/theme/ThemeContext';
 
@@ -49,6 +49,7 @@ export function DonutChart({ data, theme }: DonutChartProps) {
   const circumference = 2 * Math.PI * radius;
 
   let accumulatedOffset = 0;
+  let startAngle = -90; // Empezar en la posición de las 12 en punto (-90 grados)
   const segments = data.categories.map((cat) => {
     const strokeDashoffset = accumulatedOffset;
     const strokeDasharray = `${(cat.percentage / 100) * circumference} ${circumference}`;
@@ -56,11 +57,16 @@ export function DonutChart({ data, theme }: DonutChartProps) {
     // SVG stroke-dashoffset shifts the starting point.
     // Shifting clockwise (forward) is negative in SVG.
     accumulatedOffset -= (cat.percentage / 100) * circumference;
+
+    const segmentAngle = (cat.percentage / 100) * 360;
+    const midAngle = startAngle + segmentAngle / 2;
+    startAngle += segmentAngle;
     
     return {
       ...cat,
       strokeDasharray,
       strokeDashoffset,
+      midAngle,
       color: getColorForCategory(cat.categoryName, cat.categoryColor),
     };
   });
@@ -105,6 +111,30 @@ export function DonutChart({ data, theme }: DonutChartProps) {
               ))
             )}
           </G>
+
+          {/* Porcentajes sobre los arcos de la dona */}
+          {hasData && segments.map((segment, index) => {
+            if (segment.percentage < 7) return null; // Solo mostrar si tiene más del 7% para evitar superposición
+            
+            const rad = (segment.midAngle * Math.PI) / 180;
+            const tx = 100 + radius * Math.cos(rad);
+            // +3.5 de compensación vertical para centrado óptico del texto
+            const ty = 100 + radius * Math.sin(rad) + 3.5;
+            
+            return (
+              <SVGText
+                key={`text-${index}`}
+                x={tx}
+                y={ty}
+                fill="#FFFFFF"
+                fontSize="10"
+                fontWeight="900"
+                textAnchor="middle"
+              >
+                {`${segment.percentage.toFixed(0)}%`}
+              </SVGText>
+            );
+          })}
         </Svg>
       </View>
 

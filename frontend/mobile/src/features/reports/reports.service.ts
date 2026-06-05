@@ -5,6 +5,7 @@ import type {
   ReportMovement,
 } from './report.types';
 import { getPreviousPeriodRange } from './reportPeriods';
+import { enrichMovementsWithCategories } from '@/features/wallet/wallet.service';
 
 type ReportMovementQueryFilters = ReportFilters & {
   clerkUserId: string;
@@ -74,7 +75,11 @@ export async function getReportMovements(
     throw new Error(error.message);
   }
 
-  return (data ?? []) as ReportMovement[];
+  return enrichMovementsWithCategories(
+    supabase,
+    clerkUserId,
+    (data ?? []) as ReportMovement[]
+  );
 }
 
 export async function getPreviousPeriodMovements(
