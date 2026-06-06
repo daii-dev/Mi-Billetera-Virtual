@@ -1,11 +1,6 @@
-import {
-  useEffect,
-  useState,
-} from 'react';
+import { useState } from 'react';
 
-import * as AuthSession from 'expo-auth-session';
 import { router } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import {
   Eye,
   Lock,
@@ -32,30 +27,10 @@ import {
 } from '@/features/auth/auth.validators';
 import { savePendingSignupData } from '@/lib/storage';
 import { colors } from '@/theme/colors';
-import {
-  useSignUp,
-  useSSO,
-} from '@clerk/expo';
-
-WebBrowser.maybeCompleteAuthSession();
-
-function useWarmUpBrowser() {
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-
-    void WebBrowser.warmUpAsync();
-
-    return () => {
-      void WebBrowser.coolDownAsync();
-    };
-  }, []);
-}
+import { useSignUp } from '@clerk/expo';
 
 export default function SignUpScreen() {
-  useWarmUpBrowser();
-
   const { signUp } = useSignUp();
-  const { startSSOFlow } = useSSO();
 
   const [fullName, setFullName] = useState('');
   const [emailAddress, setEmailAddress] = useState('');
@@ -68,7 +43,6 @@ export default function SignUpScreen() {
 
   const [securePassword, setSecurePassword] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
 
   function validatePassword(password: string): string | null {
     if (password.length < 8) {
@@ -162,49 +136,6 @@ export default function SignUpScreen() {
     }
 
     return message || 'No se pudo crear la cuenta. Revisa los datos e intenta nuevamente.';
-  }
-
-  async function handleGoogleSignUp() {
-    try {
-      setGoogleLoading(true);
-
-      const redirectUrl = AuthSession.makeRedirectUri({
-        scheme: 'mibilleteravirtual',
-        path: 'oauth-callback',
-      });
-
-      console.log('GOOGLE SIGN UP REDIRECT URL:', redirectUrl);
-
-      const { createdSessionId, setActive } = await startSSOFlow({
-        strategy: 'oauth_google',
-        redirectUrl,
-      });
-
-      if (createdSessionId) {
-        await setActive?.({
-          session: createdSessionId,
-        });
-
-        router.replace('/');
-        return;
-      }
-
-      Alert.alert(
-        'Registro con Google no completado',
-        'No se pudo crear la sesión con Google. Revisa la configuración de Google en Clerk.'
-      );
-    } catch (error: any) {
-      console.log('GOOGLE SIGN UP ERROR:', JSON.stringify(error, null, 2));
-
-      const message =
-        error?.errors?.[0]?.message ||
-        error?.message ||
-        'No se pudo crear la cuenta con Google';
-
-      Alert.alert('Error con Google', message);
-    } finally {
-      setGoogleLoading(false);
-    }
   }
 
   async function handleCreateAccount() {
@@ -351,23 +282,6 @@ export default function SignUpScreen() {
           onPress={handleCreateAccount}
           loading={loading}
         />
-
-        <View style={styles.separator}>
-          <View style={styles.line} />
-          <Text style={styles.separatorText}>o regístrate con</Text>
-          <View style={styles.line} />
-        </View>
-
-        <Pressable
-          style={[styles.googleButton, googleLoading && styles.disabledButton]}
-          onPress={handleGoogleSignUp}
-          disabled={googleLoading}
-        >
-          <Text style={styles.googleIcon}>G</Text>
-          <Text style={styles.googleText}>
-            {googleLoading ? 'Abriendo Google...' : 'Google'}
-          </Text>
-        </Pressable>
       </View>
 
       <View style={styles.footer}>
@@ -406,57 +320,12 @@ const styles = StyleSheet.create({
   },
   form: {
     width: '100%',
-    marginTop: 42,
+    marginTop: 38,
     gap: 22,
   },
-  separator: {
-    marginTop: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#BDBDBD',
-  },
-  separatorText: {
-    color: '#666666',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  googleButton: {
-    height: 44,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 2,
-    elevation: 2,
-    backgroundColor: '#ffffff',
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  googleIcon: {
-    color: '#4285F4',
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  googleText: {
-    color: '#555555',
-    fontSize: 14,
-    fontWeight: '900',
-  },
   footer: {
-    marginTop: 36,
-    marginBottom: 70,
+    marginTop: 30,
+    marginBottom: 40,
     flexDirection: 'row',
   },
   footerText: {
