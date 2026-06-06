@@ -12,10 +12,11 @@
     "@clerk/expo": "^3.2.10",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
-    "@supabase/supabase-js": "^2.105.4",
+    "@supabase/supabase-js": "2.105.4",
     "expo": "~54.0.35",
     "expo-asset": "~12.0.13",
     "expo-auth-session": "~7.0.11",
+    "expo-build-properties": "~1.0.10",
     "expo-constants": "~18.0.13",
     "expo-file-system": "~19.0.23",
     "expo-linking": "~8.0.12",
@@ -40,5 +41,8 @@
     "@types/react": "~19.1.0",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "optionalDependencies": {
+    "utf-8-validate": "^5.0.10"
+  }
 }
